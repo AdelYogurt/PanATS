@@ -1,2 +1,2 @@
 # HATS
-program to calculate hypersonic aerodynamic thermal and structure
+a program to calculate hypersonic aerodynamic thermal and structure
