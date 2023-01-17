@@ -19,7 +19,7 @@ end
 INFORMATION_FLAG=0;
 
 if length(filename_mesh) > 4
-    if ~strcmp(filename_mesh((end-3):end),'.stl')
+    if ~strcmpi(filename_mesh((end-3):end),'.stl')
         filename_mesh=[filename_mesh,'.stl'];
     end
 else

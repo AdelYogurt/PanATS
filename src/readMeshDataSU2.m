@@ -15,7 +15,7 @@ point_list=[];
 element_list=[];
 marker_list=[];
 
-if ~strcmp(filename_mesh((end-3):end),'.su2')
+if ~strcmpi(filename_mesh((end-3):end),'.su2')
     filename_mesh=[filename_mesh,'.su2'];
 end
 

@@ -3,12 +3,11 @@ clc;
 close all hidden;
 
 addpath([pwd,'\src']);
+addpath([pwd,'\input']);
 
-global g_geometry g_Point g_Element g_Marker...
-    ADtree_marker_element HATS_element_list...
-    streamline_output inviscid_output heat_output viscid_output FEM_output...
-    post_output
+global g_model
 
+g_model=readModelCFG('slender.cfg');
 
 % AOA_list=[0,3,5,7,10];
 % Cl_list=zeros(1,length(AOA_list));

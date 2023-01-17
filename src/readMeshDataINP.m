@@ -16,7 +16,7 @@ end
 INFORMATION_FLAG=1;
 
 if length(filename_mesh) > 4
-    if ~strcmp(filename_mesh((end-3):end),'.inp')
+    if ~strcmpi(filename_mesh((end-3):end),'.inp')
         filename_mesh=[filename_mesh,'.inp'];
     end
 else
