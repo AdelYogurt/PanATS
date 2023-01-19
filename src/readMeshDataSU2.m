@@ -1,60 +1,73 @@
-function [geometry,point_list,element_list,marker_list]=readMeshDataSU2...
-    (filename_mesh,evaluate_marker_name_list)
+function [point_list,element_list,marker_list,geometry]=readMeshDataSU2...
+    (filename_mesh,scale)
 % read mash data from data file
-% input mesh_filename, support .su2 file
-% return point_list, element_list, marker_list
-
+% input mesh_filename(support .su2 file), scale(geometry zoom scale)
+% return point_list, element_list(all evaluated marker element), marker_list
+%
 % point_list is coordinate of all node
-% element_list contain element(element_type, node_index1, node_index2, ...)
-% marker_list contain make{marker_name,marker_element_number,marker_element} 
+% element_list contain element which will be aero function evaluated
+% element contain element_type, node_index1, node_index2, ...
+% marker_list contain maker{marker_name,marker_element_number,marker_element}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
-disp('readMeshData: read mash data begin')
+if nargin < 2
+    scale=[];
+end
+
+INFORMATION_FLAG=1;
+
+% cheak file definition
+if length(filename_mesh) > 4
+    if ~strcmpi(filename_mesh((end-3):end),'.su2')
+        filename_mesh=[filename_mesh,'.su2'];
+    end
+else
+    filename_mesh=[filename_mesh,'.su2'];
+end
+if exist(filename_mesh,'file')==2
+    file_mesh=fopen(filename_mesh,'r');
+else
+    error('readMeshDataSU2: file do not exist')
+end
 
 point_list=[];
 element_list=[];
 marker_list=[];
 
-if ~strcmpi(filename_mesh((end-3):end),'.su2')
-    filename_mesh=[filename_mesh,'.su2'];
+if isempty(scale)
+    scale=1;
 end
 
-if exist(filename_mesh,'file')==2
-    file_mesh=fopen(filename_mesh,'r');
-else
-    error('readMeshData: file do not exist')
+if INFORMATION_FLAG
+    disp('readMeshDataSU2: read mash data begin');
 end
 
 dimension_string=fgetl(file_mesh);
-dimension_string=strsplit(dimension_string);
+dimension_string=strsplit(dimension_string,' ');
 dimension=str2double(dimension_string{2});
 
 element_number_string=fgetl(file_mesh);
-element_number_string=strsplit(element_number_string);
+element_number_string=strsplit(element_number_string,' ');
 element_number=str2double(element_number_string{2});
 
 % jump over volume element data
-for rank_index=1:element_number
-    fgetl(file_mesh);
+for element_index=1:element_number
+    fgets(file_mesh);
 end
- 
+
 % read node data
-node_number_string=fgetl(file_mesh);
-node_number_string=strsplit(node_number_string);
-if strcmp(node_number_string{1},'NPOIN=')
-    node_number=str2double(node_number_string{2});
+point_number_string=fgetl(file_mesh);
+point_number_string=strsplit(point_number_string,' ');
+if strcmp(point_number_string{1},'NPOIN=')
+    point_number=str2double(point_number_string{2});
 else
-    error('readMeshData:NPOIN do not exist')
+    error('readMeshDataSU2:NPOIN do not exist')
 end
-point_list=zeros(node_number,dimension);
-for node_index=1:node_number
-    node_string=strsplit(fgetl(file_mesh));
-    if strcmp(node_string{1},'')
-       node_string=node_string(2:end); 
-    end
-    for dimension_index=1:dimension
-        point_list(node_index,dimension_index)=str2double(node_string{dimension_index});
-    end
+point_position=ftell(file_mesh);
+
+% jump over node data first, after read marker, read node data
+for point_index=1:point_number
+    fgets(file_mesh);
 end
 
 % read marker data
@@ -71,11 +84,11 @@ for marker_index=1:marker_number
     % read marker name
     marker_name_string=strsplit(fgetl(file_mesh));
     marker_name=marker_name_string{2};
-    
+
     % read marker element number
     marker_element_number_string=strsplit(fgetl(file_mesh));
     marker_element_number=str2double(marker_element_number_string{2});
-    
+
     % read marker element node index
     if dimension == 2
         marker_element=zeros(marker_element_number,3);
@@ -88,76 +101,119 @@ for marker_index=1:marker_number
         marker_element(marker_element_index,1)=marker_element_type;
         switch marker_element_type
             case 3
-                marker_element_index_number=2;
+                element_node_number=2;
             case 5
-                marker_element_index_number=3;
+                element_node_number=3;
             case 9
-                marker_element_index_number=4;
+                element_node_number=4;
         end
-        for node_index=1:marker_element_index_number
-            marker_element(marker_element_index,node_index+1)=str2double(marker_element_string{node_index+1});
+        for node_index=1:element_node_number
+            % su2 file point index is start from 0
+            marker_element(marker_element_index,node_index+1)=str2double(marker_element_string{node_index+1})+1;
         end
     end
-    
+
     marker_list{marker_index,1}=marker_name;
     marker_list{marker_index,2}=marker_element_number;
     marker_list{marker_index,3}=marker_element;
 end
-fclose(file_mesh);
-clear('file_mesh')
 
-geometry.min_bou=min(point_list);
-geometry.max_bou=max(point_list);
-geometry.dimension=3;
-
-% get all element of marker and create HATSElemet list g_Marker_Element
-element_list=[]; % all element needed to be evaluate list, pointer to HATSElemet
-for marker_name_index=1:size(evaluate_marker_name_list,2)
-    element_list=[element_list;getMarkerElement(evaluate_marker_name_list{marker_name_index})];
-end
-
-% read all point on marker
+% read all point index of marker element
 marker_point_number=0;
-marker_point_index_list=zeros(1,4*size(element_list,1));
-for element_index=1:size(element_list,1)
-    element_type=element_list(element_index,1);
-    switch element_type
-        case 5
-            marker_point_index_list(marker_point_number+1:marker_point_number+3)=...
-                element_list(element_index,2:4);
-            marker_point_number=marker_point_number+3;
-        case 9
-            marker_point_index_list(marker_point_number+1:marker_point_number+4)=...
-                element_list(element_index,2:5);
-            marker_point_number=marker_point_number+4;
+marker_element_number=0;
+for marker_index=1:length(marker_list)
+    marker_element_number=marker_element_number+marker_list{marker_index,2};
+end
+marker_point_index_list=zeros(1,4*marker_element_number);
+for marker_index=1:length(marker_list)
+    marker_element=marker_list{marker_index,3};
+    for element_index=1:marker_list{marker_index,2}
+        element_type=marker_element(element_index,1);
+        switch element_type
+            case 3
+                marker_point_index_list(marker_point_number+1:marker_point_number+2)=...
+                    marker_element(element_index,2:3);
+                marker_point_number=marker_point_number+2;
+            case 5
+                marker_point_index_list(marker_point_number+1:marker_point_number+3)=...
+                    marker_element(element_index,2:4);
+                marker_point_number=marker_point_number+3;
+            case 9
+                marker_point_index_list(marker_point_number+1:marker_point_number+4)=...
+                    marker_element(element_index,2:5);
+                marker_point_number=marker_point_number+4;
+        end
     end
 end
 
-% deleta useless point
+% deleta useless point, get all point index of marker
+% mapping_list: old marker_point_index_list to new marker_point_index_list
+% read_list: old marker_point_index_list to new marker_point_index_list
+% read point should accord with marker_point_index_list
+% marker_point_index_list is sort from small to large
 marker_point_index_list(marker_point_number+1:end)=[];
 [marker_point_index_list,~,mapping_list]=unique(marker_point_index_list);
 
 % updata element_list point index to new list
 marker_point_number=0;
-for element_index=1:size(element_list,1)
-    element_type=element_list(element_index,1);
-    switch element_type
-        case 5
-            point_number=3;
-            marker_point_number=marker_point_number+3;
-        case 9
-            point_number=4;
-            marker_point_number=marker_point_number+4;
+for marker_index=1:length(marker_list)
+    marker_element=marker_list{marker_index,3};
+    for element_index=1:marker_list{marker_index,2}
+        element_type=marker_element(element_index,1);
+        switch element_type
+            case 2
+                element_node_number=2;
+                marker_point_number=marker_point_number+2;
+            case 5
+                element_node_number=3;
+                marker_point_number=marker_point_number+3;
+            case 9
+                element_node_number=4;
+                marker_point_number=marker_point_number+4;
+        end
+        for point_index=1:element_node_number
+            marker_element(element_index,1+point_index)=...
+                mapping_list(marker_point_number-element_node_number+point_index);
+        end
     end
-    for point_index=1:point_number
-        element_list(element_index,1+point_index)=...
-            mapping_list(marker_point_number-point_number+point_index);
+    marker_list{marker_index,3}=marker_element;
+end
+
+marker_point_number=length(marker_point_index_list);
+
+% reread point data
+fseek(file_mesh,point_position,"bof");
+point_list=zeros(marker_point_number,dimension);
+point_index_position=1;
+for node_index=1:point_number
+    point_string=fgetl(file_mesh);
+
+    % only on marker point will be read
+    if marker_point_index_list(point_index_position) == node_index
+        point_string=strsplit(point_string,{char(32),char(9)});
+        %     if isempty(node_string{1})
+        %        node_string=node_string(2:end);
+        %     end
+        point_list(point_index_position,1:dimension)=str2double(point_string(1:dimension))*scale;
+        point_index_position=point_index_position+1;
+    end
+
+    if point_index_position > marker_point_number
+        % stop reading
+        break;
     end
 end
 
-point_list=point_list(marker_point_index_list+1,:);
+geometry.min_bou=min(point_list);
+geometry.max_bou=max(point_list);
+geometry.dimension=3;
 
-disp('readMeshData: read mash data done!')
+fclose(file_mesh);
+clear('file_mesh')
+
+if INFORMATION_FLAG
+    disp('readMeshDataSU2: read mash data done!')
+end
 
     function Marker_Element=getMarkerElement(marker_name)
         % return specified marker

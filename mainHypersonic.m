@@ -7,7 +7,9 @@ addpath([pwd,'\input']);
 
 global g_model
 
-g_model=readModelCFG('slender.cfg');
+% g_model=preModelCFG('waverider.cfg');
+g_model=preModelCFG('INP_test.cfg');
+displayMarker()
 
 % AOA_list=[0,3,5,7,10];
 % Cl_list=zeros(1,length(AOA_list));
@@ -89,6 +91,5 @@ g_model=readModelCFG('slender.cfg');
 % [area,volume]=solveGeometry();
 
 % displayModel('log_P')
-% displayMarker('WAVERIDER')
 
 % rmpath([pwd,'\src']);

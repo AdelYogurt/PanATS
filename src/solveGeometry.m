@@ -37,7 +37,7 @@ for element_index=1:length(HATS_element_list)
     if HATS_element_list(element_index).normal_vector(3) > 0
         volume=volume-VL;
     else
-        volume=volume-VL;
+        volume=volume+VL;
     end
 end
 end

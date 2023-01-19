@@ -1,12 +1,14 @@
-function [geometry,point_list,element_list,marker_list]=readMeshDataSTL...
+function [point_list,element_list,marker_list,geometry]=readMeshDataSTL...
     (filename_mesh,scale,file_type)
 % read mash data from data file
-% input mesh_filename, support .stl file, scale(geometry zoom scale)
+% input mesh_filename(support .stl file), scale(geometry zoom scale),
+% file_type(file encode type, can be empty)
 % return point_list, element_list, marker_list
-
+%
 % point_list is coordinate of all node
-% element_list contain element(element_type, node_index1, node_index2, ...)
-% marker_list contain marker{marker_name,marker_element_number,marker_element} 
+% element_list contain element which will be aero function evaluated
+% element contain element_type, node_index1, node_index2, ...
+% marker_list contain maker{marker_name,marker_element_number,marker_element}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
 if nargin < 3
@@ -16,8 +18,9 @@ if nargin < 3
     end
 end
 
-INFORMATION_FLAG=0;
+INFORMATION_FLAG=1;
 
+% cheak file definition
 if length(filename_mesh) > 4
     if ~strcmpi(filename_mesh((end-3):end),'.stl')
         filename_mesh=[filename_mesh,'.stl'];
@@ -25,6 +28,10 @@ if length(filename_mesh) > 4
 else
     filename_mesh=[filename_mesh,'.stl'];
 end
+if exist(filename_mesh,'file')~=2
+    error('readMeshDataSTL: file do not exist')
+end
+
 point_list=[];
 element_list=[];
 marker_list=[];
@@ -33,10 +40,6 @@ torlance=1e-12;
 
 if isempty(scale)
     scale=1;
-end
-
-if exist(filename_mesh,'file')~=2
-    error('readMeshData: file do not exist')
 end
 
 % detech file type
@@ -58,7 +61,7 @@ if isempty(file_type)
 end
 
 if INFORMATION_FLAG
-    disp(['readMeshData: read mash data begin, file type read as ',file_type]);
+    disp(['readMeshDataSTL: read mash data begin, file type read as ',file_type]);
 end
 
 if strcmp(file_type,'binary')
@@ -165,7 +168,7 @@ element_list=marker_element;
 marker_list={marker_name,marker_element_number,marker_element};
 
 if INFORMATION_FLAG
-    disp('readMeshData: read mash data done!');
+    disp('readMeshDataSTL: read mash data done!');
 end
 
     function point=getASCIIPoint(file_mesh)
