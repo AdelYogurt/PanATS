@@ -20,7 +20,7 @@ end
 
 % initialize model
 g_model=struct('g_Point',[],'g_Element',[],'g_Marker',[],...
-    'geometry_output',[],'inviscid_output',[],'heat_output',[],'FEM_output',[],...
+    'inviscid_output',[],'heat_output',[],'viscid_output',[],'FEM_output',[],...
     'post_output',[]);
 
 cfg_file=fopen(cfg_filename,'r');
@@ -33,14 +33,14 @@ while (~feof(cfg_file))
         parameter=string_list{1};
         value=string_list{2:end};
 
-%         % check out if exist empty
-%         value_index=1;
-%         while (value_index <= length(value))
-%             if isempty(value{value_index})
-%                 value(value_index=[]);
-%             end
-%             value_index=value_index+1;
-%         end
+        %         % check out if exist empty
+        %         value_index=1;
+        %         while (value_index <= length(value))
+        %             if isempty(value{value_index})
+        %                 value(value_index=[]);
+        %             end
+        %             value_index=value_index+1;
+        %         end
         if isempty(value)
             error('readModelCFG: definition lack value');
         end
@@ -71,9 +71,6 @@ end
 if ~isfield(g_model,'SIDESLIP_ANGLE')
     g_model.SIDESLIP_ANGLE=0;
 end
-if ~isfield(g_model,'MARKER_MONITORING')
-    g_model.MARKER_MONITORING=[];
-end
 
 % load mesh data
 switch g_model.MESH_FORMAT
@@ -90,6 +87,11 @@ switch g_model.MESH_FORMAT
         g_model.min_bou=output.min_bou;
         g_model.max_bou=output.max_bou;
         g_model.MARKER_MONITORING=g_model.MESH_FILENAME;
+
+        % for STL file, if MARKER_MONITORING than will analysis all file
+        if ~isfield(g_model,'MARKER_MONITORING')
+            g_model.MARKER_MONITORING=g_model.MESH_FILENAME;
+        end
     case 'INP'
         [g_model.point_list,g_model.element_list,g_model.marker_list,...
             output]=readMeshDataINP(g_model.MESH_FILENAME,g_model.MESH_SCALE);
@@ -98,5 +100,12 @@ switch g_model.MESH_FORMAT
         g_model.max_bou=output.max_bou;
 end
 
+if ~isfield(g_model,'MARKER_MONITORING')
+    error('preModelCFG: lack marker moniter');
+else
+    if ischar(g_model.MARKER_MONITORING)
+        g_model.MARKER_MONITORING={g_model.MARKER_MONITORING};
+    end
+end
 
 end

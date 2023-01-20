@@ -53,7 +53,7 @@ elseif dimension == 3
     %     line(point_list(point_index_list+1,1),point_list(point_index_list+1,2),point_list(point_index_list+1,3),...
     %         'LineStyle','none','Marker','o');
     for marker_index=1:length(marker_name_list)
-        marker_element=getMarkerElement(marker_name_list{marker_index});
+        marker_element=getMarkerElement(marker_name_list{marker_index},marker_list);
         for element_index=1:size(marker_element,1)
             % element point index
             node_index=[marker_element(element_index).point_index_list,...
@@ -69,19 +69,4 @@ axis equal;
 xlabel('x');
 ylabel('y');
 
-    function Marker_Element=getMarkerElement(marker_name)
-        % return specified marker
-        % marker is include all element unit of marker
-        % element include element type and point index
-        %
-        Marker_Element=[];
-        for marker_index=1:size(marker_list,1)
-            if strcmp(marker_list{marker_index,1},marker_name)
-                Marker_Element=marker_list{marker_index,3};
-            end
-        end
-        if isempty(Marker_Element)
-            error('getMarkerElement: no marker found')
-        end
-    end
 end

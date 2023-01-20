@@ -46,6 +46,7 @@ read_part_flag=0;
 read_point_flag=0;
 read_element_flag=0;
 % loop each line
+marker_index=0;
 while ~feof(file_mesh)
     string_data=fgetl(file_mesh);
     string_list=strsplit(string_data,{' ',',',char(9)});
@@ -55,9 +56,10 @@ while ~feof(file_mesh)
 
     % detact read part
     if strcmp(string_list{1},'*Part')
-        marker_name=string_list{2}(6:end);
         read_part_flag=1;
 
+        marker_name=string_list{2}(6:end);
+        marker_index=marker_index+1;
         marker_element=[];
         continue;
     end
@@ -93,23 +95,23 @@ while ~feof(file_mesh)
     end
 
     % begin read marker element data
+    element_empty=HATSElement([],[]);
     if read_element_flag
         element_point_number=length(string_list)-1;
-        element=HATSElement([],[]);
-
-        % add node index
-        element.point_index_list=int32(str2double(string_list(2:(element_point_number+1))));
         switch element_point_number
             case 2
-                element.element_type=int8(3);
+                element_type=int8(3);
             case 3
-                element.element_type=int8(5);
+                element_type=int8(5);
             case 4
-                element.element_type=int8(9);
+                element_type=int8(9);
             otherwise
                 error('readMeshDataINP: unknown element type')
         end
-        element.nearby_index_list=int32(zeros(1,element_point_number));
+        % new element
+        element=HATSElement(element_type,int32(str2double(string_list(2:(element_point_number+1)))));
+        element.element_nearby_list=repmat(element_empty,1,element_point_number);
+        element.marker_index=marker_index;
 
         % add element type
         marker_element=[marker_element;element];

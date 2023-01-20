@@ -79,6 +79,7 @@ else
     error('readMeshData:NMARK do not exist')
 end
 
+element_empty=HATSElement([],[]);
 marker_list=cell(marker_number,3);
 for marker_index=1:marker_number
     % read marker name
@@ -92,13 +93,8 @@ for marker_index=1:marker_number
     % read marker element node index
     marker_element=repmat(HATSElement([],[]),marker_element_number,1);
     for element_index=1:marker_element_number
-        % new element
-        element=HATSElement([],[]);
-
         marker_element_string=strsplit(fgetl(file_mesh));
-
         marker_element_type=int8(str2double(marker_element_string{1}));
-        element.element_type=marker_element_type;
         switch marker_element_type
             case 3
                 element_node_number=2;
@@ -108,10 +104,12 @@ for marker_index=1:marker_number
                 element_node_number=4;
         end
 
+        % create new HATSElement
         % su2 file point index is start from 0
-        element.point_index_list=...
-            int32(str2double(marker_element_string(2:1+element_node_number)))+1;
-        element.nearby_index_list=int32(zeros(1,element_node_number));
+        element=HATSElement(marker_element_type,...
+            int32(str2double(marker_element_string(2:1+element_node_number)))+1);
+        element.element_nearby_list=repmat(element_empty,1,element_node_number);
+        element.marker_index=marker_index;
 
         % give element
         marker_element(element_index)=element;
@@ -214,19 +212,4 @@ if INFORMATION_FLAG
     disp('readMeshDataSU2: read mash data done!')
 end
 
-    function Marker_Element=getMarkerElement(marker_name)
-        % return specified marker
-        % marker is include all element unit of marker
-        % element include element type and point index
-        %
-        Marker_Element=[];
-        for marker_index=1:size(marker_list,1)
-            if strcmp(marker_list{marker_index,1},marker_name)
-                Marker_Element=marker_list{marker_index,3};
-            end
-        end
-        if isempty(Marker_Element)
-            error('getMarkerElement: no marker found')
-        end
-    end
 end
