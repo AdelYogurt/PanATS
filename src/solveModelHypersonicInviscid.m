@@ -17,6 +17,27 @@ global g_geometry g_Point g_Element g_Marker...
 marker_element_number=size(HATS_element_list,1);
 dimension=3;
 
+vector_flow=[1;0;0];
+
+AOA=AOA/180*pi;
+cos_AOA=cos(AOA);
+sin_AOA=sin(AOA);
+rotation_AOA=[
+    cos_AOA 0 -sin_AOA;
+    0 1 0;
+    sin_AOA 0 cos_AOA];
+
+SIDESLIP_ANGLE=SIDESLIP_ANGLE/180*pi;
+cos_SIDESLIP_ANGLE=cos(SIDESLIP_ANGLE);
+sin_SIDESLIP_ANGLE=sin(SIDESLIP_ANGLE);
+rotation_SIDESLIP_ANGLE=[
+    cos_SIDESLIP_ANGLE -sin_SIDESLIP_ANGLE 0;
+    sin_SIDESLIP_ANGLE cos_SIDESLIP_ANGLE 0;
+    0 0 1];
+
+vector_flow=rotation_AOA*rotation_SIDESLIP_ANGLE*vector_flow;
+g_geometry.vector_flow=vector_flow;
+
 vector_flow=g_geometry.vector_flow;
 
 R=287.0955;

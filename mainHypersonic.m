@@ -7,8 +7,9 @@ addpath([pwd,'\input']);
 
 global g_model
 
+g_model=preModelCFG('slender.cfg');
 % g_model=preModelCFG('waverider.cfg');
-g_model=preModelCFG('INP_test.cfg');
+% g_model=preModelCFG('INP_test.cfg');
 displayMarker()
 
 % AOA_list=[0,3,5,7,10];

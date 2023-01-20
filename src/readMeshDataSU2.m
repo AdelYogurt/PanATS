@@ -6,7 +6,7 @@ function [point_list,element_list,marker_list,geometry]=readMeshDataSU2...
 %
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
-% element contain element_type, node_index1, node_index2, ...
+% element contain HATSelement
 % marker_list contain maker{marker_name,marker_element_number,marker_element}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
@@ -90,15 +90,15 @@ for marker_index=1:marker_number
     marker_element_number=str2double(marker_element_number_string{2});
 
     % read marker element node index
-    if dimension == 2
-        marker_element=zeros(marker_element_number,3);
-    elseif dimension == 3
-        marker_element=zeros(marker_element_number,5);
-    end
-    for marker_element_index=1:marker_element_number
+    marker_element=repmat(HATSElement([],[]),marker_element_number,1);
+    for element_index=1:marker_element_number
+        % new element
+        element=HATSElement([],[]);
+
         marker_element_string=strsplit(fgetl(file_mesh));
-        marker_element_type=str2double(marker_element_string{1});
-        marker_element(marker_element_index,1)=marker_element_type;
+
+        marker_element_type=int8(str2double(marker_element_string{1}));
+        element.element_type=marker_element_type;
         switch marker_element_type
             case 3
                 element_node_number=2;
@@ -107,10 +107,14 @@ for marker_index=1:marker_number
             case 9
                 element_node_number=4;
         end
-        for node_index=1:element_node_number
-            % su2 file point index is start from 0
-            marker_element(marker_element_index,node_index+1)=str2double(marker_element_string{node_index+1})+1;
-        end
+
+        % su2 file point index is start from 0
+        element.point_index_list=...
+            int32(str2double(marker_element_string(2:1+element_node_number)))+1;
+        element.nearby_index_list=int32(zeros(1,element_node_number));
+
+        % give element
+        marker_element(element_index)=element;
     end
 
     marker_list{marker_index,1}=marker_name;
@@ -128,19 +132,18 @@ marker_point_index_list=zeros(1,4*marker_element_number);
 for marker_index=1:length(marker_list)
     marker_element=marker_list{marker_index,3};
     for element_index=1:marker_list{marker_index,2}
-        element_type=marker_element(element_index,1);
-        switch element_type
+        switch marker_element(element_index).element_type
             case 3
                 marker_point_index_list(marker_point_number+1:marker_point_number+2)=...
-                    marker_element(element_index,2:3);
+                    marker_element(element_index).point_index_list;
                 marker_point_number=marker_point_number+2;
             case 5
                 marker_point_index_list(marker_point_number+1:marker_point_number+3)=...
-                    marker_element(element_index,2:4);
+                    marker_element(element_index).point_index_list;
                 marker_point_number=marker_point_number+3;
             case 9
                 marker_point_index_list(marker_point_number+1:marker_point_number+4)=...
-                    marker_element(element_index,2:5);
+                    marker_element(element_index).point_index_list;
                 marker_point_number=marker_point_number+4;
         end
     end
@@ -159,8 +162,7 @@ marker_point_number=0;
 for marker_index=1:length(marker_list)
     marker_element=marker_list{marker_index,3};
     for element_index=1:marker_list{marker_index,2}
-        element_type=marker_element(element_index,1);
-        switch element_type
+        switch marker_element(element_index).element_type
             case 2
                 element_node_number=2;
                 marker_point_number=marker_point_number+2;
@@ -172,7 +174,7 @@ for marker_index=1:length(marker_list)
                 marker_point_number=marker_point_number+4;
         end
         for point_index=1:element_node_number
-            marker_element(element_index,1+point_index)=...
+            marker_element(element_index).point_index_list(point_index)=...
                 mapping_list(marker_point_number-element_node_number+point_index);
         end
     end
@@ -191,9 +193,6 @@ for node_index=1:point_number
     % only on marker point will be read
     if marker_point_index_list(point_index_position) == node_index
         point_string=strsplit(point_string,{char(32),char(9)});
-        %     if isempty(node_string{1})
-        %        node_string=node_string(2:end);
-        %     end
         point_list(point_index_position,1:dimension)=str2double(point_string(1:dimension))*scale;
         point_index_position=point_index_position+1;
     end

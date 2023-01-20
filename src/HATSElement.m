@@ -1,14 +1,14 @@
 classdef HATSElement < handle
     % HATS Element Node Class
     properties
-        element_type;
-        point_index_list; % rank vector
+        element_type=[];
+        point_index_list=[]; % rank vector
         
-        normal_vector; % rank vector
-        area;
+        normal_vector=[]; % rank vector
+        area=[];
         
-        in_index_list; % rank vector, inflow element index
-        out_index_list; % rank vector, outflow element index
+        nearby_index_list=[]; % rank vector, contact element list
+        nearby_number=int8(0);
     end
     methods
         function HATS_element=HATSElement...

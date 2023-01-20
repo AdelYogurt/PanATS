@@ -1,9 +1,7 @@
-function preModelPanel(AOA,SIDESLIP_ANGLE,symmetry)
-% function to prepare model
-% base on g_Point g_Element g_Marker, marker monitoring, AOA
-% analysis stagnation point of aircaft
-% stagnation point will be root of element tree
-% calculate marker element geomertry (element normal vector, center point)
+function preModelPanel()
+% function to prepare model for panel method(only basical function)
+% 
+% calculate monitor element geomertry (element normal vector)
 % project element center point to flow vector
 % sort g_Element by element_center_point_project_flow_vector
 % nearby element only search in nearby after sort g_Element
@@ -18,42 +16,7 @@ function preModelPanel(AOA,SIDESLIP_ANGLE,symmetry)
 %
 % copyright Adel 2022.11
 %
-global g_geometry g_Point g_Element g_Marker...
-    ADtree_marker_element HATS_element_list
-if nargin < 3
-    symmetry=[];
-end
-
-g_geometry.dimension=3;
-g_geometry.AOA=AOA;
-g_geometry.SIDESLIP_ANGLE=SIDESLIP_ANGLE;
-g_geometry.symmetry=symmetry;
-
-geometry_torlance=1e-6;
-search_range=10;
-
-vector_flow=[1;0;0];
-
-AOA=AOA/180*pi;
-cos_AOA=cos(AOA);
-sin_AOA=sin(AOA);
-rotation_AOA=[
-    cos_AOA 0 -sin_AOA;
-    0 1 0;
-    sin_AOA 0 cos_AOA];
-
-SIDESLIP_ANGLE=SIDESLIP_ANGLE/180*pi;
-cos_SIDESLIP_ANGLE=cos(SIDESLIP_ANGLE);
-sin_SIDESLIP_ANGLE=sin(SIDESLIP_ANGLE);
-rotation_SIDESLIP_ANGLE=[
-    cos_SIDESLIP_ANGLE -sin_SIDESLIP_ANGLE 0;
-    sin_SIDESLIP_ANGLE cos_SIDESLIP_ANGLE 0;
-    0 0 1];
-
-vector_flow=rotation_AOA*rotation_SIDESLIP_ANGLE*vector_flow;
-g_geometry.vector_flow=vector_flow;
-
-element_number=length(g_Element);
+global g_model
 
 % calculate element geometry parameter
 volume_center_point=zeros(1,3);

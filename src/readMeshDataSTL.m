@@ -7,7 +7,7 @@ function [point_list,element_list,marker_list,geometry]=readMeshDataSTL...
 %
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
-% element contain element_type, node_index1, node_index2, ...
+% element contain HATSelement
 % marker_list contain maker{marker_name,marker_element_number,marker_element}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
@@ -146,7 +146,8 @@ fclose(file_mesh);
 clear('file_mesh');
 
 [ADT,index_list]=ADTreePoint(point_list,[],[],torlance);
-marker_element=zeros(marker_element_number,4);
+
+marker_element=repmat(HATSElement([],[]),marker_element_number,1);
 
 geometry.min_bou=ADT.min_bou;
 geometry.max_bou=ADT.max_bou;
@@ -156,15 +157,16 @@ geometry.dimension=3;
 [index_list,~,mapping_list]=unique(index_list);
 % updata element_list point index to new list
 for element_index=1:marker_element_number
-    marker_element(element_index,1)=5;
-    for point_index=1:3
-        marker_element(element_index,1+point_index)=...
-            mapping_list(3*(element_index-1)+point_index);
-    end
+    % new element
+    element=HATSElement(int8(5),int32(mapping_list(3*(element_index-1)+(1:3))'));
+    element.nearby_index_list=int32(zeros(1,3));
+
+    % give element
+    marker_element(element_index)=element;
 end
 
 point_list=point_list(index_list,:);
-element_list=marker_element;
+element_list=[];
 marker_list={marker_name,marker_element_number,marker_element};
 
 if INFORMATION_FLAG

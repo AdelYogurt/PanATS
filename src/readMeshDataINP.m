@@ -6,7 +6,7 @@ function [point_list,element_list,marker_list,geometry]=readMeshDataINP...
 %
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
-% element contain element_type, node_index1, node_index2, ...
+% element contain HATSelement
 % marker_list contain maker{marker_name,marker_element_number,marker_element}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
@@ -95,24 +95,23 @@ while ~feof(file_mesh)
     % begin read marker element data
     if read_element_flag
         element_point_number=length(string_list)-1;
-        element=zeros(1,element_point_number+1);
+        element=HATSElement([],[]);
 
         % add node index
-        element(2:(element_point_number+1))=str2double(string_list(2:(element_point_number+1)));
-
+        element.point_index_list=int32(str2double(string_list(2:(element_point_number+1))));
         switch element_point_number
             case 2
-                element_type=3;
+                element.element_type=int8(3);
             case 3
-                element_type=5;
+                element.element_type=int8(5);
             case 4
-                element_type=9;
+                element.element_type=int8(9);
             otherwise
                 error('readMeshDataINP: unknown element type')
         end
+        element.nearby_index_list=int32(zeros(1,element_point_number));
 
         % add element type
-        element(1)=element_type;
         marker_element=[marker_element;element];
     end
 
