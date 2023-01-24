@@ -7,35 +7,34 @@ addpath([pwd,'\input']);
 
 global g_model
 
-% g_model=preModelCFG('slender.cfg');
-g_model=preModelCFG('waverider.cfg');
+g_model=preModelCFG('slender.cfg');
+% g_model=preModelCFG('waverider.cfg');
 % g_model=preModelCFG('INP_test.cfg');
+% g_model=preModelCFG('geo_test.cfg');
 preModelPanel()
-displayMarker()
+
+% [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
+preModelStreamline()
+solveModelStreamline();
+
+% [area,volume]=solveGeometry()
+displayMarker('SLENDER')
+
+% displayModel('P')
 
 % AOA_list=[0,3,5,7,10];
 % Cl_list=zeros(1,length(AOA_list));
 % Cd_list=zeros(1,length(AOA_list));
 % LDratio_list=zeros(1,length(AOA_list));
-% Cmz_list=zeros(1,length(AOA_list));
+% Cmy_list=zeros(1,length(AOA_list));
 % for AOA_index=1:length(AOA_list)
 %     AOA=AOA_list(AOA_index);
-%     preModelPanel(AOA,SIDESLIP_ANGLE,SYMMETRY)
-%     solveModelStreamline...
-%         ([],[],[],[],[],[],AOA,SIDESLIP_ANGLE);
-%     [Cl,Cd,LDratio,Cmz]=solveModelHypersonicInviscid...
-%         ([],[],FREESTREAM_TEMPERATURE,FREESTREAM_PRESSURE,MACH_NUMBER,GAMA_VALUE,AOA,SIDESLIP_ANGLE,...
-%         [REF_ORIGIN_MOMENT_X,REF_ORIGIN_MOMENT_Y,REF_ORIGIN_MOMENT_Z],REF_LENGTH,REF_AREA,REYNOLDS_NUMBER);
-%     max_heat_flow=solveModelHypersonicHeat...
-%         ([],[],FREESTREAM_TEMPERATURE,FREESTREAM_PRESSURE,MACH_NUMBER,GAMA_VALUE,AOA,SIDESLIP_ANGLE,...
-%         MARKER_ISOTHERMAL);
-%     [Cl,Cd,LDratio,Cmz]=solveModelHypersonicViscid...
-%         ([],[],FREESTREAM_TEMPERATURE,FREESTREAM_PRESSURE,MACH_NUMBER,GAMA_VALUE,AOA,SIDESLIP_ANGLE,...
-%         [REF_ORIGIN_MOMENT_X,REF_ORIGIN_MOMENT_Y,REF_ORIGIN_MOMENT_Z],REF_LENGTH,REF_AREA,REYNOLDS_NUMBER);
+%     g_model.AOA=AOA;
+%     [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid();
 %     Cl_list(AOA_index)=Cl;
 %     Cd_list(AOA_index)=Cd;
 %     LDratio_list(AOA_index)=LDratio;
-%     Cmz_list(AOA_index)=Cmz;
+%     Cmy_list(AOA_index)=Cmy;
 % end
 % 
 % figure();
@@ -64,7 +63,7 @@ displayMarker()
 % 
 % subplot(2,2,4);
 % line(AOA_list,[0,0.03,0.07,0.095,0.158],'Marker','o','Color','r','LineStyle','none');
-% line(AOA_list,Cmz_list,'Marker','*','Color','b')
+% line(AOA_list,Cmy_list,'Marker','*','Color','b')
 % set(gca,'YLim',[-0.05,0.2]);
 % xlabel('\alpha deg');
 % ylabel('C_m');

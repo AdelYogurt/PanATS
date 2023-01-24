@@ -55,10 +55,17 @@ elseif dimension == 3
     for marker_index=1:length(marker_name_list)
         marker_element=getMarkerElement(marker_name_list{marker_index},marker_list);
         for element_index=1:size(marker_element,1)
+            element=marker_element(element_index);
             % element point index
-            node_index=[marker_element(element_index).point_index_list,...
-                marker_element(element_index).point_index_list(1)];
+            node_index=[element.point_index_list,...
+                element.point_index_list(1)];
             line(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3));
+            if ~isempty(element.stagnation)
+                if element.stagnation
+                    patch(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3),'r');
+                end
+                drawFlow(element);
+            end
         end
     end
 
@@ -69,4 +76,12 @@ axis equal;
 xlabel('x');
 ylabel('y');
 
+end
+
+function drawFlow(element)
+surface_flow=element.surface_flow;
+point=element.center_point;
+hold on;
+quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.001);
+hold off;
 end

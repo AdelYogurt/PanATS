@@ -1,6 +1,4 @@
-function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid...
-    (rou_1,V_1,T_1,P_1,Ma_1,gama,AOA,SIDESLIP_ANGLE,...
-    ref_point,ref_length,ref_area,Re)
+function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
 % Newton method to calculate hypersonic aircraft
 %
 % point_list is coordinate of all node
@@ -10,16 +8,17 @@ function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid...
 %
 % copyright Adel 2022.11
 %
-global g_geometry g_Point g_Element g_Marker...
-    ADtree_marker_element HATS_element_list...
-    streamline_output inviscid_output
+global g_model
 
-marker_element_number=size(HATS_element_list,1);
-dimension=3;
+dimension=g_model.dimension;
+point_list=g_model.point_list;
+marker_list=g_model.marker_list;
+MARKER_MONITORING=g_model.MARKER_MONITORING;
 
-vector_flow=[1;0;0];
+% calculate inflow vector
+free_flow_vector=[1;0;0];
 
-AOA=AOA/180*pi;
+AOA=g_model.AOA/180*pi;
 cos_AOA=cos(AOA);
 sin_AOA=sin(AOA);
 rotation_AOA=[
@@ -27,32 +26,33 @@ rotation_AOA=[
     0 1 0;
     sin_AOA 0 cos_AOA];
 
-SIDESLIP_ANGLE=SIDESLIP_ANGLE/180*pi;
-cos_SIDESLIP_ANGLE=cos(SIDESLIP_ANGLE);
-sin_SIDESLIP_ANGLE=sin(SIDESLIP_ANGLE);
+AOS=g_model.SIDESLIP_ANGLE/180*pi;
+cos_AOS=cos(AOS);
+sin_AOS=sin(AOS);
 rotation_SIDESLIP_ANGLE=[
-    cos_SIDESLIP_ANGLE -sin_SIDESLIP_ANGLE 0;
-    sin_SIDESLIP_ANGLE cos_SIDESLIP_ANGLE 0;
+    cos_AOS -sin_AOS 0;
+    sin_AOS cos_AOS 0;
     0 0 1];
 
-vector_flow=rotation_AOA*rotation_SIDESLIP_ANGLE*vector_flow;
-g_geometry.vector_flow=vector_flow;
+free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
+g_model.free_flow_vector=free_flow_vector;
 
-vector_flow=g_geometry.vector_flow;
+% reference value
+ref_point=[g_model.REF_ORIGIN_MOMENT_X,g_model.REF_ORIGIN_MOMENT_Y,g_model.REF_ORIGIN_MOMENT_Z];
+ref_area=g_model.REF_AREA;
+ref_length=g_model.REF_LENGTH;
+
+T_1=g_model.FREESTREAM_TEMPERATURE;
+P_1=g_model.FREESTREAM_PRESSURE;
+Ma_1=g_model.MACH_NUMBER;
+gama=g_model.GAMA_VALUE;
+Re=g_model.REYNOLDS_NUMBER;
 
 R=287.0955;
 rou_1=P_1/R/T_1;
 a_1=sqrt(gama*R*T_1);
 V_1=a_1*Ma_1;
 q_1=rou_1*V_1*V_1/2;
-
-g_geometry.rou_1=rou_1;
-g_geometry.V_1=V_1;
-g_geometry.T_1=T_1;
-g_geometry.P_1=P_1;
-g_geometry.Ma_1=Ma_1;
-g_geometry.gama=gama;
-g_geometry.Re=Re;
 
 % solve prepare
 Ma_1_sq=Ma_1*Ma_1;
@@ -86,60 +86,79 @@ else
     HIGH_HYPERSONIC_FLAG=1;
 end
 
-delta_list=zeros(marker_element_number,1);
-Cp_list=zeros(marker_element_number,1);
-P_list=zeros(marker_element_number,1);
-dFn_list=zeros(marker_element_number,3);
-dMn_list=zeros(marker_element_number,3);
-for element_index=1:marker_element_number
-    center_point=ADtree_marker_element.center_point_list(element_index,:);
-    
-    normal_vector=HATS_element_list(element_index).normal_vector;
-    area=HATS_element_list(element_index).area;
-    
-    % theta is angle of negative normal vector and nomlz_vec_air
-    cos_theta=-normal_vector*vector_flow;
-    if cos_theta < -1
-        theta=pi;
-    elseif cos_theta > 1
-        theta=0;
-    else
-        theta=acos(cos_theta);
+% initialize data sort array
+inviscid_output=repmat(...
+    struct('delta_list',[],'Cp_list',[],'P_list',[],'dFn_list',[],'dMn_list',[]),...
+    length(marker_list),1); % delta, Cp, P, dFn, dMn
+force=zeros(1,3);
+moment=zeros(1,3);
+
+for monitor_index=1:length(MARKER_MONITORING)
+    [marker_element,marker_index]=getMarkerElement(MARKER_MONITORING(monitor_index),marker_list);
+
+    delta_list=zeros(marker_list(marker_index).element_number,1);
+    Cp_list=zeros(marker_list(marker_index).element_number,1);
+    P_list=zeros(marker_list(marker_index).element_number,1);
+    dFn_list=zeros(marker_list(marker_index).element_number,3);
+    dMn_list=zeros(marker_list(marker_index).element_number,3);
+
+    for element_index=1:marker_list(marker_index).element_number
+        element=marker_element(element_index);
+
+        normal_vector=element.normal_vector;
+        area=element.area;
+
+        % theta is angle of negative normal vector and nomlz_vec_air
+        cos_theta=-normal_vector*free_flow_vector;
+        if cos_theta < -1
+            theta=pi;
+        elseif cos_theta > 1
+            theta=0;
+        else
+            theta=acos(cos_theta);
+        end
+        % delta is attack angle
+        delta=abs(pi/2-theta);
+
+        % Cp
+        if theta < pi/2
+            % modified Newton
+            Cp=Cp_max*cos_theta^2;
+        else
+            % ACM experantial
+            Cp=max(-(delta*3.8197)*(1/Ma_1_sq),-(1/Ma_1_sq));
+        end
+
+        % p
+        P=q_1*Cp+P_1;
+
+        if P < 0
+            disp('P < 0');
+        end
+
+        delta_list(element_index,:)=delta;
+        Cp_list(element_index,:)=Cp;
+        P_list(element_index,:)=P;
+        dFn_list(element_index,:)=-normal_vector*area*P;
+        dMn_list(element_index,:)=cross(element.center_point-ref_point,dFn_list(element_index,:));
+
+        force=force+dFn_list(element_index,:);
+        moment=moment+dFn_list(element_index,:);
     end
-    % delta is attack angle
-    delta=abs(pi/2-theta);
-    
-    % Cp
-    if theta < pi/2
-        % modified Newton
-        Cp=Cp_max*cos_theta^2;
-    else
-        % ACM experantial
-        Cp=max(-(delta*3.8197)*(1/Ma_1_sq),-(1/Ma_1_sq));
-    end
-    
-    % p
-    P=q_1*Cp+P_1;
-    
-    if P < 0
-        disp('P < 0');
-    end
-    
-    delta_list(element_index,:)=delta;
-    Cp_list(element_index,:)=Cp;
-    P_list(element_index,:)=P;
-    dFn_list(element_index,:)=-normal_vector*area*P;
-    dMn_list(element_index,:)=cross(center_point-ref_point,dFn_list(element_index,:));
+
+    inviscid_output(marker_index).delta_list=delta_list;
+    inviscid_output(marker_index).Cp_list=Cp_list;
+    inviscid_output(marker_index).P_list=P_list;
+    inviscid_output(marker_index).dFn_list=dFn_list;
+    inviscid_output(marker_index).dMn_list=dMn_list;
 end
 
-% calculate lift and drag
-data_force=sum(dFn_list,1);
-force=sum(data_force,1);
-drag=force*vector_flow;
+% calculate lift and drag coefficient
+drag=force*free_flow_vector;
 rotation_matrix=[0,0,1;
     0,1,0;
     -1,0,0]';
-lift=force*(rotation_matrix*vector_flow);
+lift=force*(rotation_matrix*free_flow_vector);
 Cl=lift/ref_area/q_1;
 Cd=drag/ref_area/q_1;
 LDratio=Cl/Cd;
@@ -149,12 +168,5 @@ moment=sum(dMn_list,1);
 moment_y=moment*[0;1;0];
 Cmy=moment_y/ref_area/ref_length/q_1;
 
-inviscid_output.delta_list=delta_list;
-inviscid_output.Cp_list=Cp_list;
-inviscid_output.P_list=P_list;
-inviscid_output.dFn_list=dFn_list;
-inviscid_output.dMn_list=dMn_list;
-inviscid_output.Cl=Cl;
-inviscid_output.Cd=Cd;
-inviscid_output.Cmz=Cmy;
+g_model.inviscid_output=inviscid_output;
 end

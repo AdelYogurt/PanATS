@@ -1,21 +1,14 @@
 function displayModel(type)
 % display solve result
 %
-global g_geometry g_Point g_Element g_Marker...
-    ADtree_marker_element HATS_element_list...
-    streamline_output inviscid_output heat_output viscid_output FEM_output
+global g_model
 
-if length(HATS_element_list) < 5000
-    DRAW_FACE_FLAG=1;
-else
-    DRAW_FACE_FLAG=0;
-end
-
+DRAW_FACE_FLAG=1;
 DRAW_SYM_FLAG=1;
 DRAW_INITIAL_GEO=0;
 
-element_number=length(HATS_element_list);
-center_point_list=ADtree_marker_element.center_point_list;
+point_list=g_model.point_list;
+marker_list=g_model.marker_list;
 
 % inflow_direction_list=streamline_output.inflow_direction_list;
 
@@ -24,16 +17,18 @@ figure_result=figure();
 
 switch type
     case 'P'
-        P_list=inviscid_output.P_list;
+        P_list={g_model.inviscid_output.P_list};
         drawData(P_list);
         title('Pressure');
+        figure_result.Children.set('ColorScale','log')
     case 'log_P'
         P_1=g_geometry.P_1;
-        log_P_list=log(inviscid_output.P_list/P_1)/log(10)+1;
+        log_P_list={log(g_model.inviscid_output.P_list/P_1)/log(10)+1};
         drawData(log_P_list);
         title('log Pressure');
+        figure_result.Children.set('ColorScale','linear')
     case 'Cp'
-        Cp_list=inviscid_output.Cp_list;
+        Cp_list={g_model.inviscid_output.Cp_list};
         drawData(Cp_list);
         title('Surface Pressure Coefficient');
     case 'Q'
@@ -69,8 +64,8 @@ switch type
         
         % drawing displacements
         % calculate zoom in/out figure scale
-        min_node=min(g_Point);
-        max_node=max(g_Point);
+        min_node=min(point_list);
+        max_node=max(point_list);
         max_distance=sqrt(sum((max_node-min_node).^2));
         delta=sqrt(sum((abs_delta_max).^2));
         if delta == 0
@@ -82,9 +77,9 @@ switch type
         element_number=size(g_Element,1);
         draw_order=[1,2,3,1];
         for element_index=1:element_number
-            xpt=g_Point(g_Element(element_index,draw_order+1),1);
-            ypt=g_Point(g_Element(element_index,draw_order+1),2);
-            zpt=g_Point(g_Element(element_index,draw_order+1),3);
+            xpt=point_list(g_Element(element_index,draw_order+1),1);
+            ypt=point_list(g_Element(element_index,draw_order+1),2);
+            zpt=point_list(g_Element(element_index,draw_order+1),3);
             disx=U_list(DOF_node*g_Element(element_index,draw_order+1)-5);
             disy=U_list(DOF_node*g_Element(element_index,draw_order+1)-4);
             disz=U_list(DOF_node*g_Element(element_index,draw_order+1)-3);
@@ -104,45 +99,53 @@ drawnow;
 
     function drawData(data_list)
         if DRAW_FACE_FLAG
-            for element_index=1:element_number
-                point_index_list=HATS_element_list(element_index).point_index_list;
-                patch(g_Point(point_index_list,1),g_Point(point_index_list,2),g_Point(point_index_list,3),...
-                    data_list(element_index),'LineStyle','none')
-                
-                if DRAW_INITIAL_GEO
-                    line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                        'LineStyle',':','Color','r','LineWidth',0.5);
+            for marker_index=1:length(data_list)
+                if isempty(data_list{marker_index})
+                    continue;
                 end
-                
-                if DRAW_SYM_FLAG
-                    switch g_geometry.symmetry
-                        case 'XOY'
-                            patch(g_Point(point_index_list,1),g_Point(point_index_list,2),-g_Point(point_index_list,3),...
-                                data_list(element_index),'LineStyle','none')
-                            if DRAW_INITIAL_GEO
-                                line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),-g_geometry.initial_point(point_index_list,3),...
-                                    'LineStyle',':','Color','r','LineWidth',0.5);
-                            end
-                        case 'YOZ'
-                            patch(-g_Point(point_index_list,1),g_Point(point_index_list,2),g_Point(point_index_list,3),...
-                                data_list(element_index),'LineStyle','none')
-                            if DRAW_INITIAL_GEO
-                                line(-g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                                    'LineStyle',':','Color','r','LineWidth',0.5);
-                            end
-                        case 'ZOX'
-                            patch(g_Point(point_index_list,1),-g_Point(point_index_list,2),g_Point(point_index_list,3),...
-                                data_list(element_index),'LineStyle','none')
-                            if DRAW_INITIAL_GEO
-                                line(g_geometry.initial_point(point_index_list,1),-g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                                    'LineStyle',':','Color','r','LineWidth',0.5);
-                            end
+
+                % only have data will be draw
+                data=data_list{marker_index};
+                marker_element=marker_list(marker_index).element_list;
+                element_number=marker_list(marker_index).element_number;
+                for element_index=1:element_number
+                    point_index_list=marker_element(element_index).point_index_list;
+                    patch(point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
+                        data(element_index),'LineStyle','none')
+
+                    if DRAW_INITIAL_GEO
+                        line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
+                            'LineStyle',':','Color','r','LineWidth',0.5);
+                    end
+
+                    if DRAW_SYM_FLAG
+                        switch g_model.SYMMETRY
+                            case 'XOY'
+                                patch(point_list(point_index_list,1),point_list(point_index_list,2),-point_list(point_index_list,3),...
+                                    data(element_index),'LineStyle','none')
+                                if DRAW_INITIAL_GEO
+                                    line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),-g_geometry.initial_point(point_index_list,3),...
+                                        'LineStyle',':','Color','r','LineWidth',0.5);
+                                end
+                            case 'YOZ'
+                                patch(-point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
+                                    data(element_index),'LineStyle','none')
+                                if DRAW_INITIAL_GEO
+                                    line(-g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
+                                        'LineStyle',':','Color','r','LineWidth',0.5);
+                                end
+                            case 'ZOX'
+                                patch(point_list(point_index_list,1),-point_list(point_index_list,2),point_list(point_index_list,3),...
+                                    data(element_index),'LineStyle','none')
+                                if DRAW_INITIAL_GEO
+                                    line(g_geometry.initial_point(point_index_list,1),-g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
+                                        'LineStyle',':','Color','r','LineWidth',0.5);
+                                end
+                        end
                     end
                 end
             end
         else
-            scatter3(center_point_list(:,1),center_point_list(:,2),center_point_list(:,3),...
-                [],data_list,'Marker','.');
         end
     end
 end

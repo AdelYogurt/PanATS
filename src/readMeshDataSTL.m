@@ -1,4 +1,4 @@
-function [point_list,element_list,marker_list,geometry]=readMeshDataSTL...
+function [point_list,element_list,marker_list,geometry,marker_moniter]=readMeshDataSTL...
     (filename_mesh_list,scale,file_type)
 % read mash data from data file
 % input mesh_filename(support .stl file), scale(geometry zoom scale),
@@ -20,6 +20,8 @@ end
 
 INFORMATION_FLAG=1;
 
+geometry_torlance=1e-12;
+
 if ischar(filename_mesh_list)
     filename_mesh_list={filename_mesh_list};
 end
@@ -27,6 +29,7 @@ end
 point_list=[];
 element_list=[];
 marker_list=cell(length(filename_mesh_list),3);
+marker_moniter=cell(length(filename_mesh_list),1);
 
 for marker_index=1:length(filename_mesh_list)
     filename_mesh=filename_mesh_list{marker_index};
@@ -41,8 +44,6 @@ for marker_index=1:length(filename_mesh_list)
     if exist(filename_mesh,'file')~=2
         error('readMeshDataSTL: file do not exist')
     end
-
-    torlance=1e-12;
 
     if isempty(scale)
         scale=1;
@@ -101,9 +102,9 @@ for marker_index=1:length(filename_mesh_list)
 
             attribute=fread(file_mesh,1,'int16');
 
-            if norm(point_1-point_2) < torlance ||...
-                    norm(point_2-point_3) < torlance ||...
-                    norm(point_3-point_1) < torlance
+            if norm(point_1-point_2) < geometry_torlance ||...
+                    norm(point_2-point_3) < geometry_torlance ||...
+                    norm(point_3-point_1) < geometry_torlance
                 repeat_list=[repeat_list;element_index];
             end
         end
@@ -133,9 +134,9 @@ for marker_index=1:length(filename_mesh_list)
             % read normal vector
             vector_normal_string=strsplit(fgetl(file_mesh));
 
-            if norm(point_1-point_2) < torlance ||...
-                    norm(point_2-point_3) < torlance ||...
-                    norm(point_3-point_1) < torlance
+            if norm(point_1-point_2) < geometry_torlance ||...
+                    norm(point_2-point_3) < geometry_torlance ||...
+                    norm(point_3-point_1) < geometry_torlance
             else
                 marker_point_list=[marker_point_list;point_1'];
                 marker_point_list=[marker_point_list;point_2'];
@@ -149,7 +150,7 @@ for marker_index=1:length(filename_mesh_list)
     fclose(file_mesh);
     clear('file_mesh');
 
-    [ADT,index_list]=ADTreePoint(marker_point_list,[],[],torlance);
+    [ADT,index_list]=ADTreePoint(marker_point_list,[],[],geometry_torlance);
 
     marker_element=repmat(HATSElement([],[]),marker_element_number,1);
 
@@ -173,6 +174,8 @@ for marker_index=1:length(filename_mesh_list)
 
     point_list=[point_list;marker_point_list(index_list,:)];
     marker_list(marker_index,:)={marker_name,marker_element_number,marker_element};
+
+    marker_moniter{marker_index}=marker_name;
 end
 
 if INFORMATION_FLAG

@@ -59,6 +59,9 @@ fclose(cfg_file);
 clear('cfg_file');
 
 % default value
+if ~isfield(g_model,'SYMMETRY')
+    g_model.SYMMETRY=[];
+end
 if ~isfield(g_model,'MESH_SCALE')
     g_model.MESH_SCALE=1;
 end
@@ -82,15 +85,14 @@ switch g_model.MESH_FORMAT
         g_model.max_bou=output.max_bou;
     case 'STL'
         [g_model.point_list,g_model.element_list,g_model.marker_list,...
-            output]=readMeshDataSTL(g_model.MESH_FILENAME,g_model.MESH_SCALE,g_model.MESH_ENCODE);
+            output,marker_moniter]=readMeshDataSTL(g_model.MESH_FILENAME,g_model.MESH_SCALE,g_model.MESH_ENCODE);
         g_model.dimension=output.dimension;
         g_model.min_bou=output.min_bou;
         g_model.max_bou=output.max_bou;
-        g_model.MARKER_MONITORING=g_model.MESH_FILENAME;
 
         % for STL file, if MARKER_MONITORING than will analysis all file
         if ~isfield(g_model,'MARKER_MONITORING')
-            g_model.MARKER_MONITORING=g_model.MESH_FILENAME;
+            g_model.MARKER_MONITORING=marker_moniter;
         end
     case 'INP'
         [g_model.point_list,g_model.element_list,g_model.marker_list,...

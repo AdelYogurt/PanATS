@@ -80,7 +80,7 @@ else
 end
 
 element_empty=HATSElement([],[]);
-marker_list=cell(marker_number,3);
+marker_list=repmat(struct('name',[],'element_number',[],'element_list',[]),marker_number,3);
 for marker_index=1:marker_number
     % read marker name
     marker_name_string=strsplit(fgetl(file_mesh));
@@ -115,21 +115,21 @@ for marker_index=1:marker_number
         marker_element(element_index)=element;
     end
 
-    marker_list{marker_index,1}=marker_name;
-    marker_list{marker_index,2}=marker_element_number;
-    marker_list{marker_index,3}=marker_element;
+    marker_list(marker_index).name=marker_name;
+    marker_list(marker_index).element_number=marker_element_number;
+    marker_list(marker_index).element_list=marker_element;
 end
 
 % read all point index of marker element
 marker_point_number=0;
 marker_element_number=0;
 for marker_index=1:length(marker_list)
-    marker_element_number=marker_element_number+marker_list{marker_index,2};
+    marker_element_number=marker_element_number+marker_list(marker_index).element_number;
 end
 marker_point_index_list=zeros(1,4*marker_element_number);
 for marker_index=1:length(marker_list)
-    marker_element=marker_list{marker_index,3};
-    for element_index=1:marker_list{marker_index,2}
+    marker_element=marker_list(marker_index).element_list;
+    for element_index=1:marker_list(marker_index).element_number
         switch marker_element(element_index).element_type
             case 3
                 marker_point_index_list(marker_point_number+1:marker_point_number+2)=...
@@ -158,8 +158,8 @@ marker_point_index_list(marker_point_number+1:end)=[];
 % updata element_list point index to new list
 marker_point_number=0;
 for marker_index=1:length(marker_list)
-    marker_element=marker_list{marker_index,3};
-    for element_index=1:marker_list{marker_index,2}
+    marker_element=marker_list(marker_index).element_list;
+    for element_index=1:marker_list(marker_index).element_number
         switch marker_element(element_index).element_type
             case 2
                 element_node_number=2;
@@ -176,7 +176,7 @@ for marker_index=1:length(marker_list)
                 mapping_list(marker_point_number-element_node_number+point_index);
         end
     end
-    marker_list{marker_index,3}=marker_element;
+    marker_list(marker_index).element_list=marker_element;
 end
 
 marker_point_number=length(marker_point_index_list);

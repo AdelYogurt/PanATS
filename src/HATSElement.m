@@ -14,6 +14,10 @@ classdef HATSElement < handle
         normal_vector=[];
         area=[];
         center_point=[];
+        surface_flow=[]; % norm range is -1 to 1, 1 means equal to V_1
+        streamline_length=[];
+        inflow_vector=[];
+        stagnation=[];
     end
     methods
         function HATS_element=HATSElement...

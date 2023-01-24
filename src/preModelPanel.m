@@ -23,9 +23,8 @@ vertex_empty=HATSVertex();
 vertex_list=repmat(vertex_empty,size(point_list,1),1);
 for moniter_index=1:length(MARKER_MONITORING)
     [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
-    for element_index=1:marker_list{marker_index,2}
+    for element_index=1:marker_list(marker_index).element_number
         element=marker_elemenet(element_index);
-        element.element_nearby_number=0;
         for base_point_index=1:length(element.point_index_list)
             % start from one edge
             point_base_index=element.point_index_list(base_point_index);
@@ -73,34 +72,13 @@ for moniter_index=1:length(MARKER_MONITORING)
     end
 end
 
-% for all vertex in marker, disturbute nearby element
-for point_base_index=1:length(vertex_list)
-    vertex=vertex_list(point_base_index);
-    if vertex ~= vertex_empty
-        % means this vertex is not empty
-        % add this element into dual edge element
-        for nearby_index=1:vertex.nearby_number
-            element=vertex.element_list(nearby_index);
-            point_nearby_index=vertex.point_nearby_list(nearby_index);
-            % cheak dual element by hash table(vertex_list)
-            vertex_dual=vertex_list(point_nearby_index);
-            if vertex_dual ~= vertex_empty
-                [exist_flag,index]=judgeMatExistNum...
-                    (vertex_dual.point_nearby_list,point_base_index);
-                if exist_flag
-                    element_dual=vertex_dual.element_list(index);
-                    element_dual.element_nearby_number=element_dual.element_nearby_number+1;
-                    element_dual.element_nearby_list(element_dual.element_nearby_number)=element;
-                end
-            end
-        end
-    end
-end
+g_model.vertex_list=vertex_list;
+g_model.vertex_empty=vertex_empty;
 
 % add normal_vector_list and area_list
 for moniter_index=1:length(MARKER_MONITORING)
     [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
-    for element_index=1:marker_list{marker_index,2}
+    for element_index=1:marker_list(marker_index).element_number
         element=marker_elemenet(element_index);
         point_index_list=element.point_index_list;
         element.center_point=sum(point_list(point_index_list,1:g_model.dimension),1)/length(point_index_list);
@@ -144,20 +122,6 @@ end
 %         HATS_element_list(element_index).point_index_list=fliplr(HATS_element_list(element_index).point_index_list);
 %     end
 % end
-
-    function [exist_flag,index]=judgeMatExistNum(mat,num)
-        % cheak num if exist in mat
-        % if exist, return 1 and place in mat, else 0
-        %
-        exist_flag=0;
-        for index=1:length(mat)
-            if mat(index) == num
-                exist_flag=1;
-                return;
-            end
-        end
-        index=[];
-    end
 end
 
 function geoMakeConsistent(current_index,parent_index)
