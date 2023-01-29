@@ -8,17 +8,17 @@ function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
 %
 % copyright Adel 2022.11
 %
-global g_model
+global user_model
 
-dimension=g_model.dimension;
-point_list=g_model.point_list;
-marker_list=g_model.marker_list;
-MARKER_MONITORING=g_model.MARKER_MONITORING;
+dimension=user_model.dimension;
+point_list=user_model.point_list;
+marker_list=user_model.marker_list;
+MARKER_MONITORING=user_model.MARKER_MONITORING;
 
 % calculate inflow vector
 free_flow_vector=[1;0;0];
 
-AOA=g_model.AOA/180*pi;
+AOA=user_model.AOA/180*pi;
 cos_AOA=cos(AOA);
 sin_AOA=sin(AOA);
 rotation_AOA=[
@@ -26,7 +26,7 @@ rotation_AOA=[
     0 1 0;
     sin_AOA 0 cos_AOA];
 
-AOS=g_model.SIDESLIP_ANGLE/180*pi;
+AOS=user_model.SIDESLIP_ANGLE/180*pi;
 cos_AOS=cos(AOS);
 sin_AOS=sin(AOS);
 rotation_SIDESLIP_ANGLE=[
@@ -35,18 +35,18 @@ rotation_SIDESLIP_ANGLE=[
     0 0 1];
 
 free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
-g_model.free_flow_vector=free_flow_vector;
+user_model.free_flow_vector=free_flow_vector;
 
 % reference value
-ref_point=[g_model.REF_ORIGIN_MOMENT_X,g_model.REF_ORIGIN_MOMENT_Y,g_model.REF_ORIGIN_MOMENT_Z];
-ref_area=g_model.REF_AREA;
-ref_length=g_model.REF_LENGTH;
+ref_point=[user_model.REF_ORIGIN_MOMENT_X,user_model.REF_ORIGIN_MOMENT_Y,user_model.REF_ORIGIN_MOMENT_Z];
+ref_area=user_model.REF_AREA;
+ref_length=user_model.REF_LENGTH;
 
-T_1=g_model.FREESTREAM_TEMPERATURE;
-P_1=g_model.FREESTREAM_PRESSURE;
-Ma_1=g_model.MACH_NUMBER;
-gama=g_model.GAMA_VALUE;
-Re=g_model.REYNOLDS_NUMBER;
+T_1=user_model.FREESTREAM_TEMPERATURE;
+P_1=user_model.FREESTREAM_PRESSURE;
+Ma_1=user_model.MACH_NUMBER;
+gama=user_model.GAMA_VALUE;
+Re=user_model.REYNOLDS_NUMBER;
 
 R=287.0955;
 rou_1=P_1/R/T_1;
@@ -168,5 +168,5 @@ moment=sum(dMn_list,1);
 moment_y=moment*[0;1;0];
 Cmy=moment_y/ref_area/ref_length/q_1;
 
-g_model.inviscid_output=inviscid_output;
+user_model.inviscid_output=inviscid_output;
 end

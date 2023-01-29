@@ -1,14 +1,14 @@
 function displayModel(type)
 % display solve result
 %
-global g_model
+global user_model
 
 DRAW_FACE_FLAG=1;
 DRAW_SYM_FLAG=1;
 DRAW_INITIAL_GEO=0;
 
-point_list=g_model.point_list;
-marker_list=g_model.marker_list;
+point_list=user_model.point_list;
+marker_list=user_model.marker_list;
 
 % inflow_direction_list=streamline_output.inflow_direction_list;
 
@@ -17,18 +17,18 @@ figure_result=figure();
 
 switch type
     case 'P'
-        P_list={g_model.inviscid_output.P_list};
+        P_list={user_model.inviscid_output.P_list};
         drawData(P_list);
         title('Pressure');
         figure_result.Children.set('ColorScale','log')
     case 'log_P'
         P_1=g_geometry.P_1;
-        log_P_list={log(g_model.inviscid_output.P_list/P_1)/log(10)+1};
+        log_P_list={log(user_model.inviscid_output.P_list/P_1)/log(10)+1};
         drawData(log_P_list);
         title('log Pressure');
         figure_result.Children.set('ColorScale','linear')
     case 'Cp'
-        Cp_list={g_model.inviscid_output.Cp_list};
+        Cp_list={user_model.inviscid_output.Cp_list};
         drawData(Cp_list);
         title('Surface Pressure Coefficient');
     case 'Q'
@@ -119,7 +119,7 @@ drawnow;
                     end
 
                     if DRAW_SYM_FLAG
-                        switch g_model.SYMMETRY
+                        switch user_model.SYMMETRY
                             case 'XOY'
                                 patch(point_list(point_index_list,1),point_list(point_index_list,2),-point_list(point_index_list,3),...
                                     data(element_index),'LineStyle','none')

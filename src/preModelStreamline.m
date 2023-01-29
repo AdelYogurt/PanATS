@@ -1,13 +1,13 @@
 function preModelStreamline()
 % base on vertex list to distribute nearby element
 %
-global g_model
+global user_model
 
-vertex_list=g_model.vertex_list;
-vertex_empty=g_model.vertex_empty;
+vertex_list=user_model.vertex_list;
+vertex_empty=user_model.vertex_empty;
 
-marker_list=g_model.marker_list;
-MARKER_MONITERING=g_model.MARKER_MONITORING;
+marker_list=user_model.marker_list;
+MARKER_MONITERING=user_model.MARKER_MONITORING;
 
 % initialize set nearby element number to zeros to avoid repeat run error
 for moniter_index=1:length(MARKER_MONITERING)

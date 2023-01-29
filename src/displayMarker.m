@@ -1,14 +1,14 @@
 function displayMarker(marker_name_list)
 % draw marker point
 %
-global g_model
+global user_model
 if nargin < 1
     marker_name_list=[];
 end
 
-dimension=g_model.dimension;
-marker_list=g_model.marker_list;
-point_list=g_model.point_list;
+dimension=user_model.dimension;
+marker_list=user_model.marker_list;
+point_list=user_model.point_list;
 
 if isempty(marker_name_list)
     marker_name_list=marker_list(:,1);
@@ -64,7 +64,7 @@ elseif dimension == 3
                 if element.stagnation
                     patch(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3),'r');
                 end
-                drawFlow(element);
+%                 drawFlow(element);
             end
         end
     end

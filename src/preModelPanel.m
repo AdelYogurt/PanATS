@@ -9,11 +9,11 @@ function preModelPanel()
 %
 % copyright Adel 2022.11
 %
-global g_model
+global user_model
 
-point_list=g_model.point_list;
-marker_list=g_model.marker_list;
-MARKER_MONITORING=g_model.MARKER_MONITORING;
+point_list=user_model.point_list;
+marker_list=user_model.marker_list;
+MARKER_MONITORING=user_model.MARKER_MONITORING;
 
 % process moniter marker
 % search all moniter marker nearby element
@@ -72,8 +72,8 @@ for moniter_index=1:length(MARKER_MONITORING)
     end
 end
 
-g_model.vertex_list=vertex_list;
-g_model.vertex_empty=vertex_empty;
+user_model.vertex_list=vertex_list;
+user_model.vertex_empty=vertex_empty;
 
 % add normal_vector_list and area_list
 for moniter_index=1:length(MARKER_MONITORING)
@@ -81,7 +81,7 @@ for moniter_index=1:length(MARKER_MONITORING)
     for element_index=1:marker_list(marker_index).element_number
         element=marker_elemenet(element_index);
         point_index_list=element.point_index_list;
-        element.center_point=sum(point_list(point_index_list,1:g_model.dimension),1)/length(point_index_list);
+        element.center_point=sum(point_list(point_index_list,1:user_model.dimension),1)/length(point_index_list);
 
         % calculate geomertry properity
         switch element.element_type

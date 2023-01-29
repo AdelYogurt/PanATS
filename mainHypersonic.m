@@ -5,16 +5,16 @@ close all hidden;
 addpath([pwd,'\src']);
 addpath([pwd,'\input']);
 
-global g_model
+global user_model
 
-g_model=preModelCFG('slender.cfg');
+% user_model=preModelCFG('slender.cfg');
 % g_model=preModelCFG('waverider.cfg');
 % g_model=preModelCFG('INP_test.cfg');
 % g_model=preModelCFG('geo_test.cfg');
-preModelPanel()
+% preModelPanel()
 
 % [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
-preModelStreamline()
+% preModelStreamline()
 solveModelStreamline();
 
 % [area,volume]=solveGeometry()
