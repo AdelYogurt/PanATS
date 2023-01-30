@@ -2,89 +2,123 @@ clc;
 clear;
 close all hidden;
 
-geometry_torlance=1e-12;
+for moniter_index=1:length(MARKER_MONITERING)
+    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
+    for element_index=1:marker_list(marker_index).element_number
+        % base on around element to determine if stagnation element
+        element=marker_element(element_index);
+        abs_Ve=norm(element.surface_flow);
 
-order=[1,2,3,1];
+        % only consider upwind element have surface flow
+        if ( (element.normal_vector*free_flow_vector > 0) || ...
+                (abs(abs_Ve) == 0) )
+            element.stagnation=int8(0);
+            continue;
+        end
+        
+        ez=element.normal_vector;    
+        ex=element.surface_flow/abs_Ve;
+        ey=cross(ez,ex);
 
-element=HATSElement(5,[1,2,3]);
+        point_index_list=element.point_index_list;
+        node_number=length(point_index_list);
 
-d_node_list=[
-    -1,-1,1;
-    1,-1,1;
-    0,1,1];
-Ve_list=[
-    1,-1;
-    -1,-1;
-    0,2];
-node_number=3;
+        % transform local cooridinate to 2D cooridinate
+        % all vector just simply project to element panel
+        Ve_list=zeros(node_number,3);
+        point_2D_list=zeros(node_number,3);
+        for node_index=1:node_number
+            point_index=point_index_list(node_index);
+            Ve_list(node_index,:)=surface_flow_list(point_index,1:3)*[ex;ey;ez]';
+            point_2D_list(node_index,:)=(point_list(point_index,:)-...
+                element.center_point)*[ex;ey;ez]';
+        end
+        point_2D_list(:,end)=1;
 
-% interpolation fit flow
-coefficient=(d_node_list\Ve_list(:,[1,2]))';
+        % interpolation fit flow
+        coefficient=(point_2D_list\Ve_list(:,[1,2]))';
 
-jacobian=coefficient(:,1:2); % [b1,c1;b2,c2]
-bias=coefficient(:,3); % [a1;a2]
+        jacobian=coefficient(:,1:2); % [b1,c1;b2,c2]
+        bias=coefficient(:,3); % [a1;a2]
 
-% jacobian matrix is negative, process stop
-det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
-if (((jacobian(1,1)+jacobian(2,2))^2-...
-        4*det_jacobian) < 0)
-    element.stagnation=int8(0);
-end
+        % jacobian matrix is negative, process stop
+        det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
+        if (((jacobian(1,1)+jacobian(2,2))^2-...
+                4*det_jacobian) < 0)
+            element.stagnation=int8(0);
+            continue;
+        end
 
-% evaluate eigenvalues of jacobian matrix
-% if one of eigenvalues is zero, process stop
-eig_value=eig(jacobian);
-if sum(abs(eig_value) <= geometry_torlance)
-    element.stagnation=int8(0);
-end
+        % evaluate eigenvalues of jacobian matrix
+        % if one of eigenvalues is zero, process stop
+        eig_value=eig(jacobian);
+        if sum(abs(eig_value) <= geometry_torlance)
+            element.stagnation=int8(0);
+            continue;
+        end
 
-stagnation_point=-jacobian\bias;
-% project element to canonical coordinates
-[eig_vector,eig_value]=eig(jacobian);
-eig_value=[eig_value(1,1),eig_value(2,2)];
-if (eig_value(1) < eig_value(2))
-    eig_value=fliplr(eig_value);
-    eig_vector=fliplr(eig_vector);
-end
-d_node_list=(d_node_list(:,1:2)-stagnation_point')/eig_vector';
+        if (element.normal_vector*free_flow_vector) < 0.98
+            drawElement...
+                (point_2D_list(:,[1,2]),Ve_list(:,[1,2]))
+            drawFlowField...
+                (bias,jacobian);
+            disp('done');
+        end
 
-line(d_node_list(order,1),d_node_list(order,2));
-drawFlowFieldProj...
-    (bias,jacobian,stagnation_point,eig_vector);
+        stagnation_point=-jacobian\bias;
+        % project element to canonical coordinates
+        [eig_vector,eig_value]=eig(jacobian);
+        eig_value=[eig_value(1,1),eig_value(2,2)];
+        if (eig_value(1) < eig_value(2))
+            eig_value=fliplr(eig_value);
+            eig_vector=fliplr(eig_vector);
+        end
+        % normalize eig_vector
+        point_2D_list=(point_2D_list(:,1:2)-stagnation_point')/eig_vector';
 
-% if (0,0) inside element
-surround_flag=judgeOriginSurround(d_node_list(:,[1,2]),geometry_torlance);
-if surround_flag
-    element.stagnation=int8(1);
-end
+        if (element.normal_vector*free_flow_vector) < 0.98
+            drawElementProj...
+                (point_2D_list(:,[1,2]),Ve_list(:,[1,2]),stagnation_point,eig_vector)
+            drawFlowFieldProj...
+                (bias,jacobian,stagnation_point,eig_vector);
+            disp('done');
+        end
 
-% judge phase portrait
-% eigenvalue less than zero is concentrate
-% X corresponds to the eigenvectors 1
-% Y corresponds to the eigenvectors 2
-if ((eig_value(1) > geometry_torlance) && ...
-        (eig_value(2) > geometry_torlance))
-    % repelling node, check small eigenvalue corresponded axis
-    % if cross Y
-    if judgeCrossY(d_node_list,node_number,geometry_torlance)
-        element.stagnation=int8(1);
-    else
-        element.stagnation=int8(0);
-    end
-elseif ((eig_value(1) < geometry_torlance) && ...
-        (eig_value(2) < geometry_torlance))
-    % attracting node, check
-    % concentrate line is not stagnation point
-    element.stagnation=int8(0);
-else
-    % saddle, judge axis X and axis Y which is separation line
-    % means which eigenvalue is large than zero
-    % repelling node, check small eigenvalue corresponded axis
-    % if cross X
-    if judgeCrossY(d_node_list,node_number,geometry_torlance)
-        element.stagnation=int8(1);
-    else
-        element.stagnation=int8(0);
+        % if (0,0) inside element
+        surround_flag=judgeOriginSurround(point_2D_list(:,[1,2]),geometry_torlance);
+        if surround_flag
+            element.stagnation=int8(1);
+            continue;
+        end
+
+        % judge phase portrait
+        % eigenvalue less than zero is concentrate
+        % X corresponds to the eigenvectors 1
+        % Y corresponds to the eigenvectors 2
+        if ((eig_value(1) > geometry_torlance) && ...
+                (eig_value(2) > geometry_torlance))
+            % repelling node, check small eigenvalue corresponded axis
+            % if cross Y
+            if judgeCrossY(point_2D_list,node_number,geometry_torlance)
+                element.stagnation=int8(1);
+            else
+                element.stagnation=int8(0);
+            end
+        elseif ((eig_value(1) < geometry_torlance) && ...
+                (eig_value(2) < geometry_torlance))
+            % attracting node, check
+            % concentrate line is not stagnation point
+            element.stagnation=int8(0);
+        else
+            % saddle, judge axis X and axis Y which is separation line
+            % means which eigenvalue is large than zero
+            % repelling node, check small eigenvalue corresponded axis
+            if judgeCrossY(point_2D_list,node_number,geometry_torlance)
+                element.stagnation=int8(1);
+            else
+                element.stagnation=int8(0);
+            end
+        end
     end
 end
 

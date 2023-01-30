@@ -11,6 +11,7 @@ function preModelPanel()
 %
 global user_model
 
+element_empty=user_model.element_empty;
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
 MARKER_MONITORING=user_model.MARKER_MONITORING;
@@ -25,20 +26,24 @@ for moniter_index=1:length(MARKER_MONITORING)
     [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
     for element_index=1:marker_list(marker_index).element_number
         element=marker_elemenet(element_index);
-        for base_point_index=1:length(element.point_index_list)
+        point_index_list=element.point_index_list;
+        for node_index=1:length(point_index_list)
             % start from one edge
-            point_base_index=element.point_index_list(base_point_index);
-            if base_point_index < length(element.point_index_list)
-                point_nearby_index=element.point_index_list(base_point_index+1);
+            point_base_index=point_index_list(node_index);
+            if node_index < length(point_index_list)
+                point_nearby_index=point_index_list(node_index+1);
             else
-                point_nearby_index=element.point_index_list(1);
+                point_nearby_index=point_index_list(1);
             end
+
+            % add edge(nearby point)
             if vertex_list(point_base_index) == vertex_empty
                 % means this vertex is empty
                 vertex=HATSVertex();
                 vertex.point_nearby_list=zeros(1,4);
                 vertex.point_nearby_list(1)=point_nearby_index;
-                vertex.element_list=repmat(element,1,4);
+                vertex.element_list=repmat(element_empty,1,4);
+                vertex.element_list(1)=element;
                 vertex.nearby_number=int8(1);
                 vertex_list(point_base_index)=vertex;
             else
@@ -49,7 +54,7 @@ for moniter_index=1:length(MARKER_MONITORING)
                 % if exist, means node index order of this element need to be rotated
                 if judgeMatExistNum(vertex.point_nearby_list,point_nearby_index)
                     % exist, rotate element node index and restart this process
-                    element.point_index_list=fliplr(element.point_index_list);
+                    element.point_index_list=fliplr(point_index_list);
                     element_index=element_index-1;
                     continue;
                 end
