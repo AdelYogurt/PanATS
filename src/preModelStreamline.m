@@ -3,8 +3,9 @@ function preModelStreamline()
 %
 global user_model
 
-vertex_list=user_model.vertex_list;
 vertex_empty=user_model.vertex_empty;
+element_empty=user_model.element_empty;
+vertex_list=user_model.vertex_list;
 
 marker_list=user_model.marker_list;
 MARKER_MONITERING=user_model.MARKER_MONITORING;
@@ -27,7 +28,7 @@ for point_base_index=1:length(vertex_list)
             point_nearby_index=vertex.point_nearby_list(nearby_index);
             % cheak dual element by hash table(vertex_list)
             vertex_dual=vertex_list(point_nearby_index);
-            if vertex_dual ~= vertex_empty
+            if vertex ~= vertex_empty
                 [exist_flag,index]=judgeMatExistNum...
                     (vertex_dual.point_nearby_list,point_base_index);
                 if exist_flag

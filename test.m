@@ -1,32 +1,39 @@
 clc;
-% clear;
+clear;
 close all hidden;
 
-point_nearby_list=[243,156,245,155]
-point_back_list=[155,243,156,167]
+xc = 1.21;
+yc = 2.32;
+zc = 4.32;
 
-index_cur=1;
-point_index_list=point_nearby_list(1);
-[exit_flag,index]=judgeMatExistNum...
-    (point_nearby_list,point_back_list(index_cur));
-while exit_flag % if exist, add into point list
-    index_cur=index;
-    point_index_list=[point_index_list,point_nearby_list(index_cur)];
-    [exit_flag,index]=judgeMatExistNum...
-        (point_nearby_list,point_back_list(index_cur));
-end
-% if not exist, add into point list
-point_index_list=[point_index_list,point_back_list(index_cur)];
-% backward search
-[~,index_cur]=judgeMatExistNum...
-    (point_back_list,point_nearby_list(1));
-[exit_flag,index]=judgeMatExistNum...
-    (point_back_list,point_nearby_list(index_cur));
-while exit_flag
-    index_cur=index;
-    point_index_list=[point_back_list(index_cur),point_index_list];
-    [exit_flag,index]=judgeMatExistNum...
-        (point_back_list,point_nearby_list(index_cur));
-end
-point_index_list=[point_nearby_list(index_cur),point_index_list];
-node_number=length(point_index_list);
+xr = 2.78;
+yr = 5.76;
+zr = 1.51;
+
+[x,y,z] = ellipsoid(xc,yc,zc,xr,yr,zr,20);
+
+plot3(x(:),y(:),z(:),'.');
+
+x=x(:);
+y=y(:);
+z=z(:);
+
+X = [x.*x y.*y z.*z x.*y x.*z y.*z x y z];
+Y = ones(length(x),1);
+
+C = inv(X'*X)*X'*Y;
+
+M=[C(1) C(4)/2 C(5)/2;
+    C(4)/2 C(2) C(6)/2;
+    C(5)/2 C(6)/2 C(3)];
+
+Cent = -0.5*[C(7) C(8) C(9)]*inv(M)
+
+S = Cent*M*Cent'+1;
+[U,V]=eig(M);
+
+[~,indx] = max(abs(U(1,:)));
+[~,indy] = max(abs(U(2,:)));
+[~,indz] = max(abs(U(3,:)));
+
+R = [sqrt(S/V(indx,indx)) sqrt(S/V(indy,indy)) sqrt(S/V(indz,indz))]

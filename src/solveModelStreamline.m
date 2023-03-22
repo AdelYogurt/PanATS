@@ -1,8 +1,7 @@
 function solveModelStreamline()
 % calculate element reference streaamline length
 %
-% reference:
-% [1]KENWRIGHT D N. Automatic detection of open and closed
+% reference:[1] KENWRIGHT D N. Automatic detection of open and closed
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].
 %
@@ -61,6 +60,7 @@ for moniter_index=1:length(MARKER_MONITERING)
         point_index_list=element.point_index_list;
         element.stagnation=[];
 
+        % calculate surface flow of element(norm value less than 1)
         dot_nor_vec=dot(free_flow_vector,normal_vector);
         Ve=(free_flow_vector'-normal_vector*dot_nor_vec);
         element.surface_flow=Ve;
@@ -101,14 +101,16 @@ for moniter_index=1:length(MARKER_MONITERING)
                 flip_operate;
 
             % add to element_nearby_list
-            element.element_nearby_list(element.element_nearby_number)=...
+            element.element_nearby_list(element.element_nearby_number+1)=...
                 element_symmetry;
         end
     end
 end
+
+boolean = surface_flow_list(:,4) ~= 0;
 % average velocity to each point
-surface_flow_list(point_index_list,1:3)=...
-    surface_flow_list(point_index_list,1:3)./surface_flow_list(point_index_list,4);
+surface_flow_list(boolean,1:3)=...
+    surface_flow_list(boolean,1:3)./surface_flow_list(boolean,4);
 
 % record
 user_model.surface_flow_list=surface_flow_list;
@@ -158,6 +160,7 @@ for vertex_index=1:length(vertex_list)
         end
         point_back_list(nearby_index)=point_index_list(index);
     end
+    
     % base on point_nearby_list and point_back_list generate point_index_list
     % for point on symmetry face, point_back_list and point_nearby_list
     % will not connect, need to process respectively
@@ -402,11 +405,14 @@ end
 
 function setElementNoStagnation(element_list,element_number)
 for element_index=1:element_number
-    if element_list(element_index).stagnation ~= 1
+    if isempty(element_list(element_index).stagnation)
+        element_list(element_index).stagnation=0;
+    elseif element_list(element_index).stagnation ~= 1
         element_list(element_index).stagnation=0;
     end
 end
 end
+
 function setElementStagnation(element_list,element_number)
 for element_index=1:element_number
     element_list(element_index).stagnation=1;

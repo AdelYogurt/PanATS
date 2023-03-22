@@ -88,18 +88,16 @@ end
 switch user_model.MESH_FORMAT
     case 'SU2'
         [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            output,element_empty]=readMeshDataSU2(user_model.MESH_FILENAME,user_model.MESH_SCALE);
+            user_model.element_empty,output]=readMeshDataSU2(user_model.MESH_FILENAME,user_model.MESH_SCALE);
         user_model.dimension=output.dimension;
         user_model.min_bou=output.min_bou;
         user_model.max_bou=output.max_bou;
-        user_model.element_empty=element_empty;
     case 'STL'
         [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            output,element_empty,marker_moniter]=readMeshDataSTL(user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.MESH_ENCODE);
+            user_model.element_empty,output,marker_moniter]=readMeshDataSTL(user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.MESH_ENCODE);
         user_model.dimension=output.dimension;
         user_model.min_bou=output.min_bou;
         user_model.max_bou=output.max_bou;
-        user_model.element_empty=element_empty;
 
         % for STL file, if MARKER_MONITORING than will analysis all file
         if ~isfield(user_model,'MARKER_MONITORING')
@@ -107,11 +105,10 @@ switch user_model.MESH_FORMAT
         end
     case 'INP'
         [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            output,element_empty]=readMeshDataINP(user_model.MESH_FILENAME,user_model.MESH_SCALE);
+            user_model.element_empty,output]=readMeshDataINP(user_model.MESH_FILENAME,user_model.MESH_SCALE);
         user_model.dimension=output.dimension;
         user_model.min_bou=output.min_bou;
         user_model.max_bou=output.max_bou;
-        user_model.element_empty=element_empty;
 end
 
 if ~isfield(user_model,'MARKER_MONITORING')

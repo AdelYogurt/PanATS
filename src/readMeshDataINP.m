@@ -1,4 +1,4 @@
-function [point_list,element_list,marker_list,geometry,element_empty]=readMeshDataINP...
+function [point_list,element_list,marker_list,element_empty,geometry]=readMeshDataINP...
     (filename_mesh,scale)
 % read mash data from data file
 % input mesh_filename(support .inp file), scale(geometry zoom scale)
@@ -7,7 +7,7 @@ function [point_list,element_list,marker_list,geometry,element_empty]=readMeshDa
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
 % element contain HATSelement
-% marker_list contain maker{marker_name,marker_element_number,marker_element}
+% marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
 if nargin < 2
@@ -33,6 +33,7 @@ end
 point_list=[];
 element_list=[];
 marker_list=[];
+element_empty=HATSElement([],[]);
 
 if isempty(scale)
     scale=1;
@@ -60,7 +61,7 @@ while ~feof(file_mesh)
 
         marker_name=string_list{2}(6:end);
         marker_index=marker_index+1;
-        marker_element=[];
+        marker_element_list=[];
         continue;
     end
 
@@ -79,10 +80,12 @@ while ~feof(file_mesh)
     % end read part
     if strcmp(string_list{1},'*End')
         if ((length(string_list) ==2) && (strcmp(string_list{2},'Part')))
-            marker_element_number=size(marker_element,1);
+            marker_element_number=size(marker_element_list,1);
             read_part_flag=0;
             read_element_flag=0;
-            marker={marker_name,marker_element_number,marker_element};
+            marker.name=marker_name;
+            marker.element_number=marker_element_number;
+            marker.element_list=marker_element_list;
             marker_list=[marker_list;marker];
             continue;
         end
@@ -95,10 +98,9 @@ while ~feof(file_mesh)
     end
 
     % begin read marker element data
-    element_empty=HATSElement([],[]);
     if read_element_flag
-        element_point_number=length(string_list)-1;
-        switch element_point_number
+        element_node_number=length(string_list)-1;
+        switch element_node_number
             case 2
                 element_type=int8(3);
             case 3
@@ -109,12 +111,12 @@ while ~feof(file_mesh)
                 error('readMeshDataINP: unknown element type')
         end
         % new element
-        element=HATSElement(element_type,int32(str2double(string_list(2:(element_point_number+1)))));
-        element.element_nearby_list=repmat(element_empty,1,element_point_number);
+        element=HATSElement(element_type,int32(str2double(string_list(2:(element_node_number+1)))));
+        element.element_nearby_list=repmat(element_empty,element_node_number,1);
         element.marker_index=marker_index;
 
         % add element type
-        marker_element=[marker_element;element];
+        marker_element_list=[marker_element_list;element];
     end
 
 end
@@ -126,7 +128,7 @@ geometry.min_bou=min(point_list);
 geometry.max_bou=max(point_list);
 geometry.dimension=3;
 
-element_list=marker_element;
+element_list=marker_element_list;
 
 if INFORMATION_FLAG
     disp('readMeshDataINP: read mash data done');

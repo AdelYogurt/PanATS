@@ -1,4 +1,4 @@
-function [point_list,element_list,marker_list,geometry,element_empty,marker_moniter]=readMeshDataSTL...
+function [point_list,element_list,marker_list,element_empty,geometry,marker_moniter]=readMeshDataSTL...
     (filename_mesh_list,scale,file_type)
 % read mash data from data file
 % input mesh_filename(support .stl file), scale(geometry zoom scale),
@@ -8,7 +8,7 @@ function [point_list,element_list,marker_list,geometry,element_empty,marker_moni
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
 % element contain HATSelement
-% marker_list contain maker{marker_name,marker_element_number,marker_element}
+% marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
 if nargin < 3
@@ -28,8 +28,9 @@ end
 
 point_list=[];
 element_list=[];
-marker_list=cell(length(filename_mesh_list),3);
-marker_moniter=cell(length(filename_mesh_list),1);
+marker_list=repmat(struct('name',[],'element_number',[],'element_list',[]),length(filename_mesh_list),1);
+marker_moniter=cell(length(filename_mesh_list),1); % default marker moniter for STL
+element_empty=HATSElement([],[]);
 
 for marker_index=1:length(filename_mesh_list)
     filename_mesh=filename_mesh_list{marker_index};
@@ -152,7 +153,7 @@ for marker_index=1:length(filename_mesh_list)
 
     [ADT,index_list]=ADTreePoint(marker_point_list,[],[],geometry_torlance);
 
-    marker_element=repmat(HATSElement([],[]),marker_element_number,1);
+    marker_element_list=repmat(HATSElement([],[]),marker_element_number,1);
 
     geometry.min_bou=ADT.min_bou;
     geometry.max_bou=ADT.max_bou;
@@ -161,19 +162,20 @@ for marker_index=1:length(filename_mesh_list)
     % deleta useless point
     [index_list,~,mapping_list]=unique(index_list);
     % updata element_list point_index to new list
-    element_empty=HATSElement([],[]);
     for element_index=1:marker_element_number
         % new element
         element=HATSElement(int8(5),int32(mapping_list(3*(element_index-1)+(1:3))'));
-        element.element_nearby_list=repmat(element_empty,1,3);
+        element.element_nearby_list=repmat(element_empty,element_node_number,1);
         element.marker_index=marker_index;
 
         % give element
-        marker_element(element_index)=element;
+        marker_element_list(element_index)=element;
     end
 
     point_list=[point_list;marker_point_list(index_list,:)];
-    marker_list(marker_index,:)={marker_name,marker_element_number,marker_element};
+    marker_list(marker_index).name=marker_name;
+    marker_list(marker_index).element_number=marker_element_number;
+    marker_list(marker_index).element_list=marker_element_list;
 
     marker_moniter{marker_index}=marker_name;
 end

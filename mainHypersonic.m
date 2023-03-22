@@ -8,17 +8,18 @@ addpath([pwd,'\input']);
 global user_model
 
 % user_model=preModelCFG('slender.cfg');
-% g_model=preModelCFG('waverider.cfg');
-% g_model=preModelCFG('INP_test.cfg');
-% g_model=preModelCFG('geo_test.cfg');
-% preModelPanel()
+% user_model=preModelCFG('waverider.cfg');
+% user_model=preModelCFG('INP_plate.cfg');
+% user_model=preModelCFG('geo_test.cfg');
+preModelPanel()
 
 % [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
-% preModelStreamline()
+preModelStreamline()
 solveModelStreamline();
 
 % [area,volume]=solveGeometry()
 displayMarker('SLENDER')
+% displayMarker('waverider')
 
 % displayModel('P')
 

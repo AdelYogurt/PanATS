@@ -82,6 +82,6 @@ function drawFlow(element)
 surface_flow=element.surface_flow;
 point=element.center_point;
 hold on;
-quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.001);
+quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.1);
 hold off;
 end

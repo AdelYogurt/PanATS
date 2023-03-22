@@ -1,4 +1,4 @@
-function [point_list,element_list,marker_list,geometry,element_empty]=readMeshDataSU2...
+function [point_list,element_list,marker_list,element_empty,geometry]=readMeshDataSU2...
     (filename_mesh,scale)
 % read mash data from data file
 % input mesh_filename(support .su2 file), scale(geometry zoom scale)
@@ -7,7 +7,7 @@ function [point_list,element_list,marker_list,geometry,element_empty]=readMeshDa
 % point_list is coordinate of all node
 % element_list contain element which will be aero function evaluated
 % element contain HATSelement
-% marker_list contain maker{marker_name,marker_element_number,marker_element}
+% marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
 if nargin < 2
@@ -33,6 +33,7 @@ end
 point_list=[];
 element_list=[];
 marker_list=[];
+element_empty=HATSElement([],[]);
 
 if isempty(scale)
     scale=1;
@@ -79,8 +80,7 @@ else
     error('readMeshData:NMARK do not exist')
 end
 
-element_empty=HATSElement([],[]);
-marker_list=repmat(struct('name',[],'element_number',[],'element_list',[]),marker_number,3);
+marker_list=repmat(struct('name',[],'element_number',[],'element_list',[]),marker_number,1);
 for marker_index=1:marker_number
     % read marker name
     marker_name_string=strsplit(fgetl(file_mesh));
@@ -91,7 +91,7 @@ for marker_index=1:marker_number
     marker_element_number=str2double(marker_element_number_string{2});
 
     % read marker element node index
-    marker_element=repmat(HATSElement([],[]),marker_element_number,1);
+    marker_element_list=repmat(HATSElement([],[]),marker_element_number,1);
     for element_index=1:marker_element_number
         marker_element_string=strsplit(fgetl(file_mesh));
         marker_element_type=int8(str2double(marker_element_string{1}));
@@ -105,19 +105,19 @@ for marker_index=1:marker_number
         end
 
         % create new HATSElement
-        % su2 file point index is start from 0
+        % su2 file point index is start from 0, so we need to add 1
         element=HATSElement(marker_element_type,...
             int32(str2double(marker_element_string(2:1+element_node_number)))+1);
-        element.element_nearby_list=repmat(element_empty,1,element_node_number);
+        element.element_nearby_list=repmat(element_empty,element_node_number,1);
         element.marker_index=marker_index;
 
         % give element
-        marker_element(element_index)=element;
+        marker_element_list(element_index)=element;
     end
 
     marker_list(marker_index).name=marker_name;
     marker_list(marker_index).element_number=marker_element_number;
-    marker_list(marker_index).element_list=marker_element;
+    marker_list(marker_index).element_list=marker_element_list;
 end
 
 % read all point index of marker element
@@ -128,20 +128,20 @@ for marker_index=1:length(marker_list)
 end
 marker_point_index_list=zeros(1,4*marker_element_number);
 for marker_index=1:length(marker_list)
-    marker_element=marker_list(marker_index).element_list;
+    marker_element_list=marker_list(marker_index).element_list;
     for element_index=1:marker_list(marker_index).element_number
-        switch marker_element(element_index).element_type
+        switch marker_element_list(element_index).element_type
             case 3
                 marker_point_index_list(marker_point_number+1:marker_point_number+2)=...
-                    marker_element(element_index).point_index_list;
+                    marker_element_list(element_index).point_index_list;
                 marker_point_number=marker_point_number+2;
             case 5
                 marker_point_index_list(marker_point_number+1:marker_point_number+3)=...
-                    marker_element(element_index).point_index_list;
+                    marker_element_list(element_index).point_index_list;
                 marker_point_number=marker_point_number+3;
             case 9
                 marker_point_index_list(marker_point_number+1:marker_point_number+4)=...
-                    marker_element(element_index).point_index_list;
+                    marker_element_list(element_index).point_index_list;
                 marker_point_number=marker_point_number+4;
         end
     end
@@ -158,9 +158,9 @@ marker_point_index_list(marker_point_number+1:end)=[];
 % updata element_list point index to new list
 marker_point_number=0;
 for marker_index=1:length(marker_list)
-    marker_element=marker_list(marker_index).element_list;
+    marker_element_list=marker_list(marker_index).element_list;
     for element_index=1:marker_list(marker_index).element_number
-        switch marker_element(element_index).element_type
+        switch marker_element_list(element_index).element_type
             case 2
                 element_node_number=2;
                 marker_point_number=marker_point_number+2;
@@ -172,11 +172,11 @@ for marker_index=1:length(marker_list)
                 marker_point_number=marker_point_number+4;
         end
         for point_index=1:element_node_number
-            marker_element(element_index).point_index_list(point_index)=...
+            marker_element_list(element_index).point_index_list(point_index)=...
                 mapping_list(marker_point_number-element_node_number+point_index);
         end
     end
-    marker_list(marker_index).element_list=marker_element;
+    marker_list(marker_index).element_list=marker_element_list;
 end
 
 marker_point_number=length(marker_point_index_list);

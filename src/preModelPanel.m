@@ -11,16 +11,18 @@ function preModelPanel()
 %
 global user_model
 
-element_empty=user_model.element_empty;
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
 MARKER_MONITORING=user_model.MARKER_MONITORING;
+element_empty=user_model.element_empty;
+
+vertex_empty=HATSVertex();
 
 % process moniter marker
 % search all moniter marker nearby element
 % generate vertex list of all marker as hash table
-% due to hash table property, normal vector consist will be done same time
-vertex_empty=HATSVertex();
+% due to hash table property
+% normal vector consist process will be done at the same time
 vertex_list=repmat(vertex_empty,size(point_list,1),1);
 for moniter_index=1:length(MARKER_MONITORING)
     [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
@@ -29,7 +31,7 @@ for moniter_index=1:length(MARKER_MONITORING)
         point_index_list=element.point_index_list;
         for node_index=1:length(point_index_list)
             % start from one edge
-            point_base_index=point_index_list(node_index);
+            point_cur_index=point_index_list(node_index);
             if node_index < length(point_index_list)
                 point_nearby_index=point_index_list(node_index+1);
             else
@@ -37,18 +39,18 @@ for moniter_index=1:length(MARKER_MONITORING)
             end
 
             % add edge(nearby point)
-            if vertex_list(point_base_index) == vertex_empty
+            if (vertex_list(point_cur_index) == vertex_empty)
                 % means this vertex is empty
                 vertex=HATSVertex();
-                vertex.point_nearby_list=zeros(1,4);
+                vertex.point_nearby_list=zeros(4,1);
                 vertex.point_nearby_list(1)=point_nearby_index;
-                vertex.element_list=repmat(element_empty,1,4);
+                vertex.element_list=repmat(element_empty,4,1);
                 vertex.element_list(1)=element;
                 vertex.nearby_number=int8(1);
-                vertex_list(point_base_index)=vertex;
+                vertex_list(point_cur_index)=vertex;
             else
                 % means this is no empty
-                vertex=vertex_list(point_base_index);
+                vertex=vertex_list(point_cur_index);
 
                 % cheak nearby point if exist in point nearby list
                 % if exist, means node index order of this element need to be rotated
@@ -63,9 +65,9 @@ for moniter_index=1:length(MARKER_MONITORING)
                 if length(vertex.point_nearby_list) == vertex.nearby_number
                     % store array no enough, increase array
                     vertex.nearby_number=vertex.nearby_number+1;
-                    vertex.point_nearby_list=[vertex.point_nearby_list,zeros(1,4)];
+                    vertex.point_nearby_list=[vertex.point_nearby_list;zeros(4,1)];
                     vertex.point_nearby_list(vertex.nearby_number)=point_nearby_index;
-                    vertex.element_list=[vertex.element_list,repmat(element,1,4)];
+                    vertex.element_list=[vertex.element_list;repmat(element_empty,4,1)];
                     vertex.element_list(vertex.nearby_number)=element;
                 else
                     vertex.nearby_number=vertex.nearby_number+1;
