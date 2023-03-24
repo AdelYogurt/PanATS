@@ -27,7 +27,7 @@ end
 if exist(filename_mesh,'file')==2
     file_mesh=fopen(filename_mesh,'r');
 else
-    error('readMeshDataSU2: file do not exist')
+    error('readMeshDataSU2: mesh file do not exist')
 end
 
 point_list=[];

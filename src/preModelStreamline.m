@@ -1,5 +1,8 @@
 function preModelStreamline()
-% base on vertex list to distribute nearby element
+% base on half edge data structure to distribute nearby element of element
+% method is basing on vertex.neaby_element_list disturbuting nearby element
+%
+% copyright Adel 2023.03
 %
 global user_model
 
@@ -25,17 +28,17 @@ for point_base_index=1:length(vertex_list)
         % means this vertex is not empty
         % add this element into dual edge element
         for nearby_index=1:vertex.nearby_number
-            point_nearby_index=vertex.point_nearby_list(nearby_index);
+            point_nearby_index=vertex.point_next_list(nearby_index);
             % cheak dual element by hash table(vertex_list)
             vertex_dual=vertex_list(point_nearby_index);
             if vertex ~= vertex_empty
                 [exist_flag,index]=judgeMatExistNum...
-                    (vertex_dual.point_nearby_list,point_base_index);
+                    (vertex_dual.point_next_list,point_base_index);
                 if exist_flag
-                    element_dual=vertex_dual.element_list(index);
+                    element_dual=vertex_dual.element_ref_list(index);
                     element_dual.element_nearby_number=element_dual.element_nearby_number+1;
                     element_dual.element_nearby_list(element_dual.element_nearby_number)=...
-                        vertex.element_list(nearby_index);
+                        vertex.element_ref_list(nearby_index);
                 end
             end
         end

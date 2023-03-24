@@ -10,6 +10,10 @@ dimension=user_model.dimension;
 marker_list=user_model.marker_list;
 point_list=user_model.point_list;
 
+if isfield(user_model,'surface_flow_list')
+    surface_flow_list=user_model.surface_flow_list;
+end
+
 if isempty(marker_name_list)
     marker_name_list=marker_list(:,1);
 else
@@ -64,9 +68,20 @@ elseif dimension == 3
                 if element.stagnation
                     patch(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3),'r');
                 end
-%                 drawFlow(element);
+                
             end
+%             drawFlowElement(element);
         end
+    end
+
+    if isfield(user_model,'surface_flow_list')
+        hold on;
+        for point_index=1:size(point_list,1)
+            surface_flow=surface_flow_list(point_index,:);
+            point=point_list(point_index,:);
+            quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.1);
+        end
+        hold off;
     end
 
     zlabel('z');
@@ -78,7 +93,7 @@ ylabel('y');
 
 end
 
-function drawFlow(element)
+function drawFlowElement(element)
 surface_flow=element.surface_flow;
 point=element.center_point;
 hold on;

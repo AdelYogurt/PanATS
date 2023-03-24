@@ -43,7 +43,7 @@ for marker_index=1:length(filename_mesh_list)
         filename_mesh=[filename_mesh,'.stl'];
     end
     if exist(filename_mesh,'file')~=2
-        error('readMeshDataSTL: file do not exist')
+        error('readMeshDataSTL: mesh file do not exist')
     end
 
     if isempty(scale)
@@ -165,7 +165,7 @@ for marker_index=1:length(filename_mesh_list)
     for element_index=1:marker_element_number
         % new element
         element=HATSElement(int8(5),int32(mapping_list(3*(element_index-1)+(1:3))'));
-        element.element_nearby_list=repmat(element_empty,element_node_number,1);
+        element.element_nearby_list=repmat(element_empty,3,1);
         element.marker_index=marker_index;
 
         % give element

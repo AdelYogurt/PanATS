@@ -8,7 +8,7 @@ function [point_list,element_list,marker_list,element_empty,geometry]=readMeshDa
 % element_list contain element which will be aero function evaluated
 % element contain HATSelement
 % marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
-% marker_element contain contain element(element_type, node_index1, node_index2, ...)
+% marker_element contain contain HATSElement
 %
 if nargin < 2
     scale=[];
@@ -25,7 +25,7 @@ else
     filename_mesh=[filename_mesh,'.inp'];
 end
 if exist(filename_mesh,'file')~=2
-    error('readMeshDataINP: file do not exist')
+    error('readMeshDataINP: mesh file do not exist')
 else
     file_mesh=fopen(filename_mesh,'r');
 end

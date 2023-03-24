@@ -1,6 +1,8 @@
 function user_model=preModelCFG(cfg_filename)
 % read model definition from cfg file
 %
+% copyright Adel 2023.03
+%
 if nargin < 1
     error('readModelCFG: need input cfg file');
 end
@@ -116,6 +118,22 @@ if ~isfield(user_model,'MARKER_MONITORING')
 else
     if ischar(user_model.MARKER_MONITORING)
         user_model.MARKER_MONITORING={user_model.MARKER_MONITORING};
+    end
+
+    % check MARKER_MONITORING if exist in marker list
+    for marker_moniter_index=1:length(user_model.MARKER_MONITORING)
+        marker_moniter=user_model.MARKER_MONITORING{marker_moniter_index};
+        exist_flag=0;
+        for marker_index=1:length(user_model.marker_list)
+            if strcmp(user_model.marker_list(marker_index).name,marker_moniter)
+                exist_flag=1;
+                break;
+            end
+        end
+
+        if ~exist_flag
+            error('preModelCFG: marker monitered do not exist in mesh');
+        end
     end
 end
 

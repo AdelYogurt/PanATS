@@ -1,285 +1,267 @@
 clc;
-clear;
+% clear;
 close all hidden;
 
+global user_model
+geometry_torlance=1e-12;
+
+user_model=preModelCFG('INP_plate.cfg');
+preModelPanel();
+preModelStreamline();
+point_list=[
+    0,0,0;
+    1,0,0;
+    1,1,0;
+    0,1,0;];
+marker.name='Part-plate';
+marker.element_number=1;
+marker.element_list=HATSElement(5,[1,2,3,4]);
+marker_list=marker;
+
+user_model.point_list=point_list;
+user_model.marker_list=marker_list;
+
+preModelPanel()
+surface_flow_list=[
+    -0.0    1.0         0
+    0.0    1.0         0
+    0.0135    0.99         0
+    -0.0135    0.99         0];
+user_model.surface_flow_list=surface_flow_list;
+MARKER_MONITERING=user_model.MARKER_MONITORING;
 
 
-% identify stagnation vertex
-% base on reference [1] to extract
-for vertex_index=1:length(vertex_list)
-    % base on around vertex to determine if stagnation vertex
-    vertex=vertex_list(vertex_index);
-    if (vertex_list(vertex_index) == vertex_empty)
-        continue;
-    end
 
-    point_nearby_list=vertex.point_nearby_list;
-    nearby_number=vertex.nearby_number;
-    element_nearby_list=vertex.element_list;
+% user_model=preModelCFG('INP_plate.cfg');
+% preModelPanel();
+% preModelStreamline();
+% 
+% point_list=user_model.point_list;
+% marker_list=user_model.marker_list;
+% 
+% vertex_list=user_model.vertex_list;
+% MARKER_MONITERING=user_model.MARKER_MONITORING;
+% 
+% % calculate surface velocity
+% surface_flow_list=[zeros(size(point_list,1),4)]; % data, repeat times
+% for point_index=1:size(point_list,1)
+%     point=point_list(point_index,:);
+%     surface_flow_list(point_index,1:3)=[point(1)-0.5,(point(2)-0.5),0];
+% end
+% 
+% user_model.surface_flow_list=surface_flow_list;
 
-    % average for nearby element normal vector
-    average_normal_vector=zeros(1,3);
-    for nearby_index=1:nearby_number
-        average_normal_vector=average_normal_vector+...
-            element_nearby_list(nearby_index).normal_vector;
-    end
-    average_normal_vector=average_normal_vector/double(nearby_number);
-    
-    abs_Ve=norm(surface_flow_list(vertex_index,1:3));
-    % only consider upwind element have surface flow
-    if ( (average_normal_vector*free_flow_vector > 0) || ...
-            (abs(abs_Ve) == 0) )
-        setElementNoStagnation(element_nearby_list,nearby_number);
-        continue;
-    end
+% identift specify line
+for marker_moniter_index=1:size(MARKER_MONITERING)
+    marker_element_list=getMarkerElement(MARKER_MONITERING(marker_moniter_index),marker_list);
+    for element_index=1:size(marker_element_list)
+        element=marker_element_list(element_index);
 
-    % load data and process symmetry, make sure point index list is curve
-    % search point_index_list from element to make sure point_index_list is
-    % anti-clock wise, which make point_index_list become an visual element
-    point_back_list=zeros(1,nearby_number); % point_back->vertex_index
-    for nearby_index=1:nearby_number
-        point_index_list=element_nearby_list(nearby_index).point_index_list;
-        [~,index]=judgeMatExistNum(point_index_list,vertex_index);
-        index=index-1;
-        if index == 0
-            index=length(point_index_list);
-        end
-        point_back_list(nearby_index)=point_index_list(index);
-    end
-    % base on point_nearby_list and point_back_list generate point_index_list
-    % for point on symmetry face, point_back_list and point_nearby_list
-    % will not connect, need to process respectively
-    if (abs(point_list(vertex_index,identify_dimension)) < geometry_torlance)
-        average_normal_vector(identify_dimension)=0;
-        average_normal_vector=average_normal_vector/norm(average_normal_vector);
-
-        % process symmetry
-        % forward search
-        index_cur=1;
-        point_index_list=point_nearby_list(1);
-        [exit_flag,index]=judgeMatExistNum...
-            (point_nearby_list,point_back_list(index_cur));
-        while exit_flag % if exist, add into point list
-            index_cur=index;
-            point_index_list=[point_index_list,point_nearby_list(index_cur)];
-            [exit_flag,index]=judgeMatExistNum...
-                (point_nearby_list,point_back_list(index_cur));
-        end
-        % if not exist, add into point list
-        point_index_list=[point_index_list,point_back_list(index_cur)];
-        % backward search
-        [~,index_cur]=judgeMatExistNum...
-            (point_back_list,point_nearby_list(1));
-        [exit_flag,index]=judgeMatExistNum...
-            (point_back_list,point_nearby_list(index_cur));
-        while exit_flag
-            index_cur=index;
-            point_index_list=[point_back_list(index_cur),point_index_list];
-            [exit_flag,index]=judgeMatExistNum...
-                (point_back_list,point_nearby_list(index_cur));
-        end
-        point_index_list=[point_nearby_list(index_cur),point_index_list];
-        node_number=length(point_index_list);
-
-        Ve_list=zeros(node_number+1,3);
-        point_2D_list=zeros(node_number+1,3);
-        Ve_list(1,:)=surface_flow_list(vertex_index,1:3);
-
-        % load data of vertex
-        for node_index=1:node_number
-            point_index=point_index_list(node_index);
-            Ve_list(node_index+1,:)=surface_flow_list(point_index,1:3);
-            point_2D_list(node_index+1,:)=(point_list(point_index,:)-...
-                point_list(vertex_index,:));
-        end
-        
-        % because of symmetry, 2:end-1 point data need to add symmetry
-        fliplr_list=Ve_list(end-1:-1:3,:);
-        fliplr_list(:,identify_dimension)=-fliplr_list(:,identify_dimension);
-        Ve_list=[Ve_list;fliplr_list];
-        fliplr_list=point_2D_list(end-1:-1:3,:);
-        fliplr_list(:,identify_dimension)=-fliplr_list(:,identify_dimension);
-        point_2D_list=[point_2D_list;fliplr_list];
-    else
-        point_index_list=zeros(1,nearby_number);
-        index_cur=1;
-        point_index_list(1)=point_nearby_list(index_cur);
-        for nearby_index=2:nearby_number
-            [~,index_cur]=judgeMatExistNum(point_nearby_list,point_back_list(index_cur));
-            point_index_list(nearby_index)=point_nearby_list(index_cur);
-        end
-        node_number=length(point_index_list);
-
-        Ve_list=zeros(node_number+1,3);
-        point_2D_list=zeros(node_number+1,3);
-        Ve_list(1,:)=surface_flow_list(vertex_index,1:3);
-
-        % load data of vertex
-        for node_index=1:node_number
-            point_index=point_index_list(node_index);
-            Ve_list(node_index+1,:)=surface_flow_list(point_index,1:3);
-            point_2D_list(node_index+1,:)=(point_list(point_index,:)-...
-                point_list(vertex_index,:));
-        end
-    end
-
-    if (average_normal_vector*free_flow_vector) < -0.98
-%         disp('done');
-    end
-
-    e3=average_normal_vector;
-    e1=point_2D_list(2,:);
-    e1=e1-(e1*e3')*e3;
-    e1=e1/norm(e1);
-    e2=cross(e3,e1);
-
-    % transform local cooridinate to 2D cooridinate
-    % all vector just simply project to element panel
-    Ve_list=Ve_list*[e1;e2;e3]';
-    point_2D_list=point_2D_list*[e1;e2;e3]';
-    point_2D_list(:,end)=1;
-
-    % interpolation fit flow
-    coefficient=(point_2D_list\Ve_list(:,[1,2]))';
-
-    jacobian=coefficient(:,1:2); % [b1,c1;b2,c2]
-    bias=coefficient(:,3); % [a1;a2]
-
-    if (average_normal_vector*free_flow_vector) < -0.98
-%         drawElement...
-%             (point_2D_list(:,[1,2]),Ve_list(:,[1,2]))
-%         drawFlowField...
-%             (bias,jacobian);
-%         disp('done');
-    end
-
-    % jacobian matrix is negative, process stop
-    det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
-    if (((jacobian(1,1)+jacobian(2,2))^2-...
-            4*det_jacobian) < 0)
-        setElementNoStagnation(element_nearby_list,nearby_number);
-        continue;
-    end
-
-    % evaluate eigenvalues of jacobian matrix
-    % if one of eigenvalues is zero, process stop
-    eig_value=eig(jacobian);
-    if sum(abs(eig_value) <= geometry_torlance)
-        setElementNoStagnation(element_nearby_list,nearby_number);
-        continue;
-    end
-
-    stagnation_point=-jacobian\bias;
-    % project element to canonical coordinates
-    [eig_vector,eig_value]=eig(jacobian);
-    eig_value=[eig_value(1,1),eig_value(2,2)];
-    if (eig_value(1) < eig_value(2))
-        eig_value=fliplr(eig_value);
-        eig_vector=fliplr(eig_vector);
-    end
-    % normalize eig_vector
-    point_2D_list=(point_2D_list(:,1:2)-stagnation_point')/eig_vector';
-
-    if (average_normal_vector*free_flow_vector) < -0.98
-%         drawElementProj...
-%             (point_2D_list(:,[1,2]),Ve_list(:,[1,2]),stagnation_point,eig_vector)
-%         drawFlowFieldProj...
-%             (bias,jacobian,stagnation_point,eig_vector);
-%         disp('done');
-    end
-
-    % if (0,0) inside element
-    surround_flag=judgeOriginSurround(point_2D_list(2:end,[1,2]),geometry_torlance);
-    if surround_flag
-        setElementStagnation(element_nearby_list,nearby_number);
-%         drawElement...
-%             (point_2D_list(:,[1,2]),Ve_list(:,[1,2]))
-%         drawFlowField...
-%             (bias,jacobian);
-%         disp('done');
-        continue;
-    else
-        setElementNoStagnation(element_nearby_list,nearby_number);
-    end
-
-%     % judge phase portrait
-%     % eigenvalue less than zero is concentrate
-%     % X corresponds to the eigenvectors 1
-%     % Y corresponds to the eigenvectors 2
-%     if ((eig_value(1) > geometry_torlance) && ...
-%             (eig_value(2) > geometry_torlance))
-%         % repelling node, check small eigenvalue corresponded axis
-%         % if cross Y
-%         if judgeCrossY(point_2D_list(2:end,[1,2]),geometry_torlance)
-%             setElementStagnation(element_nearby_list,nearby_number);
-%         else
-%             setElementNoStagnation(element_nearby_list,nearby_number);
+        % load element point data
+        point_index_list=element.point_index_list;
+        point_center=sum(point_list(point_index_list,1:3))/length(point_index_list);
+        Ve_list=surface_flow_list(point_index_list,1:3);
+        point_2D_list=(point_list(point_index_list,1:3));
+       
+%         if element_index == 90
+%             disp('');
 %         end
-%     elseif ((eig_value(1) < geometry_torlance) && ...
-%             (eig_value(2) < geometry_torlance))
-%         % attracting node, check
-%         % concentrate line is not stagnation point
-%         element.stagnation=int8(0);
-%     else
-%         % saddle, judge axis X and axis Y which is separation line
-%         % means which eigenvalue is large than zero
-%         % repelling node, check small eigenvalue corresponded axis
-%         if judgeCrossY(point_2D_list(2:end,[1,2]),geometry_torlance)
-%             setElementStagnation(element_nearby_list,nearby_number);
-%         else
-%             setElementNoStagnation(element_nearby_list,nearby_number);
-%         end
-%     end
+
+        normal_vector=element.normal_vector;
+
+        if judgeSpecify(normal_vector,point_2D_list,Ve_list)
+            element.stagnation=true(1);
+        end 
+    end
 end
 
+displayMarker('Part-plate')
 
-function surround_flag=judgeOriginSurround(curve,geometry_torlance)
+
+% load("matlab.mat");
+% judgeSpecify(normal_vector,point_arou_list,Ve_list)
+
+
+function cross_flag=judgeSpecify(normal_vector,point_list,Ve_list)
+topology_torlance=1e-6;
+precision_torlance=1e-12;
+
+cross_flag=0;
+
+% project to 2D
+e3=normal_vector;
+e1=point_list(1,1:3)-point_list(2,1:3);
+e1=e1-(e1*e3')*e3;
+e1=e1/norm(e1);
+e2=cross(e3,e1);
+
+% transform local cooridinate to 2D cooridinate
+% all vector just simply project to element panel
+% Ve_list=Ve_list*[e1;e2;e3]';
+% point_2D_list=point_list*[e1;e2;e3]';
+point_2D_list=point_list;
+point_2D_list(:,end)=1;
+
+% interpolation fit flow
+coefficient=(point_2D_list\Ve_list(:,[1,2]))';
+
+jacobian=coefficient(:,1:2); % [b1,c1;b2,c2]
+jacobian(abs(jacobian) < precision_torlance)=0; % solve precision
+bias=coefficient(:,3) % [a1;a2]
+
+% jacobian matrix is negative, process stop
+det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
+if (((jacobian(1,1)+jacobian(2,2))^2-...
+        4*det_jacobian) < -topology_torlance)
+    return;
+end
+
+% evaluate eigenvalues of jacobian matrix
+% if one of eigenvalues is zero, process stop
+eig_value=eig(jacobian);
+if sum(abs(eig_value) <= topology_torlance)
+    return;
+end
+
+stagnation_point=-jacobian\bias;
+% stagnation cannot to far 
+if max(abs(stagnation_point)) > 10
+    return;
+end
+
+% project element to canonical coordinates
+[eig_vector,eig_value]=eig(jacobian);
+eig_value=[eig_value(1,1),eig_value(2,2)];
+if (eig_value(1) < eig_value(2))
+    eig_value=fliplr(eig_value);
+    eig_vector=fliplr(eig_vector);
+end
+% normalize eig_vector
+point_2D_list=(point_2D_list(:,1:2)-stagnation_point')/eig_vector';
+if det(eig_vector) < 0
+    point_2D_list=flipud(point_2D_list);
+end
+
+% if (0,0) inside element
+if judgeOriginSurround(point_2D_list(1:end,[1,2]),topology_torlance)
+    cross_flag=1;
+    return;
+end
+
+% judge phase portrait
+% eigenvalue less than zero is concentrate
+% X corresponds to the eigenvectors 1
+% Y corresponds to the eigenvectors 2
+if ((eig_value(1) > topology_torlance) && ...
+        (eig_value(2) > topology_torlance))
+    % repelling node, check small eigenvalue corresponded axis
+    % if cross Y
+    if judgeCrossY(point_2D_list(1:end,[1,2]),topology_torlance)
+        cross_flag=1;
+    end
+elseif ((eig_value(1) < topology_torlance) && ...
+        (eig_value(2) < topology_torlance))
+    % attracting node, check
+    % concentrate line is not stagnation point
+    
+elseif ((eig_value(1) > topology_torlance) && (eig_value(2) < -topology_torlance))
+    % saddle, judge axis X and axis Y which is separation line
+    % means which eigenvalue is large than zero
+    % repelling node, check small eigenvalue corresponded axis
+    if judgeCrossY(point_2D_list(1:end,[1,2]),topology_torlance)
+        cross_flag=1;
+    end
+end
+
+end
+
+function setElementNoStagnation(element_list,element_number)
+for element_index=1:element_number
+    if isempty(element_list(element_index).stagnation)
+        element_list(element_index).stagnation=false(1);
+    elseif ~element_list(element_index).stagnation
+        element_list(element_index).stagnation=false(1);
+    end
+end
+end
+
+function setElementStagnation(element_list,element_number)
+for element_index=1:element_number
+    element_list(element_index).stagnation=true(1);
+end
+end
+
+function surround_flag=judgeOriginSurround(curve_origin,geometry_torlance)
 % function to judge if origin point(0,0) is surrounded by line
+% calculate curve cross positive axis x times, if is odd number, surround
 %
 surround_flag=0;
-cross_time=0;
-for edge_index=1:size(curve,1)
-    edge_index_next=edge_index+1;
-    if edge_index_next > size(curve,1)
+
+% shifting line with geometry_torlance
+curve=curve_origin;
+for edge_index=1:size(curve_origin,1)
+    point_1=curve_origin(edge_index,:);
+    if edge_index == size(curve_origin,1)
+        point_2=curve_origin(1,:);
         edge_index_next=1;
+    else
+        point_2=curve_origin(edge_index+1,:);
+        edge_index_next=edge_index+1;
     end
 
-    if ((-curve(edge_index_next,2)) * ...
-            ((curve(edge_index,2)))) < -eps
-        % if cross point not in line y range
+    A=point_1(2)-point_2(2);
+    B=point_2(1)-point_1(1);
+    move_dir=-[A,B]/norm([A,B]);
+
+    % move point of edge
+    curve(edge_index,:)=curve(edge_index,:)+move_dir*geometry_torlance;
+    curve(edge_index_next,:)=curve(edge_index_next,:)+move_dir*geometry_torlance;
+end
+
+cross_time=0;
+for edge_index=1:size(curve,1)
+    point_1=curve(edge_index,:);
+    if edge_index == size(curve,1)
+        point_2=curve(1,:);
+    else
+        point_2=curve(edge_index+1,:);
+    end
+
+    if (((point_1(2) < -0) && (point_2(2) < -0)) || ...
+            ((point_1(2) > 0) && (point_2(2) > 0)))
+        % if edge do not cross axis x
         continue;
     end
 
-    A=curve(edge_index,2)-curve(edge_index_next,2);
-    C=curve(edge_index_next,2)*curve(edge_index,1)-...
-        curve(edge_index_next,1)*curve(edge_index,2);
+    % edge cross axis x, calculate cross point
+    A=point_1(2)-point_2(2);
+    C=point_1(1)*point_2(2)-point_2(1)*point_1(2);
     cross_point=-C/A;
-    if abs(A) > geometry_torlance
-        if cross_point > 0
-            if ((cross_point - curve(edge_index_next,1)) * ...
-                    ((curve(edge_index,1)) - cross_point)) >= -geometry_torlance
-                % cross point must in line range
-                cross_time=cross_time+1;
-            end
+
+    % check if edge is horizontal
+    if abs(A) > 0 % no horizontal
+        if cross_point > -0
+            cross_time=cross_time+1;
         end
-    else
-        if ((-curve(edge_index_next,1)) * ...
-                ((curve(edge_index,1)))) >= geometry_torlance
+    else % horizontal
+        if ((point_1(1) > -0) ||...
+                (point_2(1) > -0))
             % cross point must in line range
             % line overlap X axis
             cross_time=cross_time+1;
         end
     end
 end
-if (cross_time == 1)
+if (mode(cross_time,2) == 1)
     surround_flag=1;
 end
 end
 
-function cross_flag=judgeCrossX(curve,node_number,geometry_torlance)
+function cross_flag=judgeCrossX(curve,geometry_torlance)
 % function to judge if curve cross X
 %
 cross_flag=0;
+node_number=size(curve,1);
 for node_index=1:node_number
     node_next_index=node_index+1;
     if node_next_index > node_number
@@ -297,10 +279,11 @@ for node_index=1:node_number
 end
 end
 
-function cross_flag=judgeCrossY(curve,node_number,geometry_torlance)
+function cross_flag=judgeCrossY(curve,geometry_torlance)
 % function to judge if curve cross Y
 %
 cross_flag=0;
+node_number=size(curve,1);
 for node_index=1:node_number
     node_next_index=node_index+1;
     if node_next_index > node_number
@@ -373,4 +356,3 @@ hold off
 
 axis equal;
 end
-

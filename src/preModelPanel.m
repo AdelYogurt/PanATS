@@ -1,13 +1,11 @@
 function preModelPanel()
-% function to prepare model for panel method(only basical function)
+% function to prepare model for panel method
+% including:
+% generate vertex_list, construct half of edge data structure and make
+% marker monitered element normal vector consisted
+% calculate monitor element geomertry, normal vector and area of element
 %
-% calculate monitor element geomertry (element normal vector)
-% project element center point to flow vector
-% sort g_Element by element_center_point_project_flow_vector
-% nearby element only search in nearby after sort g_Element
-% calculate moniter marker elemenet geometry
-%
-% copyright Adel 2022.11
+% copyright Adel 2023.03
 %
 global user_model
 
@@ -33,19 +31,19 @@ for moniter_index=1:length(MARKER_MONITORING)
             % start from one edge
             point_cur_index=point_index_list(node_index);
             if node_index < length(point_index_list)
-                point_nearby_index=point_index_list(node_index+1);
+                point_next_index=point_index_list(node_index+1);
             else
-                point_nearby_index=point_index_list(1);
+                point_next_index=point_index_list(1);
             end
 
             % add edge(nearby point)
             if (vertex_list(point_cur_index) == vertex_empty)
                 % means this vertex is empty
                 vertex=HATSVertex();
-                vertex.point_nearby_list=zeros(4,1);
-                vertex.point_nearby_list(1)=point_nearby_index;
-                vertex.element_list=repmat(element_empty,4,1);
-                vertex.element_list(1)=element;
+                vertex.point_next_list=zeros(4,1);
+                vertex.point_next_list(1)=point_next_index;
+                vertex.element_ref_list=repmat(element_empty,4,1);
+                vertex.element_ref_list(1)=element;
                 vertex.nearby_number=int8(1);
                 vertex_list(point_cur_index)=vertex;
             else
@@ -54,25 +52,25 @@ for moniter_index=1:length(MARKER_MONITORING)
 
                 % cheak nearby point if exist in point nearby list
                 % if exist, means node index order of this element need to be rotated
-                if judgeMatExistNum(vertex.point_nearby_list,point_nearby_index)
+                if judgeMatExistNum(vertex.point_next_list,point_next_index)
                     % exist, rotate element node index and restart this process
                     element.point_index_list=fliplr(point_index_list);
                     element_index=element_index-1;
-                    continue;
+                    continue; % restart this process
                 end
 
                 % if no exist, add into vertex
-                if length(vertex.point_nearby_list) == vertex.nearby_number
+                if length(vertex.point_next_list) == vertex.nearby_number
                     % store array no enough, increase array
                     vertex.nearby_number=vertex.nearby_number+1;
-                    vertex.point_nearby_list=[vertex.point_nearby_list;zeros(4,1)];
-                    vertex.point_nearby_list(vertex.nearby_number)=point_nearby_index;
-                    vertex.element_list=[vertex.element_list;repmat(element_empty,4,1)];
-                    vertex.element_list(vertex.nearby_number)=element;
+                    vertex.point_next_list=[vertex.point_next_list;zeros(4,1)];
+                    vertex.point_next_list(vertex.nearby_number)=point_next_index;
+                    vertex.element_ref_list=[vertex.element_ref_list;repmat(element_empty,4,1)];
+                    vertex.element_ref_list(vertex.nearby_number)=element;
                 else
                     vertex.nearby_number=vertex.nearby_number+1;
-                    vertex.point_nearby_list(vertex.nearby_number)=point_nearby_index;
-                    vertex.element_list(vertex.nearby_number)=element;
+                    vertex.point_next_list(vertex.nearby_number)=point_next_index;
+                    vertex.element_ref_list(vertex.nearby_number)=element;
                 end
             end
         end
