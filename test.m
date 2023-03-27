@@ -38,42 +38,21 @@ close all hidden;
 % 
 % R = [sqrt(S/V(indx,indx)) sqrt(S/V(indy,indy)) sqrt(S/V(indz,indz))]
 
-% judgeOriginSurround([0,0;1,0;1,1;0,1],1e-6)
+curve=[0,0;2,0;1,2;-2,1];
+line(curve(:,1),curve(:,2));
+curve=geoCurveOffset([0,0;2,0;1,2;-2,1],0.5);
+line(curve(:,1),curve(:,2));
+axis equal;
 
-load('geo.mat')
-judgeOriginSurround(point_2D_list(1:end,[1,2]),0.01)
-
-function surround_flag=judgeOriginSurround(curve_origin,geometry_torlance)
-% function to judge if origin point(0,0) is surrounded by line
-% calculate curve cross positive axis x times, if is odd number, surround
+function curve=geoCurveOffset(curve,offset)
+% shifting line with offset
+% direction is outside
 %
-surround_flag=0;
+edge_number=size(curve,1);
 
-% shifting line with geometry_torlance
-curve=curve_origin;
-line(curve_origin(:,1),curve_origin(:,2))
-for edge_index=1:size(curve_origin,1)
-    point_1=curve_origin(edge_index,:);
-    if edge_index == size(curve_origin,1)
-        point_2=curve_origin(1,:);
-        edge_index_next=1;
-    else
-        point_2=curve_origin(edge_index+1,:);
-        edge_index_next=edge_index+1;
-    end
-
-    A=point_1(2)-point_2(2);
-    B=point_2(1)-point_1(1);
-    move_dir=-[A,B]/norm([A,B]);
-
-    % move point of edge
-    curve(edge_index,:)=curve(edge_index,:)+move_dir*geometry_torlance;
-    curve(edge_index_next,:)=curve(edge_index_next,:)+move_dir*geometry_torlance;
-    line(curve(:,1),curve(:,2))
-end
-
-cross_time=0;
-for edge_index=1:size(curve,1)
+% calculate line data and move line
+edge_data_list=zeros(edge_number,3); % A, B, C
+for edge_index=1:edge_number
     point_1=curve(edge_index,:);
     if edge_index == size(curve,1)
         point_2=curve(1,:);
@@ -81,32 +60,27 @@ for edge_index=1:size(curve,1)
         point_2=curve(edge_index+1,:);
     end
 
-    if (((point_1(2) < -0) && (point_2(2) < -0)) || ...
-            ((point_1(2) > 0) && (point_2(2) > 0)))
-        % if edge do not cross axis x
-        continue;
+    dr=point_2-point_1;
+    
+    edge_data_list(edge_index,1)=-dr(2); % A (dr_y=-A)
+    edge_data_list(edge_index,2)=dr(1); % B (dr_x=B)
+
+    % move line
+    edge_data_list(edge_index,3)=point_1(1)*point_2(2)-point_1(2)*point_2(1)+...
+        offset/norm(dr)*sum(dr.^2); % C
+end
+
+% solve new cross point
+for edge_index=1:edge_number
+    if edge_index == 1
+        edge_prev_index=edge_number;
+    else
+        edge_prev_index=edge_index-1;
     end
 
-    % edge cross axis x, calculate cross point
-    A=point_1(2)-point_2(2);
-    C=point_1(1)*point_2(2)-point_2(1)*point_1(2);
-    cross_point=-C/A;
+    matrix=[edge_data_list(edge_index,1),edge_data_list(edge_index,2);
+        edge_data_list(edge_prev_index,1),edge_data_list(edge_prev_index,2)];
+    curve(edge_index,:)=matrix\[-edge_data_list(edge_index,3);-edge_data_list(edge_prev_index,3)];
+end
 
-    % check if edge is horizontal
-    if abs(A) > 0 % no horizontal
-        if cross_point > -0
-            cross_time=cross_time+1;
-        end
-    else % horizontal
-        if ((point_1(1) > -0) ||...
-                (point_2(1) > -0))
-            % cross point must in line range
-            % line overlap X axis
-            cross_time=cross_time+1;
-        end
-    end
-end
-if (mode(cross_time,2) == 1)
-    surround_flag=1;
-end
 end

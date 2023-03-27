@@ -23,10 +23,10 @@ user_model.marker_list=marker_list;
 
 preModelPanel()
 surface_flow_list=[
-    -0.0    1.0         0
-    0.0    1.0         0
-    0.0135    0.99         0
-    -0.0135    0.99         0];
+    -0.9    0.1         0
+    0.9    0.1         0
+    0.8    0.2         0
+    -0.8    0.2         0];
 user_model.surface_flow_list=surface_flow_list;
 MARKER_MONITERING=user_model.MARKER_MONITORING;
 

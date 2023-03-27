@@ -74,15 +74,15 @@ elseif dimension == 3
         end
     end
 
-    if isfield(user_model,'surface_flow_list')
-        hold on;
-        for point_index=1:size(point_list,1)
-            surface_flow=surface_flow_list(point_index,:);
-            point=point_list(point_index,:);
-            quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.1);
-        end
-        hold off;
-    end
+%     if isfield(user_model,'surface_flow_list')
+%         hold on;
+%         for point_index=1:size(point_list,1)
+%             surface_flow=surface_flow_list(point_index,:);
+%             point=point_list(point_index,:);
+%             quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.1);
+%         end
+%         hold off;
+%     end
 
     zlabel('z');
     view(3);
