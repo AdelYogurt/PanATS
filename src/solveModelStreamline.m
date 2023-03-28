@@ -3,7 +3,7 @@ function solveModelStreamline()
 % specifical element is the start of streamline
 % calculate element reference streaamline length
 %
-% reference:[1] KENWRIGHT D N. Automatic detection of open and closed
+% reference: [1] KENWRIGHT D N. Automatic detection of open and closed
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].
 %
@@ -12,33 +12,14 @@ function solveModelStreamline()
 global user_model
 
 dimension=user_model.dimension;
+free_flow_vector=user_model.free_flow_vector;
+
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
+
 MARKER_MONITERING=user_model.MARKER_MONITORING;
 
 geometry_torlance=1e-12;
-
-% calculate inflow vector
-free_flow_vector=[1;0;0];
-
-AOA=user_model.AOA/180*pi;
-cos_AOA=cos(AOA);
-sin_AOA=sin(AOA);
-rotation_AOA=[
-    cos_AOA 0 -sin_AOA;
-    0 1 0;
-    sin_AOA 0 cos_AOA];
-
-AOS=user_model.SIDESLIP_ANGLE/180*pi;
-cos_AOS=cos(AOS);
-sin_AOS=sin(AOS);
-rotation_SIDESLIP_ANGLE=[
-    cos_AOS -sin_AOS 0;
-    sin_AOS cos_AOS 0;
-    0 0 1];
-
-free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
-user_model.free_flow_vector=free_flow_vector;
 
 switch user_model.SYMMETRY
     case 'XOY'
@@ -62,7 +43,7 @@ for moniter_index=1:length(MARKER_MONITERING)
         element=marker_element(element_index);
         normal_vector=element.normal_vector;
         point_index_list=element.point_index_list;
-        element.stagnation=[];
+        element.attachment=[];
 
         % calculate surface flow of element(norm value less than 1)
         dot_nor_vec=dot(free_flow_vector,normal_vector);
@@ -115,6 +96,8 @@ surface_flow_list(boolean,1:3)=...
 % record
 user_model.surface_flow_list=surface_flow_list;
 
+% identify attachment element
+stagnation_list=[];
 for moniter_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
     for element_index=1:marker_list(marker_index).element_number
@@ -124,79 +107,85 @@ for moniter_index=1:length(MARKER_MONITERING)
         Ve_list=surface_flow_list(element.point_index_list,1:3);
 
         if dot(normal_vector,free_flow_vector) < 0 %% only upwind element
-            [cross_flag]=judgeAttachment(normal_vector,point_arou_list,Ve_list);
+            [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,point_arou_list,Ve_list);
             if cross_flag
-                element.stagnation=1;
+                element.attachment=1;
             else
-                element.stagnation=0;
+                element.attachment=0;
+            end
+
+            if stagnation_flag
+                stagnation_list=[stagnation_list;moniter_index,element_index];
             end
         else
-            element.stagnation=0;
+            element.attachment=0;
         end
     end
 end
 
-% % calculate streamline length
-% inflow_direction_list=zeros(marker_element_number,3);
-% streamline_length_list=zeros(marker_element_number,1);
-%
-% bottom_index_list=[];
-% for element_index=1:marker_element_number
-%     center_point=ADtree_marker_element.center_point_list(element_index,:);
-%     out_index_list=HATS_element_list(element_index).out_index_list;
-%     normal_vector=HATS_element_list(element_index).normal_vector;
-%
-%     if abs(normal_vector*free_flow_vector-1) < geometry_torlance
-%         bottom_index_list=[bottom_index_list,element_index];
-%         continue;
-%     end
-%
-%     inflow_direction=inflow_direction_list(element_index,:);
-%     streamline_length=streamline_length_list(element_index);
-%
-%     for out_node_index__=1:length(out_index_list)
-%         out_node_index=out_index_list(out_node_index__);
-%
-%         out_center_point=ADtree_marker_element.center_point_list(out_node_index,:);
-%
-%         % base on normal_vector calculate inflow_direction and streamline_length
-%         inflow_direction_out=(out_center_point-center_point);
-%         streamline_length_out=sqrt(sum(inflow_direction_out.^2));
-%         inflow_direction_out=inflow_direction_out/streamline_length_out;
-%
-%         % correct length and vector base on parent inflow_direction and streamline_length
-%         if ~isempty(inflow_direction)
-%             inflow_direction_out=...
-%                 inflow_direction_out*streamline_length_out+...
-%                 inflow_direction*streamline_length; % vector plus
-%             streamline_length_out=sqrt(sum(inflow_direction_out.^2));
-%             inflow_direction_out=inflow_direction_out/streamline_length_out;
-%         end
-%
-%         % compare exist steamline, if shorter than repace
-%         if (streamline_length_list(out_node_index) ~= 0)
-%             if streamline_length_list(out_node_index) > streamline_length_out
-%                 inflow_direction_list(out_node_index,:)=inflow_direction_out;
-%                 streamline_length_list(out_node_index)=streamline_length_out;
-%             end
-%         else
-%             inflow_direction_list(out_node_index,:)=inflow_direction_out;
-%             streamline_length_list(out_node_index)=streamline_length_out;
-%         end
-%     end
-% end
-% inflow_direction_list(bottom_index_list,:)=repmat(free_flow_vector',length(bottom_index_list),1);
-% streamline_length_list(bottom_index_list)=max(streamline_length_list);
-%
-% streamline_output.inflow_direction_list=inflow_direction_list;
-% streamline_output.streamline_length_list=streamline_length_list;
+% initialize data sort array
+% delta, Cp, P, dFn, dMn
+streamline_output=struct( ...
+    'delta_list',cell(length(marker_list),1), ...
+    'streamline_list',cell(0));
+
+% select stagnation element center point as start point to generate streamline
+for stagnation_index=1:size(stagnation_list,1)
+    streamline=zeros(size(point_list,1),4); % cross point, current length
+    index=1;
+    point_start=element.center_point;
+    streamline(index,:)=[point_start,0];
+
+    element=marker_list{stagnation_list(stagnation_index,1)}.element_list(stagnation_index(stagnation_index,2));
+    point_index_list=element.point_index_list;
+    surface_flow=element.surface_flow;
+    point_number=size(point_index_list,1);
+
+    % calculate streamline cross point on edge
+    for edge_index=1:point_number
+        point_index=point_index_list(edge_index);
+        if edge_index == point_number
+            point_next_index=point_index_list(1);
+        else
+            point_next_index=point_index_list(edge_index+1);
+        end
+        point_1=point_list(point_index,1:3);
+        point_2=point_list(point_next_index,1:3);
+
+        dr1=point_1-point_start;
+        dr2=point_2-point_start;
+        if ((dr1/norm(dr1)+dr2/norm(dr2))*surface_flow) < 1
+            % edge should place on downstream of point_start
+            if cross(surface_flow',dr1)*cross(surface_flow,dr2') < 0.5
+                % edge should cross surface_flow
+                end_point=calCrossPoint(point_1,point_2,surface_flow);
+            end
+        end
+    end
+
+    streamline_output.streamline_list{length(streamline_output.streamline_list)+1}=streamline;
 end
 
-function [cross_flag]=judgeAttachment(normal_vector,point_list,Ve_list)
+for monitor_index=1:length(MARKER_MONITERING)
+    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
+
+end
+
+user_model.streamline_output=streamline_output;
+
+if user_model.INFORMATION
+    fprintf('solveModelStreamline: streamline solve done!\n');
+    
+end
+
+end
+
+function [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,point_list,Ve_list)
 topology_torlance=1e-6;
 precision_torlance=1e-12;
 
-cross_flag=0;
+cross_flag=false(1);
+stagnation_flag=false(0);
 
 % project to 2D
 e3=normal_vector;
@@ -256,7 +245,7 @@ if det(eig_vector) < 0
 end
 
 max_bou=max(abs(point_proj_list));
-if ((eig_value(2)*max_bou(2))^2-(eig_value(1)*max_bou(1))^2) > cos(pi/6) % velocity do not too close
+if ((eig_value(2)*max_bou(2))^2-(eig_value(1)*max_bou(1))^2) > cos(pi/3) % velocity do not too close
     return;
 end
 
@@ -265,7 +254,8 @@ point_proj_list=geoCurveOffset(point_proj_list,offset);
 
 % if (0,0) inside element
 if judgeOriginSurround(point_proj_list)
-    cross_flag=1;
+    cross_flag=true(1);
+    stagnation_flag=1;
     return;
 end
 
@@ -278,7 +268,7 @@ if ((eig_value(1) > topology_torlance) && ...
     % repelling node, check small eigenvalue corresponded axis
     % if cross Y
     if judgeCrossY(point_proj_list(1:end,[1,2]))
-        cross_flag=1;
+        cross_flag=true(1);
     end
 elseif ((eig_value(1) < -topology_torlance) && ...
         (eig_value(2) < -topology_torlance))
@@ -290,7 +280,7 @@ elseif ((eig_value(1) > topology_torlance) && (eig_value(2) < -topology_torlance
     % means which eigenvalue is large than zero
     % repelling node, check small eigenvalue corresponded axis
     if judgeCrossY(point_proj_list(1:end,[1,2]))
-        cross_flag=1;
+        cross_flag=true(1);
     end
 end
 
@@ -401,7 +391,7 @@ end
 function cross_flag=judgeCrossX(curve)
 % function to judge if curve cross X
 %
-cross_flag=0;
+cross_flag=false(1);
 node_number=size(curve,1);
 for node_index=1:node_number
     node_next_index=node_index+1;
@@ -412,10 +402,10 @@ for node_index=1:node_number
             (curve(node_next_index,2) >= 0)) || ...
             ((curve(node_index,2) >= 0) && ...
             (curve(node_next_index,2) <= 0)) )
-        cross_flag=1;
+        cross_flag=true(1);
         break;
     else
-        cross_flag=0;
+        cross_flag=false(1);
     end
 end
 end
@@ -423,7 +413,7 @@ end
 function cross_flag=judgeCrossY(curve)
 % function to judge if curve cross Y
 %
-cross_flag=0;
+cross_flag=false(1);
 node_number=size(curve,1);
 for node_index=1:node_number
     node_next_index=node_index+1;
@@ -434,10 +424,10 @@ for node_index=1:node_number
             (curve(node_next_index,1) >= 0)) || ...
             ((curve(node_index,1) >= 0) && ...
             (curve(node_next_index,1) <= 0)) )
-        cross_flag=1;
+        cross_flag=true(1);
         break;
     else
-        cross_flag=0;
+        cross_flag=false(1);
     end
 end
 end

@@ -1,5 +1,5 @@
 function [point_list,element_list,marker_list,element_empty,geometry,marker_moniter]=readMeshDataSTL...
-    (filename_mesh_list,scale,file_type)
+    (filename_mesh_list,scale,file_type,INFORMATION)
 % read mash data from data file
 % input mesh_filename(support .stl file), scale(geometry zoom scale),
 % file_type(file encode type, can be empty)
@@ -17,8 +17,6 @@ if nargin < 3
         scale=[];
     end
 end
-
-INFORMATION_FLAG=1;
 
 geometry_torlance=1e-12;
 
@@ -68,7 +66,7 @@ for marker_index=1:length(filename_mesh_list)
         end
     end
 
-    if INFORMATION_FLAG
+    if INFORMATION
         disp(['readMeshDataSTL: read mash data begin, file type read as ',file_type]);
     end
 
@@ -180,7 +178,7 @@ for marker_index=1:length(filename_mesh_list)
     marker_moniter{marker_index}=marker_name;
 end
 
-if INFORMATION_FLAG
+if INFORMATION
     disp('readMeshDataSTL: read mash data done!');
 end
 

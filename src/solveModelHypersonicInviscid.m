@@ -1,4 +1,4 @@
-function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
+function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid()
 % Newton method to calculate hypersonic aircraft
 %
 % point_list is coordinate of all node
@@ -11,9 +11,12 @@ function [Cl,Cd,LDratio,Cmy]=solveModelHypersonicInviscid()
 global user_model
 
 dimension=user_model.dimension;
+
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
+
 MARKER_MONITORING=user_model.MARKER_MONITORING;
+SYMMETRY=user_model.SYMMETRY;
 
 % calculate inflow vector
 free_flow_vector=[1;0;0];
@@ -87,9 +90,13 @@ else
 end
 
 % initialize data sort array
-inviscid_output=repmat(...
-    struct('delta_list',[],'Cp_list',[],'P_list',[],'dFn_list',[],'dMn_list',[]),...
-    length(marker_list),1); % delta, Cp, P, dFn, dMn
+% delta, Cp, P, dFn, dMn
+inviscid_output=struct( ...
+    'delta_list',cell(length(marker_list),1), ...
+    'Cp_list',cell(length(marker_list),1), ...
+    'P_list',cell(length(marker_list),1), ...
+    'dFn_list',cell(length(marker_list),1), ...
+    'dMn_list',cell(length(marker_list),1));
 force=zeros(1,3);
 moment=zeros(1,3);
 
@@ -143,14 +150,14 @@ for monitor_index=1:length(MARKER_MONITORING)
         dMn_list(element_index,:)=cross(element.center_point-ref_point,dFn_list(element_index,:));
 
         force=force+dFn_list(element_index,:);
-        moment=moment+dFn_list(element_index,:);
+        moment=moment+dMn_list(element_index,:);
     end
 
-    inviscid_output(marker_index).delta_list=delta_list;
-    inviscid_output(marker_index).Cp_list=Cp_list;
-    inviscid_output(marker_index).P_list=P_list;
-    inviscid_output(marker_index).dFn_list=dFn_list;
-    inviscid_output(marker_index).dMn_list=dMn_list;
+    inviscid_output.delta_list{marker_index}=delta_list;
+    inviscid_output.Cp_list{marker_index}=Cp_list;
+    inviscid_output.P_list{marker_index}=P_list;
+    inviscid_output.dFn_list{marker_index}=dFn_list;
+    inviscid_output.dMn_list{marker_index}=dMn_list;
 end
 
 % calculate lift and drag coefficient
@@ -163,10 +170,43 @@ Cl=lift/ref_area/q_1;
 Cd=drag/ref_area/q_1;
 LDratio=Cl/Cd;
 
+% calculate force coefficient
+Cx=force(1)/ref_area/q_1;
+Cy=force(2)/ref_area/q_1;
+Cz=force(3)/ref_area/q_1;
+
 % calculate moment
-moment=sum(dMn_list,1);
-moment_y=moment*[0;1;0];
-Cmy=moment_y/ref_area/ref_length/q_1;
+Cmx=moment(1)/ref_area/ref_length/q_1;
+Cmy=moment(2)/ref_area/ref_length/q_1;
+Cmz=moment(3)/ref_area/ref_length/q_1;
+
+% process SYMMETRY
+if ~isempty(SYMMETRY)
+    switch user_model.SYMMETRY
+        case 'XOY'
+            Cz=0;
+            Cmx=0;
+            Cmy=0;
+        case 'YOZ'
+            Cx=0;
+            Cmy=0;
+            Cmz=0;
+        case 'ZOX'
+            Cy=0;
+            Cmz=0;
+            Cmx=0;
+        otherwise
+            error('solveModelHypersonicInviscid: nuknown SYMMETRY type');
+    end
+end
 
 user_model.inviscid_output=inviscid_output;
+
+if user_model.INFORMATION
+    fprintf('solveModelHypersonicInviscid: hypersonic inviscid solve done!\n');
+    fprintf('solveModelHypersonicInviscid: result\n');
+    fprintf('Cl:  %14f, Cd:  %14f, L/D: %14f\nCx:  %14f, Cy:  %14f, Cz:  %14f\nCmx: %14f, Cmy: %14f, Cmz: %14f\n',...
+        Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz)
+end
+
 end

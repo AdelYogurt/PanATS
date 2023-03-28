@@ -9,6 +9,7 @@ classdef HATSElement < handle
         
         element_nearby_list=[]; % contact element list, HATSElement pointer
         element_nearby_number=int8(0);
+        element_outflow_boolean=[]; % if nearby element is outflow of self element
 
         % geometry properties
         normal_vector=[];
@@ -17,7 +18,7 @@ classdef HATSElement < handle
         surface_flow=[]; % norm range is -1 to 1, 1 means equal to V_1
         streamline_length=[];
         inflow_vector=[];
-        stagnation=[];
+        attachment=[];
     end
     methods
         function HATS_element=HATSElement...

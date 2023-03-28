@@ -1,5 +1,5 @@
 function [point_list,element_list,marker_list,element_empty,geometry]=readMeshDataINP...
-    (filename_mesh,scale)
+    (filename_mesh,scale,INFORMATION)
 % read mash data from data file
 % input mesh_filename(support .inp file), scale(geometry zoom scale)
 % return point_list, element_list, marker_list
@@ -13,8 +13,6 @@ function [point_list,element_list,marker_list,element_empty,geometry]=readMeshDa
 if nargin < 2
     scale=[];
 end
-
-INFORMATION_FLAG=1;
 
 % cheak file definition
 if length(filename_mesh) > 4
@@ -39,7 +37,7 @@ if isempty(scale)
     scale=1;
 end
 
-if INFORMATION_FLAG
+if INFORMATION
     disp('readMeshDataINP: read mash data begin');
 end
 
@@ -130,7 +128,7 @@ geometry.dimension=3;
 
 element_list=marker_element_list;
 
-if INFORMATION_FLAG
+if INFORMATION
     disp('readMeshDataINP: read mash data done');
 end
 

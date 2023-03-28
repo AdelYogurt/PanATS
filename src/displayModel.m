@@ -45,12 +45,12 @@ switch type
         title('Streamline Length');
     case 'FEM'
         DOF_node=6;
-        
+
         U_list=FEM_output.U_list;
         R_list=FEM_output.R_list;
         surf_stress_list=FEM_output.surf_stress_list;
         surf_stress_point_list=FEM_output.surf_stress_point_list;
-        
+
         abs_delta_max=max(abs(U_list([1:DOF_node:end,2:DOF_node:end,3:DOF_node:end])));
         abs_delta_min=min(abs(U_list([1:DOF_node:end,2:DOF_node:end,3:DOF_node:end])));
         [von_surf_stress_max,node_max]=max(surf_stress_list(:,7,:));
@@ -61,7 +61,7 @@ switch type
             von_surf_stress_max,element_max,g_Element(element_max,node_max(:,:,element_max)));
         fprintf('Min Surface Von Stress: %12.4e,Element index: %4d,node index: %4d\n',...
             von_surf_stress_min,element_min,g_Element(element_min,node_min(:,:,element_min)));
-        
+
         % drawing displacements
         % calculate zoom in/out figure scale
         min_node=min(point_list);
@@ -73,7 +73,7 @@ switch type
         else
             scale=0.1*max_distance/delta;
         end
-        
+
         element_number=size(g_Element,1);
         draw_order=[1,2,3,1];
         for element_index=1:element_number
@@ -146,6 +146,15 @@ drawnow;
                 end
             end
         else
+            
         end
     end
+end
+
+function drawFlowElement(element)
+surface_flow=element.surface_flow;
+point=element.center_point;
+hold on;
+quiver3(point(1),point(2),point(3),surface_flow(1),surface_flow(2),surface_flow(3),0.1);
+hold off;
 end
