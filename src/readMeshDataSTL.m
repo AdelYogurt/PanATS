@@ -163,7 +163,6 @@ for marker_index=1:length(filename_mesh_list)
     for element_index=1:marker_element_number
         % new element
         element=HATSElement(int8(5),int32(mapping_list(3*(element_index-1)+(1:3))'));
-        element.element_nearby_list=repmat(element_empty,3,1);
         element.marker_index=marker_index;
 
         % give element

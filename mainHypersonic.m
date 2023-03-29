@@ -1,6 +1,6 @@
 clc;
-% clear all;
-close all hidden;
+% clear;
+% close all hidden;
 
 addpath([pwd,'\src']);
 addpath([pwd,'\input']);
@@ -8,18 +8,18 @@ addpath([pwd,'\input']);
 global user_model
 
 % user_model=preModelCFG('slender.cfg');
-user_model=preModelCFG('waverider.cfg');
+% user_model=preModelCFG('waverider.cfg');
 % user_model=preModelCFG('INP_plate.cfg');
 % user_model=preModelCFG('geo_test.cfg');
-preModelPanel();
+% preModelPanel();
 
-[Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
+% [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
 preModelStreamline()
 solveModelStreamline();
 
 % [area,volume]=solveGeometry()
-% displayMarker('SLENDER')
-displayMarker('waverider')
+displayMarker('SLENDER')
+% displayMarker('waverider')
 % displayMarker('Part-plate')
 
 % displayModel('P')

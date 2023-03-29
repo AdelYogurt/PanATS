@@ -38,49 +38,22 @@ close all hidden;
 % 
 % R = [sqrt(S/V(indx,indx)) sqrt(S/V(indy,indy)) sqrt(S/V(indz,indz))]
 
-curve=[0,0;2,0;1,2;-2,1];
-line(curve(:,1),curve(:,2));
-curve=geoCurveOffset([0,0;2,0;1,2;-2,1],0.5);
-line(curve(:,1),curve(:,2));
-axis equal;
 
-function curve=geoCurveOffset(curve,offset)
-% shifting line with offset
-% direction is outside
+point=[2,0,1];
+point_ref=[0,2,1];
+point_start=[0,0,0];
+surface_flow=[0.5,0.5,0.5];
+
+point_end=calCrossPoint(point,point_ref,point_start,surface_flow)
+
+function point_end=calCrossPoint(point,point_ref,point_start,surface_flow)
+% calculate cross point coordinate as surface_flow downstream point_end
 %
-edge_number=size(curve,1);
-
-% calculate line data and move line
-edge_data_list=zeros(edge_number,3); % A, B, C
-for edge_index=1:edge_number
-    point_1=curve(edge_index,:);
-    if edge_index == size(curve,1)
-        point_2=curve(1,:);
-    else
-        point_2=curve(edge_index+1,:);
-    end
-
-    dr=point_2-point_1;
-    
-    edge_data_list(edge_index,1)=-dr(2); % A (dr_y=-A)
-    edge_data_list(edge_index,2)=dr(1); % B (dr_x=B)
-
-    % move line
-    edge_data_list(edge_index,3)=point_1(1)*point_2(2)-point_1(2)*point_2(1)+...
-        offset/norm(dr)*sum(dr.^2); % C
+surface_flow=surface_flow/norm(surface_flow);
+dr_edge=point_ref-point;
+dr_edge_length=norm(dr_edge);
+dr_edge_norm=dr_edge/dr_edge_length;
+point_proj_length=norm(cross(surface_flow,point-point_start));
+point_end=point+point_proj_length/norm(cross(surface_flow,dr_edge_norm))/norm(dr_edge)*dr_edge;
 end
 
-% solve new cross point
-for edge_index=1:edge_number
-    if edge_index == 1
-        edge_prev_index=edge_number;
-    else
-        edge_prev_index=edge_index-1;
-    end
-
-    matrix=[edge_data_list(edge_index,1),edge_data_list(edge_index,2);
-        edge_data_list(edge_prev_index,1),edge_data_list(edge_prev_index,2)];
-    curve(edge_index,:)=matrix\[-edge_data_list(edge_index,3);-edge_data_list(edge_prev_index,3)];
-end
-
-end

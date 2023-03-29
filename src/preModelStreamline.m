@@ -6,8 +6,8 @@ function preModelStreamline()
 %
 global user_model
 
-vertex_empty=user_model.vertex_empty;
-vertex_list=user_model.vertex_list;
+edge_empty=user_model.edge_empty;
+edge_list=user_model.edge_list;
 
 marker_list=user_model.marker_list;
 
@@ -35,57 +35,32 @@ rotation_SIDESLIP_ANGLE=[
 free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
 user_model.free_flow_vector=free_flow_vector;
 
-% initialize set nearby element number to zeros to avoid repeat run error
-for moniter_index=1:length(MARKER_MONITERING)
-    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
+% clear last time record
+for monitor_index=1:length(MARKER_MONITERING)
+    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
+
+    streamline_len_list=zeros(marker_list(marker_index).element_number,1);
+
     for element_index=1:marker_list(marker_index).element_number
-        marker_element(element_index).element_nearby_number=0;
+        marker_element(element_index).streamline_index=[];
     end
 end
 
-% for all vertex in marker, disturbute nearby element
-for vertex_index=1:length(vertex_list)
-    vertex=vertex_list(vertex_index);
-    if vertex ~= vertex_empty
-        % means this vertex is not empty
-        % add reference element into dual edge element
-        for nearby_index=1:vertex.nearby_number
-            point_nearby_index=vertex.point_next_list(nearby_index);
-
-            % cheak dual element by hash table(vertex_list)
-            vertex_next=vertex_list(point_nearby_index);
-            if vertex ~= vertex_empty
-                % search vertex_index place in vertex_next.point_next_list
-                [exist_flag,ref_index]=judgeMatExistNum...
-                    (vertex_next.point_next_list,vertex_index);
-                if exist_flag
-                    element_dual=vertex_next.element_ref_list(ref_index);
-                    element_dual.element_nearby_number=element_dual.element_nearby_number+1;
-                    element_dual.element_nearby_list(element_dual.element_nearby_number)=...
-                        vertex.element_ref_list(nearby_index);
-                end
-            end
-        end
-    end
-end
-
-% for all moniter marker element, generate element_outflow_boolean
-for moniter_index=1:length(MARKER_MONITERING)
-    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
-    for element_index=1:marker_list(marker_index).element_number
-        element=marker_element(element_index);
-        element_nearby_number=element.element_nearby_number;
-        surface_flow=element.surface_flow;
-        element.element_outflow_boolean=true(element_nearby_number,1); % default is outflow element
-
-        for nearby_index=1:element_nearby_number
-            % base on 
-            if dot(element.center_point-element.element_nearby_list(nearby_index).center_point,...
-                    free_flow_vector) > 0
-                element.element_outflow_boolean(nearby_index)=true(1);
-            end
-        end
-    end
-end
+% % for all edge in marker, disturbute opposite edge
+% for vertex_index=1:length(edge_list)
+%     edge=edge_list(vertex_index);
+%     if edge ~= edge_empty
+%         % means this vertex is not empty
+%         vertex_ref_list=edge.vertex_ref_list;
+%         edge_number=edge.edge_number;
+%         edge.edge_oppo_list=zeros(edge_number,1,'int32');
+%         
+%         % add index of edge in HATSEdge
+%         for edge_index=1:edge.edge_number
+%             edge.edge_oppo_list(edge_index)=...
+%                 edge_list(vertex_ref_list(edge_index)).getRefIndex(vertex_index);
+%         end
+%     end
+% end
 
 end

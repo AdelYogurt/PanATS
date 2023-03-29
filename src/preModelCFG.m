@@ -89,7 +89,6 @@ if ~isfield(user_model,'INFORMATION')
     user_model.INFORMATION=1;
 end
 
-
 % load mesh data
 switch user_model.MESH_FORMAT
     case 'SU2'

@@ -1,8 +1,8 @@
 function preModelPanel()
 % function to prepare model for panel method
 % including:
-% generate vertex_list, construct half of edge data structure and make
-% marker monitered element normal vector consisted
+% generate edge_list, construct half of edge data structure,
+% and make marker monitered element normal vector consisted
 % calculate monitor element geomertry, normal vector and area of element
 %
 % copyright Adel 2023.03
@@ -12,8 +12,154 @@ global user_model
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
 MARKER_MONITORING=user_model.MARKER_MONITORING;
-element_empty=user_model.element_empty;
 
+element_empty=user_model.element_empty;
+edge_empty=HATSEdge();
+
+% process moniter marker
+% search all moniter marker nearby element
+% generate edge list of all monitoring marker as hash table
+% due to hash table(edge_list) property
+% normal vector consist process will be done at the same time
+edge_list=repmat(edge_empty,size(point_list,1),1);
+for moniter_index=1:length(MARKER_MONITORING)
+    [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
+    for element_index=1:marker_list(marker_index).element_number
+        element=marker_elemenet(element_index);
+        point_index_list=element.point_index_list;
+        
+        for point_index=1:length(point_index_list)
+            % start from one edge
+            vertex_index=point_index_list(point_index);
+            if point_index == length(point_index_list)
+                vertex_ref_index=point_index_list(1);
+                % edge next
+                % edge prev
+            else
+                vertex_ref_index=point_index_list(point_index+1);
+                % edge next
+                % edge prev
+            end
+
+            % add point reference of edge
+            if (edge_list(vertex_index) == edge_empty)
+                % means this vertex is empty
+                edge=HATSEdge();
+                edge.edge_number=int8(1);
+
+                edge.vertex_ref_list=zeros(4,1,'int32');
+                edge.vertex_ref_list(1)=vertex_ref_index;
+                edge.element_ref_list=repmat(element_empty,4,1);
+                edge.element_ref_list(1)=element;
+
+                % edge next
+                % edge prev
+                % edge oppo(1)
+
+                edge.insertRef(vertex_ref_index,1);
+
+                edge_list(vertex_index)=edge;
+
+                element.edge_ref_list(point_index)=1;
+            else
+                % means this is no empty
+                edge=edge_list(vertex_index);
+
+                % cheak ref point if exist in vertex_ref_list
+                % if exist, means node index order of this element need to be rotated
+                if judgeMatExistNum(edge.vertex_ref_list,vertex_ref_index)
+                    % exist, rotate element node index and restart this process
+                    element.point_index_list=fliplr(point_index_list);
+                    element_index=element_index-1;
+                    continue; % restart this process
+                end
+
+%                 % if no exist, add into vertex
+%                 if length(edge.vertex_ref_list) == edge.edge_number
+%                     % store array no enough, increase array
+%                     edge.edge_number=edge.edge_number+1;
+%                     edge.vertex_ref_list=[edge.vertex_ref_list;zeros(4,1,'int32')];
+%                     edge.vertex_ref_list(edge.edge_number)=point_ref_index;
+%                     edge.element_ref_list=[edge.element_ref_list;repmat(element_empty,4,1)];
+%                     edge.element_ref_list(edge.edge_number)=element;
+%                 else
+%                     edge.edge_number=edge.edge_number+1;
+%                     edge.vertex_ref_list(edge.edge_number)=point_ref_index;
+%                     edge.element_ref_list(edge.edge_number)=element;
+%                 end
+
+                % if no exist, add into vertex
+                edge_number=edge.edge_number+1;
+                edge.edge_number=edge_number;
+
+                edge.vertex_ref_list(edge_number)=vertex_ref_index;
+                edge.element_ref_list(edge_number)=element;
+
+                % edge next(edge_number)
+                % edge prev(edge_number)
+                % edge oppo(edge_number)
+
+                edge.insertRef(vertex_ref_index,edge_number);
+
+                element.edge_ref_list(point_index)=edge_number;
+            end
+        end
+    end
+end
+
+user_model.edge_list=edge_list;
+user_model.edge_empty=edge_empty;
+
+% add normal_vector_list and area_list
+for moniter_index=1:length(MARKER_MONITORING)
+    [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
+    for element_index=1:marker_list(marker_index).element_number
+        element=marker_elemenet(element_index);
+        point_index_list=element.point_index_list;
+        element.center_point=sum(point_list(point_index_list,1:user_model.dimension),1)/length(point_index_list);
+
+        % calculate geomertry properity
+        switch element.element_type
+            case 3 % line
+                dr12=point_list(point_index_list(2),1:2)-point_list(point_index_list(1),1:2);
+                element.area=norm(dr12,2);
+                element.normal_vector=[dr12(2),-dr12(1)]/element.area;
+            case 5 % triangle
+                dr12=point_list(point_index_list(2),1:3)-point_list(point_index_list(1),1:3);
+                dr23=point_list(point_index_list(3),1:3)-point_list(point_index_list(2),1:3);
+
+                % calculate norm_vector of element
+                cross_vector=cross(dr12,dr23);
+                length_cross_vector=norm(cross_vector,2);
+                element.area=length_cross_vector/2;
+                element.normal_vector=cross_vector/length_cross_vector;
+            case 9 % quadrilateral
+                dr13=point_list(point_index_list(3),1:3)-point_list(point_index_list(1),1:3);
+                dr24=point_list(point_index_list(4),1:3)-point_list(point_index_list(2),1:3);
+
+                % calculate norm_vector of element
+                cross_vector=cross(dr13,dr24);
+                length_cross_vector=norm(cross_vector,2);
+                element.area=length_cross_vector/2;
+                element.normal_vector=cross_vector/length_cross_vector;
+        end
+    end
+end
+
+% due to normal vector is continue, only need to judge one element normal
+% if one element normal vector is incorrect, reverse all element
+% volume_center_point_stagnation_point=ADtree_marker_element.center_point_list(1,:)-volume_center_point;
+% normal_vector_project=volume_center_point_stagnation_point*HATS_element_list(1).normal_vector';
+% if normal_vector_project < 0
+%     % reverse all element
+%     for element_index=1:element_number
+%         HATS_element_list(element_index).normal_vector=-HATS_element_list(element_index).normal_vector;
+%         HATS_element_list(element_index).point_index_list=fliplr(HATS_element_list(element_index).point_index_list);
+%     end
+% end
+end
+
+function getVextexList()
 vertex_empty=HATSVertex();
 
 % process moniter marker
@@ -80,53 +226,6 @@ end
 user_model.vertex_list=vertex_list;
 user_model.vertex_empty=vertex_empty;
 
-% add normal_vector_list and area_list
-for moniter_index=1:length(MARKER_MONITORING)
-    [marker_elemenet,marker_index]=getMarkerElement(MARKER_MONITORING{moniter_index},marker_list);
-    for element_index=1:marker_list(marker_index).element_number
-        element=marker_elemenet(element_index);
-        point_index_list=element.point_index_list;
-        element.center_point=sum(point_list(point_index_list,1:user_model.dimension),1)/length(point_index_list);
-
-        % calculate geomertry properity
-        switch element.element_type
-            case 3 % line
-                dr12=point_list(point_index_list(2),1:2)-point_list(point_index_list(1),1:2);
-                element.area=norm(dr12,2);
-                element.normal_vector=[dr12(2),-dr12(1)]/element.area;
-            case 5 % triangle
-                dr12=point_list(point_index_list(2),1:3)-point_list(point_index_list(1),1:3);
-                dr23=point_list(point_index_list(3),1:3)-point_list(point_index_list(2),1:3);
-
-                % calculate norm_vector of element
-                cross_vector=cross(dr12,dr23);
-                length_cross_vector=norm(cross_vector,2);
-                element.area=length_cross_vector/2;
-                element.normal_vector=cross_vector/length_cross_vector;
-            case 9 % quadrilateral
-                dr13=point_list(point_index_list(3),1:3)-point_list(point_index_list(1),1:3);
-                dr24=point_list(point_index_list(4),1:3)-point_list(point_index_list(2),1:3);
-
-                % calculate norm_vector of element
-                cross_vector=cross(dr13,dr24);
-                length_cross_vector=norm(cross_vector,2);
-                element.area=length_cross_vector/2;
-                element.normal_vector=cross_vector/length_cross_vector;
-        end
-    end
-end
-
-% due to normal vector is continue, only need to judge one element normal
-% if one element normal vector is incorrect, reverse all element
-% volume_center_point_stagnation_point=ADtree_marker_element.center_point_list(1,:)-volume_center_point;
-% normal_vector_project=volume_center_point_stagnation_point*HATS_element_list(1).normal_vector';
-% if normal_vector_project < 0
-%     % reverse all element
-%     for element_index=1:element_number
-%         HATS_element_list(element_index).normal_vector=-HATS_element_list(element_index).normal_vector;
-%         HATS_element_list(element_index).point_index_list=fliplr(HATS_element_list(element_index).point_index_list);
-%     end
-% end
 end
 
 function geoMakeConsistent(current_index,parent_index)
@@ -182,6 +281,7 @@ if point_index_list_current(public_index_sub) == point_index_list_parent(public_
     HATS_element_list(current_index).point_index_list=fliplr(HATS_element_list(current_index).point_index_list);
 end
 end
+
 function addContactElement(element_index)
 % add children to element
 %
@@ -240,6 +340,7 @@ end
 HATS_element_list(element_index).in_index_list=in_index_list;
 HATS_element_list(element_index).out_index_list=out_index_list;
 end
+
 function contact_index_list=findContactElement(element_index,on_symmetry_flag)
 % search nearby chilren element_index(node_index)
 % if on_symmetry_flag == 1, total contact element should subtract 1

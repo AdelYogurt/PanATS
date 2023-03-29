@@ -106,7 +106,6 @@ for marker_index=1:marker_number
         % su2 file point index is start from 0, so we need to add 1
         element=HATSElement(marker_element_type,...
             int32(str2double(marker_element_string(2:1+element_node_number)))+1);
-        element.element_nearby_list=repmat(element_empty,element_node_number,1);
         element.marker_index=marker_index;
 
         % give element

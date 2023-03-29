@@ -110,7 +110,6 @@ while ~feof(file_mesh)
         end
         % new element
         element=HATSElement(element_type,int32(str2double(string_list(2:(element_node_number+1)))));
-        element.element_nearby_list=repmat(element_empty,element_node_number,1);
         element.marker_index=marker_index;
 
         % add element type

@@ -91,12 +91,11 @@ end
 
 % initialize data sort array
 % delta, Cp, P, dFn, dMn
-inviscid_output=struct( ...
-    'delta_list',cell(length(marker_list),1), ...
-    'Cp_list',cell(length(marker_list),1), ...
-    'P_list',cell(length(marker_list),1), ...
-    'dFn_list',cell(length(marker_list),1), ...
-    'dMn_list',cell(length(marker_list),1));
+inviscid_output.delta_list=cell(length(marker_list),1);
+inviscid_output.Cp_list=cell(length(marker_list),1);
+inviscid_output.P_list=cell(length(marker_list),1);
+inviscid_output.dFn_list=cell(length(marker_list),1);
+inviscid_output.dMn_list=cell(length(marker_list),1);
 force=zeros(1,3);
 moment=zeros(1,3);
 

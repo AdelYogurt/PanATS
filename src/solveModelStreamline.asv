@@ -125,48 +125,22 @@ for moniter_index=1:length(MARKER_MONITERING)
 end
 
 % initialize data sort array
-% streamline_len_list, streamline_list
-streamline_output.streamline_len_list=cell(length(marker_list),1);
+% delta, Cp, P, dFn, dMn
+streamline_output.delta_list=cell(length(marker_list),1);
 streamline_output.streamline_list={};
 
 % select stagnation element center point as start point to generate streamline
 for stagnation_index=1:size(stagnation_list,1)
     element=marker_list(stagnation_list(stagnation_index,1)).element_list(stagnation_list(stagnation_index,2));
 
-    streamline_index=length(streamline_output.streamline_list)+1;
-    streamline=calStreamlineDown...
-        (free_flow_vector,point_list,edge_list,element,element.center_point,streamline_index);
-    line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
+    point_start=element.center_point;
 
-    streamline_output.streamline_list{streamline_index}=streamline;
+    streamline_output.streamline_list{length(streamline_output.streamline_list)+1}=streamline;
 end
 
 for monitor_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
 
-    for element_index=1:marker_list(marker_index).element_number
-        element=marker_element(element_index);
-
-        if isempty(element.streamline_index)
-            % if donot have streamline cross, add new streamline
-            streamline_index=length(streamline_output.streamline_list)+1;
-            streamline=calStreamlineDown...
-                (free_flow_vector,point_list,edge_list,element,element.center_point,streamline_index);
-            line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
-
-            streamline_output.streamline_list{streamline_index}=streamline;
-        end
-    end
-end
-
-for monitor_index=1:length(MARKER_MONITERING)
-    [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
-
-    streamline_len_list=zeros(marker_list(marker_index).element_number,1);
-
-    for element_index=1:marker_list(marker_index).element_number
-        element=marker_element(element_index);
-    end
 end
 
 user_model.streamline_output=streamline_output;
@@ -179,14 +153,13 @@ end
 
 end
 
-function streamline=calStreamlineDown...
-    (free_flow_vector,point_list,edge_list,element,point_start,streamline_index)
-streamline=zeros(size(point_list,1),4); % cross point, current length
-index=1;
+function streamline=calStreamlineDown(element,point_start,streamline_index)
+    streamline=zeros(size(point_list,1),4); % cross point, current length
+    index=1;
+    
+    
 
 streamline(index,:)=[point_start,0];
-element.streamline_index=[streamline_index,index];
-
 point_index_list=element.point_index_list;
 surface_flow=element.surface_flow;
 point_number=length(point_index_list);
@@ -206,8 +179,8 @@ for point_index=1:point_number
     point_ref=point_list(vertex_ref_index,1:3);
 
     dr=point-point_start;
-    dr_ref=point_ref-point_start;d
-    if ((dr/norm(dr)+dr_ref/norm(dr_ref))*free_flow_vector) >= 0 % edge should place on downstream of point_start
+    dr_ref=point_ref-point_start;
+    if ((dr/norm(dr)+dr_ref/norm(dr_ref))*free_flow_vector) > 0 % edge should place on downstream of point_start
         if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0 % edge should cross surface_flow
             point_end=calCrossPoint(point,point_ref,point_start,surface_flow);
             break;
@@ -230,7 +203,6 @@ while ~isempty(element_oppo) && index < size(point_list,1) && ...
     element=element_oppo;
     vertex_start_index=vertex_ref_index;
     point_start=point_end;
-    element.streamline_index=[streamline_index,index];
 
     %         line(point_start(:,1),point_start(:,2),point_start(:,3),'Marker','o')
 
