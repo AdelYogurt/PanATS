@@ -22,8 +22,8 @@ end
 
 % initialize model
 user_model=struct('g_Point',[],'g_Element',[],'g_Marker',[],...
-    'inviscid_output',[],'heat_output',[],'viscid_output',[],'FEM_output',[],...
-    'post_output',[]);
+    'output_inviscid',[],'output_streamline',[],'output_heat',[],'output_viscid',[],'output_FEM',[],...
+    'output_post',[]);
 
 cfg_file=fopen(cfg_filename,'r');
 
@@ -115,6 +115,9 @@ switch user_model.MESH_FORMAT
         user_model.min_bou=output.min_bou;
         user_model.max_bou=output.max_bou;
 end
+
+user_model.point_number=size(user_model.point_list,1);
+user_model.element_number=sum([user_model.marker_list.element_number]);
 
 if ~isfield(user_model,'MARKER_MONITORING')
     error('preModelCFG: lack marker moniter');

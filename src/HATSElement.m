@@ -21,7 +21,7 @@ classdef HATSElement < handle
         % if this element is attachment line element of stagnation element
         attachment=[]; % boolean
         % index of streamline which across this element
-        streamline_index=[]; % streamline index, index of segment in streamline
+        streamline_ref=[]; % streamline reference, index of segment in streamline
     end
     methods
         function HATS_element=HATSElement...

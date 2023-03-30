@@ -62,7 +62,7 @@ elseif dimension == 3
             line(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3));
             if ~isempty(element.attachment)
                 if element.attachment
-                    patch(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3),'r');
+                    patch(point_list(node_index,1),point_list(node_index,2),point_list(node_index,3),'g');
                 end
                 
             end

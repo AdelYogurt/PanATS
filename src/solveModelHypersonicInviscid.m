@@ -91,11 +91,11 @@ end
 
 % initialize data sort array
 % delta, Cp, P, dFn, dMn
-inviscid_output.delta_list=cell(length(marker_list),1);
-inviscid_output.Cp_list=cell(length(marker_list),1);
-inviscid_output.P_list=cell(length(marker_list),1);
-inviscid_output.dFn_list=cell(length(marker_list),1);
-inviscid_output.dMn_list=cell(length(marker_list),1);
+output_inviscid.delta_list=cell(length(marker_list),1);
+output_inviscid.Cp_list=cell(length(marker_list),1);
+output_inviscid.P_list=cell(length(marker_list),1);
+output_inviscid.dFn_list=cell(length(marker_list),1);
+output_inviscid.dMn_list=cell(length(marker_list),1);
 force=zeros(1,3);
 moment=zeros(1,3);
 
@@ -152,11 +152,11 @@ for monitor_index=1:length(MARKER_MONITORING)
         moment=moment+dMn_list(element_index,:);
     end
 
-    inviscid_output.delta_list{marker_index}=delta_list;
-    inviscid_output.Cp_list{marker_index}=Cp_list;
-    inviscid_output.P_list{marker_index}=P_list;
-    inviscid_output.dFn_list{marker_index}=dFn_list;
-    inviscid_output.dMn_list{marker_index}=dMn_list;
+    output_inviscid.delta_list{marker_index}=delta_list;
+    output_inviscid.Cp_list{marker_index}=Cp_list;
+    output_inviscid.P_list{marker_index}=P_list;
+    output_inviscid.dFn_list{marker_index}=dFn_list;
+    output_inviscid.dMn_list{marker_index}=dMn_list;
 end
 
 % calculate lift and drag coefficient
@@ -199,7 +199,7 @@ if ~isempty(SYMMETRY)
     end
 end
 
-user_model.inviscid_output=inviscid_output;
+user_model.output_inviscid=output_inviscid;
 
 if user_model.INFORMATION
     fprintf('solveModelHypersonicInviscid: hypersonic inviscid solve done!\n');

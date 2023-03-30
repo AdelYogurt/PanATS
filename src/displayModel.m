@@ -5,43 +5,80 @@ global user_model
 
 DRAW_FACE_FLAG=1;
 DRAW_SYM_FLAG=1;
-DRAW_INITIAL_GEO=0;
 
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;
 
-% inflow_direction_list=streamline_output.inflow_direction_list;
+output_inviscid=user_model.output_inviscid;
+output_streamline=user_model.output_streamline;
+output_heat=user_model.output_heat;
+output_viscid=user_model.output_viscid;
+output_FEM=user_model.output_FEM;
+output_post=user_model.output_post;
 
 figure_result=figure();
 % colormap('jet');
 
 switch type
     case 'P'
-        P_list={user_model.inviscid_output.P_list};
+        P_list=output_inviscid.P_list;
         drawData(P_list);
         title('Pressure');
         figure_result.Children.set('ColorScale','log')
     case 'log_P'
         P_1=g_geometry.P_1;
-        log_P_list={log(user_model.inviscid_output.P_list/P_1)/log(10)+1};
+        log_P_list={log(output_inviscid.P_list/P_1)/log(10)+1};
         drawData(log_P_list);
         title('log Pressure');
         figure_result.Children.set('ColorScale','linear')
     case 'Cp'
-        Cp_list={user_model.inviscid_output.Cp_list};
+        Cp_list=output_inviscid.Cp_list;
         drawData(Cp_list);
         title('Surface Pressure Coefficient');
     case 'Q'
-        Q_list=heat_output.Q_list;
+        Q_list=output_heat.Q_list;
         drawData(Q_list);
         title('Heat Flux');
     case 'Re_x'
-        Re_x_list=heat_output.Re_x_list;
+        Re_x_list=output_heat.Re_x_list;
         drawData(Re_x_list);
         title('Surface Reynolds number');
     case 'SL'
-        SL_list=streamline_output.streamline_length_list;
-        drawData(SL_list);
+        SLL_list=output_streamline.streamline_len_list;
+        drawData(SLL_list);
+        SL_list=output_streamline.streamline_list;
+        for SL_index=1:length(SL_list)
+            streamline=SL_list{SL_index};
+            line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
+            if DRAW_SYM_FLAG
+                switch user_model.SYMMETRY
+                    case 'XOY'
+                        line(streamline(:,1),streamline(:,2),-streamline(:,3),'Color','r');
+                    case 'YOZ'
+                        line(-streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
+                    case 'ZOX'
+                        line(streamline(:,1),-streamline(:,2),streamline(:,3),'Color','r');
+                end
+            end
+        end
+        attachment_list=output_streamline.attachment_list;
+        for attachment_index=1:length(attachment_list)
+            element_attachment=attachment_list(attachment_index);
+            draw_index_list=element_attachment.point_index_list;
+            draw_index_list=[draw_index_list,draw_index_list(1)];
+
+            line(point_list(draw_index_list,1),point_list(draw_index_list,2),point_list(draw_index_list,3),'Color','r');
+            if DRAW_SYM_FLAG
+                switch user_model.SYMMETRY
+                    case 'XOY'
+                        line(point_list(draw_index_list,1),point_list(draw_index_list,2),-point_list(draw_index_list,3),'Color','r');
+                    case 'YOZ'
+                        line(-point_list(draw_index_list,1),point_list(draw_index_list,2),point_list(draw_index_list,3),'Color','r');
+                    case 'ZOX'
+                        line(point_list(draw_index_list,1),-point_list(draw_index_list,2),point_list(draw_index_list,3),'Color','r');
+                end
+            end
+        end
         title('Streamline Length');
     case 'FEM'
         DOF_node=6;
@@ -113,34 +150,17 @@ drawnow;
                     patch(point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
                         data(element_index),'LineStyle','none')
 
-                    if DRAW_INITIAL_GEO
-                        line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                            'LineStyle',':','Color','r','LineWidth',0.5);
-                    end
-
                     if DRAW_SYM_FLAG
                         switch user_model.SYMMETRY
                             case 'XOY'
                                 patch(point_list(point_index_list,1),point_list(point_index_list,2),-point_list(point_index_list,3),...
                                     data(element_index),'LineStyle','none')
-                                if DRAW_INITIAL_GEO
-                                    line(g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),-g_geometry.initial_point(point_index_list,3),...
-                                        'LineStyle',':','Color','r','LineWidth',0.5);
-                                end
                             case 'YOZ'
                                 patch(-point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
                                     data(element_index),'LineStyle','none')
-                                if DRAW_INITIAL_GEO
-                                    line(-g_geometry.initial_point(point_index_list,1),g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                                        'LineStyle',':','Color','r','LineWidth',0.5);
-                                end
                             case 'ZOX'
                                 patch(point_list(point_index_list,1),-point_list(point_index_list,2),point_list(point_index_list,3),...
                                     data(element_index),'LineStyle','none')
-                                if DRAW_INITIAL_GEO
-                                    line(g_geometry.initial_point(point_index_list,1),-g_geometry.initial_point(point_index_list,2),g_geometry.initial_point(point_index_list,3),...
-                                        'LineStyle',':','Color','r','LineWidth',0.5);
-                                end
                         end
                     end
                 end

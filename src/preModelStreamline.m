@@ -38,29 +38,26 @@ user_model.free_flow_vector=free_flow_vector;
 % clear last time record
 for monitor_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
-
-    streamline_len_list=zeros(marker_list(marker_index).element_number,1);
-
     for element_index=1:marker_list(marker_index).element_number
         marker_element(element_index).streamline_index=[];
     end
 end
 
-% % for all edge in marker, disturbute opposite edge
-% for vertex_index=1:length(edge_list)
-%     edge=edge_list(vertex_index);
-%     if edge ~= edge_empty
-%         % means this vertex is not empty
-%         vertex_ref_list=edge.vertex_ref_list;
-%         edge_number=edge.edge_number;
-%         edge.edge_oppo_list=zeros(edge_number,1,'int32');
-%         
-%         % add index of edge in HATSEdge
-%         for edge_index=1:edge.edge_number
-%             edge.edge_oppo_list(edge_index)=...
-%                 edge_list(vertex_ref_list(edge_index)).getRefIndex(vertex_index);
-%         end
-%     end
-% end
+% for all edge in marker, disturbute opposite edge
+for vertex_index=1:length(edge_list)
+    edge=edge_list(vertex_index);
+    if edge ~= edge_empty
+        % means this vertex is not empty
+        vertex_ref_list=edge.vertex_ref_list;
+        edge_number=edge.edge_number;
+        edge.edge_oppo_list=zeros(edge_number,1,'int32');
+        
+        % add index of edge in HATSEdge
+        for edge_index=1:edge.edge_number
+            edge.edge_oppo_list(edge_index)=...
+                edge_list(vertex_ref_list(edge_index)).getRefIndex(vertex_index);
+        end
+    end
+end
 
 end
