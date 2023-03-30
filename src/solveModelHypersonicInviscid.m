@@ -1,12 +1,12 @@
 function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid()
-% Newton method to calculate hypersonic aircraft
+% base on Newton method and etc to calculate pressure of surface element
 %
 % point_list is coordinate of all node
-% element_list contain element(element_type, node_index1, node_index2, ...)
+% element_list contain []
 % marker_list contain make{marker_name,marker_element_number,marker_element}
-% marker_element contain contain element(element_type, node_index1, node_index2, ...)
+% marker_element contain HATSElement
 %
-% copyright Adel 2022.11
+% copyright Adel 2023.03
 %
 global user_model
 

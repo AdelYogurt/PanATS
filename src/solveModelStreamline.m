@@ -3,6 +3,11 @@ function solveModelStreamline()
 % specifical element is the start of streamline
 % calculate element reference streaamline length
 %
+% point_list is coordinate of all node
+% element_list contain []
+% marker_list contain make{marker_name,marker_element_number,marker_element}
+% marker_element contain HATSElement
+%
 % reference: [1] KENWRIGHT D N. Automatic detection of open and closed
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].

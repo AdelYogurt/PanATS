@@ -15,6 +15,7 @@ preModelPanel();
 
 [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
 solveModelStreamline();
+[max_heat_flow]=solveModelHypersonicHeat();
 
 % [area,volume]=solveGeometry()
 % displayMarker('SLENDER')

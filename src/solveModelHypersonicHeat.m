@@ -1,20 +1,62 @@
 function [max_heat_flow]=solveModelHypersonicHeat()
-% plate reference enthalpy method to calculate hypersonic aircraft
+% plate reference enthalpy method to calculate heat density of surface element
 %
 % point_list is coordinate of all node
-% element_list contain element(element_type, node_index1, node_index2, ...)
+% element_list contain []
 % marker_list contain make{marker_name,marker_element_number,marker_element}
-% marker_element contain contain element(element_type, node_index1, node_index2, ...)
+% marker_element contain HATSElement
 %
 % note P_e == P_w because of
 % pressure of outer boundary of boundary layer is equal to pressure of surface
 %
-% copyright Adel 2022.11
+% copyright Adel 2023.03
 %
-global g_model
-    
-marker_element_number=size(HATS_element_list,1);
-dimension=3;
+global user_model
+
+dimension=user_model.dimension;
+
+point_list=user_model.point_list;
+marker_list=user_model.marker_list;
+
+MARKER_MONITORING=user_model.MARKER_MONITORING;
+SYMMETRY=user_model.SYMMETRY;
+
+% heat calculate need inviscid and streamline result
+output_inviscid=user_model.output_inviscid;
+output_streamline=user_model.output_streamline;
+
+% calculate inflow vector
+free_flow_vector=[1;0;0];
+
+AOA=user_model.AOA/180*pi;
+cos_AOA=cos(AOA);
+sin_AOA=sin(AOA);
+rotation_AOA=[
+    cos_AOA 0 -sin_AOA;
+    0 1 0;
+    sin_AOA 0 cos_AOA];
+
+AOS=user_model.SIDESLIP_ANGLE/180*pi;
+cos_AOS=cos(AOS);
+sin_AOS=sin(AOS);
+rotation_SIDESLIP_ANGLE=[
+    cos_AOS -sin_AOS 0;
+    sin_AOS cos_AOS 0;
+    0 0 1];
+
+free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
+user_model.free_flow_vector=free_flow_vector;
+
+% reference value
+ref_point=[user_model.REF_ORIGIN_MOMENT_X,user_model.REF_ORIGIN_MOMENT_Y,user_model.REF_ORIGIN_MOMENT_Z];
+ref_area=user_model.REF_AREA;
+ref_length=user_model.REF_LENGTH;
+
+T_1=user_model.FREESTREAM_TEMPERATURE;
+P_1=user_model.FREESTREAM_PRESSURE;
+Ma_1=user_model.MACH_NUMBER;
+gama=user_model.GAMA_VALUE;
+Re=user_model.REYNOLDS_NUMBER;
 
 % air parameter
 rou_sl=1.225;
@@ -33,13 +75,6 @@ a_1=sqrt(gama*R*T_1);
 V_1=a_1*Ma_1;
 V_1_sq=V_1*V_1;
 q_1=rou_1*V_1_sq/2;
-
-g_geometry.rou_1=rou_1;
-g_geometry.V_1=V_1;
-g_geometry.T_1=T_1;
-g_geometry.P_1=P_1;
-g_geometry.Ma_1=Ma_1;
-g_geometry.gama=gama;
 
 % solve prepare
 H_0=(airEnthalpy(T_1)+V_1_sq/2); % Free-stream enthalpy J/kg equal to H_s
@@ -81,8 +116,6 @@ rou_w_s=airDensity(H_w,P_ws);
 % du_e__ds=sqrt(2*(P_es-P_w)/rou_es)/radius_s;
 % Q_s_FR=0.763*Pr^-0.6*(rou_w_s*miu_w/rou_es/miu_es)^0.1*...
 %     sqrt(rou_es*miu_es*du_e__ds)*(1+(Le^a-1)*H_d/H_es)*(H_es-H_w);
-
-
 
 if nargin < 10
     % calculate stagnation point heat flow density
