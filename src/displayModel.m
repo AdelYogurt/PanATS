@@ -35,14 +35,7 @@ switch type
         Cp_list=output_inviscid.Cp_list;
         drawData(Cp_list);
         title('Surface Pressure Coefficient');
-    case 'Q'
-        Q_list=output_heat.Q_list;
-        drawData(Q_list);
-        title('Heat Flux');
-    case 'Re_x'
-        Re_x_list=output_heat.Re_x_list;
-        drawData(Re_x_list);
-        title('Surface Reynolds number');
+        figure_result.Children.set('ColorScale','log')
     case 'SL'
         SLL_list=output_streamline.streamline_len_list;
         drawData(SLL_list);
@@ -63,7 +56,9 @@ switch type
         end
         attachment_list=output_streamline.attachment_list;
         for attachment_index=1:length(attachment_list)
-            element_attachment=attachment_list(attachment_index);
+            attachment_data=attachment_list(attachment_index,:);
+            element_attachment=marker_list(attachment_data(1)).element_list(attachment_data(2));
+
             draw_index_list=element_attachment.point_index_list;
             draw_index_list=[draw_index_list,draw_index_list(1)];
 
@@ -80,6 +75,36 @@ switch type
             end
         end
         title('Streamline Length');
+    case 'rou_e'
+        rou_e_list=output_heat.rou_e_list;
+        drawData(rou_e_list);
+        title('Edge of Boundary Layer Density');
+    case 'V_e'
+        V_e_list=output_heat.V_e_list;
+        drawData(V_e_list);
+        title('Edge of Boundary Layer Velocity');
+    case 'miu_e'
+        miu_e_list=output_heat.miu_e_list;
+        drawData(miu_e_list);
+        title('Edge of Boundary Layer Viscosity');
+    case 'H_e'
+        H_e_list=output_heat.H_e_list;
+        drawData(H_e_list);
+        title('Edge of Boundary Layer Enthalpy ');
+    case 'Re_x'
+        Re_x_list=output_heat.Re_x_list;
+        drawData(Re_x_list);
+        title('Surface Reynolds Number');
+    case 'Q'
+        Q_list=output_heat.Q_list;
+        drawData(Q_list);
+        title('Heat Flux');
+        figure_result.Children.set('ColorScale','log')
+    case 'Cf'
+        Cf_list=output_viscid.Cf_list;
+        drawData(Cf_list);
+        title('Surface Friction Coefficient');
+        figure_result.Children.set('ColorScale','log')
     case 'FEM'
         DOF_node=6;
 

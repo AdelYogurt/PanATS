@@ -107,6 +107,7 @@ for marker_index=1:marker_number
         element=HATSElement(marker_element_type,...
             int32(str2double(marker_element_string(2:1+element_node_number)))+1);
         element.marker_index=marker_index;
+        element.element_index=element_index;
 
         % give element
         marker_element_list(element_index)=element;

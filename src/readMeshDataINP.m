@@ -72,6 +72,7 @@ while ~feof(file_mesh)
     if strcmp(string_list{1},'*Element') && read_part_flag
         read_point_flag=0;
         read_element_flag=1;
+        element_index=0;
         continue;
     end
 
@@ -89,14 +90,15 @@ while ~feof(file_mesh)
         end
     end
 
-    % begin read point data
+    % read point data
     if read_point_flag
         point=str2double(string_list(2:4))*scale;
         point_list=[point_list;point];
     end
 
-    % begin read marker element data
+    % read marker element data
     if read_element_flag
+        element_index=element_index+1;
         element_node_number=length(string_list)-1;
         switch element_node_number
             case 2
@@ -111,6 +113,7 @@ while ~feof(file_mesh)
         % new element
         element=HATSElement(element_type,int32(str2double(string_list(2:(element_node_number+1)))));
         element.marker_index=marker_index;
+        element.element_index=element_index;
 
         % add element type
         marker_element_list=[marker_element_list;element];

@@ -1,4 +1,4 @@
-function solveModelStreamline()
+function [max_streamline_len]=solveModelStreamline()
 % identify specifical element(stagnation elemenet, separate element)
 % specifical element is the start of streamline
 % calculate element reference streaamline length
@@ -16,6 +16,8 @@ function solveModelStreamline()
 %
 global user_model
 
+geometry_torlance=1e-9;
+
 dimension=user_model.dimension;
 
 point_list=user_model.point_list;
@@ -23,8 +25,6 @@ edge_list=user_model.edge_list;
 marker_list=user_model.marker_list;
 
 MARKER_MONITERING=user_model.MARKER_MONITORING;
-
-geometry_torlance=1e-9;
 
 % calculate free flow vector
 free_flow_vector=[1;0;0];
@@ -137,7 +137,7 @@ surface_flow_list(boolean,1:3)=...
 user_model.surface_flow_list=surface_flow_list;
 
 % identify attachment element
-attachment_list=HATSElement.empty();
+attachment_list=[]; % marker_index, element_index
 for moniter_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
     for element_index=1:marker_list(marker_index).element_number
@@ -150,7 +150,7 @@ for moniter_index=1:length(MARKER_MONITERING)
             [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,point_arou_list,Ve_list);
             if cross_flag
                 element.attachment=1;
-                attachment_list=[attachment_list;element];
+                attachment_list=[attachment_list;marker_index,element_index];
             else
                 element.attachment=0;
             end
@@ -166,23 +166,23 @@ end
 
 % initialize data sort array
 % streamline_len_list, streamline_list
-output_streamline.streamline_len_list=cell(length(marker_list),1);
-output_streamline.streamline_list={};
-output_streamline.attachment_list=attachment_list;
+streamline_len_list=cell(length(marker_list),1);
+streamline_list={};
 
 max_streamline_len=0; % max length of streamline
 
 % select stagnation element center point as start point to generate streamline
 for attachment_index=1:length(attachment_list)
-    element=attachment_list(attachment_index);
+    attachment_data=attachment_list(attachment_index,:);
+    element=marker_list(attachment_data(1)).element_list(attachment_data(2));
 
-    streamline_index=length(output_streamline.streamline_list)+1;
+    streamline_index=length(streamline_list)+1;
     streamline=calStreamline...
         (free_flow_vector,point_list,edge_list,element,element.center_point,...
         user_model.element_number,streamline_index,geometry_torlance);
 %     line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
 
-    output_streamline.streamline_list{streamline_index,1}=streamline;
+    streamline_list{streamline_index,1}=streamline;
     if streamline(end,4) > max_streamline_len
         max_streamline_len=streamline(end,4);
     end
@@ -199,20 +199,16 @@ for monitor_index=1:length(MARKER_MONITERING)
         if isempty(element.streamline_ref) && ...
                 sum(abs(element.surface_flow)) > geometry_torlance
             % if donot have streamline cross, add new streamline
-            streamline_index=length(output_streamline.streamline_list)+1;
+            streamline_index=length(streamline_list)+1;
             streamline=calStreamline...
                 (free_flow_vector,point_list,edge_list,element,element.center_point,...
                 user_model.element_number,streamline_index,geometry_torlance);
 %             line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
 
-            output_streamline.streamline_list{streamline_index,1}=streamline;
+            streamline_list{streamline_index,1}=streamline;
             if streamline(end,4) > max_streamline_len
                 max_streamline_len=streamline(end,4);
             end
-
-%             if streamline_index == 72
-%                 disp('?');
-%             end
         end
     end
 end
@@ -220,7 +216,7 @@ end
 for monitor_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING(monitor_index),marker_list);
 
-    streamline_len_list=zeros(marker_list(marker_index).element_number,1);
+    streamline_len_list_marker=zeros(marker_list(marker_index).element_number,1);
 
     for element_index=1:marker_list(marker_index).element_number
         element=marker_element(element_index);
@@ -229,14 +225,14 @@ for monitor_index=1:length(MARKER_MONITERING)
         if isempty(streamline_ref)
             if sum(abs(element.surface_flow)) < geometry_torlance
                 % for backup element and have no surface_flow, set to max_streamline_len
-                streamline_len_list(element_index)=max_streamline_len;
+                streamline_len_list_marker(element_index)=max_streamline_len;
             else
                 disp('?');
             end
         else
             streamline_ref_number=size(streamline_ref,1);
             if streamline_ref_number == 1
-                streamline=output_streamline.streamline_list{streamline_ref(1)};
+                streamline=streamline_list{streamline_ref(1)};
                 base_len=streamline(streamline_ref(2),4);
                 base_point=streamline(streamline_ref(2),1:3);
 
@@ -245,7 +241,7 @@ for monitor_index=1:length(MARKER_MONITERING)
                 % select min streamline length as streamline_ref
                 streamline_len=max_streamline_len;
                 for streamline_ref_index=1:streamline_ref_number
-                    streamline=output_streamline.streamline_list{streamline_ref(streamline_ref_index,1)};
+                    streamline=streamline_list{streamline_ref(streamline_ref_index,1)};
                     base_len=streamline(streamline_ref(streamline_ref_index,2),4);
                     base_point=streamline(streamline_ref(streamline_ref_index,2),1:3);
 
@@ -256,12 +252,16 @@ for monitor_index=1:length(MARKER_MONITERING)
                 end
             end
 
-            streamline_len_list(element_index)=streamline_len;
+            streamline_len_list_marker(element_index)=streamline_len;
         end
     end
 
-    output_streamline.streamline_len_list{marker_index}=streamline_len_list;
+    streamline_len_list{marker_index}=streamline_len_list_marker;
 end
+
+output_streamline.streamline_len_list=streamline_len_list;
+output_streamline.streamline_list=streamline_list;
+output_streamline.attachment_list=attachment_list;
 
 user_model.output_streamline=output_streamline;
 
@@ -346,8 +346,15 @@ while ~isempty(element) && index < max_size && ...
         dr=point-point_start;
         dr_ref=point_ref-point_start;
 
+        dr_norm=norm(dr);
+        dr_ref_norm=norm(dr_ref);
+
+        if dr_ref_norm == 0 || dr_norm == 0
+            continue;
+        end
+
         % check if edge was upstream 
-        if ((dr/norm(dr)+dr_ref/norm(dr_ref))*surface_flow') <= 0
+        if ((dr/dr_norm+dr_ref/dr_ref_norm)*surface_flow') <= 0
             % check if edge was crossed by surface_flow
             if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0
                 point_end=calCrossPoint(point,point_ref,point_start,surface_flow);
@@ -627,7 +634,7 @@ while index < max_size && downstream_flag
                 % check if edge was crossed by surface_flow
                 if cross(element_ref.surface_flow,dedge_ref)*cross(element_ref.surface_flow,dedge_prev)' <= 0
                     element_search_flag=true(1);
-                    break;
+                    break; % goto edge search
                 end
             end
         end
@@ -656,7 +663,7 @@ while index < max_size && downstream_flag
         element_ref=edge.element_ref_list(edge.getRefIndex(vertex_index));
     end
 
-    if isempty(element_ref)
+    if isempty(element_ref) || sum(abs(element_ref.surface_flow)) < geometry_torlance
         downstream_flag=false(1);
     end
 
@@ -664,7 +671,6 @@ while index < max_size && downstream_flag
     element=element_ref;
     vertex_forbid_index=vertex_ref_index;
     point_start=point_end;
-
 end
 
 streamline=streamline(1:index,:);
@@ -732,8 +738,8 @@ if sum(abs(eig_value) <= topology_torlance)
 end
 
 stagnation_point=-jacobian\bias;
-% stagnation cannot to far 
-% if max(abs(stagnation_point)) > 10
+% % stagnation cannot to far 
+% if max(abs(stagnation_point)) > 100
 %     return;
 % end
 
@@ -752,7 +758,9 @@ if det(eig_vector) < 0
 end
 
 max_bou=max(abs(point_proj_list));
-if ((eig_value(2)*max_bou(2))^2-(eig_value(1)*max_bou(1))^2) > cos(pi/3) % velocity do not too close
+cos_angle=((eig_value(2)*max_bou(2))^2-(eig_value(1)*max_bou(1))^2)/ ...
+    ((eig_value(2)*max_bou(2))^2+(eig_value(1)*max_bou(1))^2);
+if cos_angle > 0.95 % velocity do not too close
     return;
 end
 

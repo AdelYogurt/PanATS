@@ -7,6 +7,8 @@ classdef HATSElement < handle
         point_index_list=[]; % int32
         % marker_index
         marker_index=[]; % int8
+        % element_index in marker element
+        element_index=[]; % int32
         % edge index in HATSEdge
         edge_ref_list=[]; % int8
     end

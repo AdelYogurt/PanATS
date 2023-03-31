@@ -164,6 +164,7 @@ for marker_index=1:length(filename_mesh_list)
         % new element
         element=HATSElement(int8(5),int32(mapping_list(3*(element_index-1)+(1:3))'));
         element.marker_index=marker_index;
+        element.element_index=element_index;
 
         % give element
         marker_element_list(element_index)=element;

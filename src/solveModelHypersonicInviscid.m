@@ -89,24 +89,24 @@ else
     HIGH_HYPERSONIC_FLAG=1;
 end
 
-% initialize data sort array
+% initialize result sort array
 % delta, Cp, P, dFn, dMn
-output_inviscid.delta_list=cell(length(marker_list),1);
-output_inviscid.Cp_list=cell(length(marker_list),1);
-output_inviscid.P_list=cell(length(marker_list),1);
-output_inviscid.dFn_list=cell(length(marker_list),1);
-output_inviscid.dMn_list=cell(length(marker_list),1);
-force=zeros(1,3);
-moment=zeros(1,3);
+delta_list=cell(length(marker_list),1);
+Cp_list=cell(length(marker_list),1);
+P_list=cell(length(marker_list),1);
+dFn_list=cell(length(marker_list),1);
+dMn_list=cell(length(marker_list),1);
+force_inviscid=zeros(1,3);
+moment_inviscid=zeros(1,3);
 
 for monitor_index=1:length(MARKER_MONITORING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITORING(monitor_index),marker_list);
 
-    delta_list=zeros(marker_list(marker_index).element_number,1);
-    Cp_list=zeros(marker_list(marker_index).element_number,1);
-    P_list=zeros(marker_list(marker_index).element_number,1);
-    dFn_list=zeros(marker_list(marker_index).element_number,3);
-    dMn_list=zeros(marker_list(marker_index).element_number,3);
+    delta_list_marker=zeros(marker_list(marker_index).element_number,1);
+    Cp_list_marker=zeros(marker_list(marker_index).element_number,1);
+    P_list_marker=zeros(marker_list(marker_index).element_number,1);
+    dFn_list_marker=zeros(marker_list(marker_index).element_number,3);
+    dMn_list_marker=zeros(marker_list(marker_index).element_number,3);
 
     for element_index=1:marker_list(marker_index).element_number
         element=marker_element(element_index);
@@ -135,49 +135,49 @@ for monitor_index=1:length(MARKER_MONITORING)
             Cp=max(-(delta*3.8197)*(1/Ma_1_sq),-(1/Ma_1_sq));
         end
 
-        % p
+        % Pressure
         P=q_1*Cp+P_1;
 
         if P < 0
             disp('P < 0');
         end
 
-        delta_list(element_index,:)=delta;
-        Cp_list(element_index,:)=Cp;
-        P_list(element_index,:)=P;
-        dFn_list(element_index,:)=-normal_vector*area*P;
-        dMn_list(element_index,:)=cross(element.center_point-ref_point,dFn_list(element_index,:));
+        delta_list_marker(element_index,:)=delta;
+        Cp_list_marker(element_index,:)=Cp;
+        P_list_marker(element_index,:)=P;
+        dFn_list_marker(element_index,:)=-normal_vector*area*P;
+        dMn_list_marker(element_index,:)=cross(element.center_point-ref_point,dFn_list_marker(element_index,:));
 
-        force=force+dFn_list(element_index,:);
-        moment=moment+dMn_list(element_index,:);
+        force_inviscid=force_inviscid+dFn_list_marker(element_index,:);
+        moment_inviscid=moment_inviscid+dMn_list_marker(element_index,:);
     end
 
-    output_inviscid.delta_list{marker_index}=delta_list;
-    output_inviscid.Cp_list{marker_index}=Cp_list;
-    output_inviscid.P_list{marker_index}=P_list;
-    output_inviscid.dFn_list{marker_index}=dFn_list;
-    output_inviscid.dMn_list{marker_index}=dMn_list;
+    delta_list{marker_index}=delta_list_marker;
+    Cp_list{marker_index}=Cp_list_marker;
+    P_list{marker_index}=P_list_marker;
+    dFn_list{marker_index}=dFn_list_marker;
+    dMn_list{marker_index}=dMn_list_marker;
 end
 
 % calculate lift and drag coefficient
-drag=force*free_flow_vector;
+drag=force_inviscid*free_flow_vector;
 rotation_matrix=[0,0,1;
     0,1,0;
     -1,0,0]';
-lift=force*(rotation_matrix*free_flow_vector);
+lift=force_inviscid*(rotation_matrix*free_flow_vector);
 Cl=lift/ref_area/q_1;
 Cd=drag/ref_area/q_1;
 LDratio=Cl/Cd;
 
 % calculate force coefficient
-Cx=force(1)/ref_area/q_1;
-Cy=force(2)/ref_area/q_1;
-Cz=force(3)/ref_area/q_1;
+Cx=force_inviscid(1)/ref_area/q_1;
+Cy=force_inviscid(2)/ref_area/q_1;
+Cz=force_inviscid(3)/ref_area/q_1;
 
 % calculate moment
-Cmx=moment(1)/ref_area/ref_length/q_1;
-Cmy=moment(2)/ref_area/ref_length/q_1;
-Cmz=moment(3)/ref_area/ref_length/q_1;
+Cmx=moment_inviscid(1)/ref_area/ref_length/q_1;
+Cmy=moment_inviscid(2)/ref_area/ref_length/q_1;
+Cmz=moment_inviscid(3)/ref_area/ref_length/q_1;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)
@@ -198,6 +198,14 @@ if ~isempty(SYMMETRY)
             error('solveModelHypersonicInviscid: nuknown SYMMETRY type');
     end
 end
+
+output_inviscid.delta_list=delta_list;
+output_inviscid.Cp_list=Cp_list;
+output_inviscid.P_list=P_list;
+output_inviscid.dFn_list=dFn_list;
+output_inviscid.dMn_list=dMn_list;
+output_inviscid.force_inviscid=force_inviscid;
+output_inviscid.moment_inviscid=moment_inviscid;
 
 user_model.output_inviscid=output_inviscid;
 
