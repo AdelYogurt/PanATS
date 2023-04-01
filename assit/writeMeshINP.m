@@ -1,4 +1,4 @@
-function writeMeshDataINP(filename_mesh,point_list,element_list,element_type)
+function writeMeshINP(filename_mesh,point_list,element_list,element_type)
 % write mesh data into inp file(ABAQUS analysis format)
 %
 if strcmp(filename_mesh(end-3:end),'.inp')
