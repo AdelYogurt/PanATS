@@ -71,7 +71,8 @@ switch user_model.SYMMETRY
 end
 
 % calculate surface velocity base on velocity project
-surface_flow_list=[zeros(size(point_list,1),4)]; % surface_flow, repeat times of vertex
+surface_flow_list=[zeros(size(point_list,1),3)]; % surface_flow
+vertex_repeat_times=[zeros(size(point_list,1),1)]; % repeat times of vertex
 for moniter_index=1:length(MARKER_MONITERING)
     [marker_element,marker_index]=getMarkerElement(MARKER_MONITERING{moniter_index},marker_list);
     for element_index=1:marker_list(marker_index).element_number
@@ -93,8 +94,8 @@ for moniter_index=1:length(MARKER_MONITERING)
         % add data to each point
         surface_flow_list(point_index_list,1:3)=...
             surface_flow_list(point_index_list,1:3)+Ve;
-        surface_flow_list(point_index_list,4)=...
-            surface_flow_list(point_index_list,4)+1;
+        vertex_repeat_times(point_index_list)=...
+            vertex_repeat_times(point_index_list)+1;
 
         % identify which point of element on symmetry face
         % add symmetry velocity to point
@@ -128,13 +129,15 @@ for moniter_index=1:length(MARKER_MONITERING)
     end
 end
 
-boolean = surface_flow_list(:,4) ~= 0;
+marker_boolean=vertex_repeat_times ~= 0;
 % average velocity to each point
-surface_flow_list(boolean,1:3)=...
-    surface_flow_list(boolean,1:3)./surface_flow_list(boolean,4);
+surface_flow_list(marker_boolean,1:3)=...
+    surface_flow_list(marker_boolean,1:3)./vertex_repeat_times(marker_boolean);
 
 % record
-user_model.surface_flow_list=surface_flow_list;
+user_model.output_post.surface_flow_list=surface_flow_list;
+user_model.output_post.vertex_repeat_times=vertex_repeat_times;
+user_model.output_post.marker_boolean=marker_boolean;
 
 % identify attachment element
 attachment_list=[]; % marker_index, element_index
@@ -694,11 +697,15 @@ function [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,point_list,V
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].
 %
-topology_torlance=1e-6;
 precision_torlance=1e-12;
+% topology_torlance=1e-6;
 
 cross_flag=false(1);
 stagnation_flag=false(0);
+
+% if any(sum(abs(point_list-[2.5322,1.922,-0.00416]),2) < 1e-3)
+%     disp('?');
+% end
 
 % project to 2D
 e3=normal_vector;
@@ -723,7 +730,7 @@ bias=coefficient(:,3); % [a1;a2]
 % jacobian matrix is negative, process stop
 det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
 if (((jacobian(1,1)+jacobian(2,2))^2-...
-        4*det_jacobian) < -topology_torlance)
+        4*det_jacobian) < -precision_torlance)
     eig_value=[];
     stagnation_point=[];
     return;
@@ -732,7 +739,7 @@ end
 % evaluate eigenvalues of jacobian matrix
 % if one of eigenvalues is zero, process stop
 eig_value=eig(jacobian);
-if sum(abs(eig_value) <= topology_torlance)
+if any(abs(eig_value) <= precision_torlance)
     stagnation_point=[];
     return;
 end
@@ -757,9 +764,14 @@ if det(eig_vector) < 0
     point_proj_list=flipud(point_proj_list);
 end
 
-max_bou=max(abs(point_proj_list));
-cos_angle=((eig_value(2)*max_bou(2))^2-(eig_value(1)*max_bou(1))^2)/ ...
-    ((eig_value(2)*max_bou(2))^2+(eig_value(1)*max_bou(1))^2);
+max_bou=max((point_proj_list));
+min_bou=min((point_proj_list));
+center_bou=(min_bou+max_bou)/2;
+aver_bou=sum(max_bou-min_bou)/2;
+judge_bou=center_bou+aver_bou/2;
+
+cos_angle=((eig_value(2)*judge_bou(2))^2-(eig_value(1)*judge_bou(1))^2)/ ...
+    ((eig_value(2)*judge_bou(2))^2+(eig_value(1)*judge_bou(1))^2);
 if cos_angle > 0.95 % velocity do not too close
     return;
 end
@@ -778,19 +790,19 @@ end
 % eigenvalue less than zero is concentrate
 % X corresponds to the eigenvectors 1
 % Y corresponds to the eigenvectors 2
-if ((eig_value(1) > topology_torlance) && ...
-        (eig_value(2) > topology_torlance))
+if ((eig_value(1) > precision_torlance) && ...
+        (eig_value(2) > precision_torlance))
     % repelling node, check small eigenvalue corresponded axis
     % if cross Y
     if judgeCrossY(point_proj_list(1:end,[1,2]))
         cross_flag=true(1);
     end
-elseif ((eig_value(1) < -topology_torlance) && ...
-        (eig_value(2) < -topology_torlance))
+elseif ((eig_value(1) < -precision_torlance) && ...
+        (eig_value(2) < -precision_torlance))
     % attracting node, check
     % concentrate line is not stagnation point
     
-elseif ((eig_value(1) > topology_torlance) && (eig_value(2) < -topology_torlance))
+elseif ((eig_value(1) > precision_torlance) && (eig_value(2) < -precision_torlance))
     % saddle, judge axis X and axis Y which is separation line
     % means which eigenvalue is large than zero
     % repelling node, check small eigenvalue corresponded axis

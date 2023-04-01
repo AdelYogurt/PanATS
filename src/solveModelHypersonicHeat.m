@@ -285,14 +285,14 @@ for monitor_index=1:length(MARKER_MONITORING)
         miu_ref=airViscosity(H_ref);
         rou_ref=airDensity(H_ref,P_e);
 
-        if Re_x <= 1e5
+        if Re_x <= Re_x_tri
             % laminar flow
             Q=0.332*Pr^(-3/2)*rou_e*V_e*Re_x^-0.5*(H_r-H_w)*...
                 (rou_ref*miu_ref/rou_e/miu_e)^0.5;
-        elseif Re_x < 1e7
-            % transition flow
-            Q=0.0296*Pr^(-3/2)*rou_e*V_e*Re_x^-0.2*(H_r-H_w)*...
-                (rou_ref/rou_e)^0.8*(miu_ref/miu_e)^0.2;
+%         elseif Re_x < 1e7
+%             % transition flow
+%             Q=0.0296*Pr^(-3/2)*rou_e*V_e*Re_x^-0.2*(H_r-H_w)*...
+%                 (rou_ref/rou_e)^0.8*(miu_ref/miu_e)^0.2;
         else
             % turbulent flow
             Q=0.185*Pr^(-3/2)*rou_ref*V_e*(log(Re_x)/log(10))^2.584*(H_r-H_w)*...

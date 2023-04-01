@@ -114,12 +114,12 @@ for monitor_index=1:length(MARKER_MONITORING)
             Re_x=10;
         end
 
-        if Re_x <= 1e5
+        if Re_x <= Re_x_tri
             % laminar flow
             Cf=0.6640*Re_x^-0.5;
-        elseif Re_x < 1e7
-            % transition flow
-            Cf=0.0296*Re_x^-0.2;
+%         elseif Re_x < 1e7
+%             % transition flow
+%             Cf=0.0296*Re_x^-0.2;
         else
             % turbulent flow
             Cf=0.288*(log(Re_x)/log(10))^2.584;
