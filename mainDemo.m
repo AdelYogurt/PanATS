@@ -9,8 +9,8 @@ addpath([pwd,'\mesh']);
 global user_model
 
 % user_model=preModelCFG('slender.cfg');
-user_model=preModelCFG('blunt.cfg');
-% user_model=preModelCFG('waverider.cfg');
+% user_model=preModelCFG('blunt.cfg');
+user_model=preModelCFG('waverider.cfg');
 % user_model=preModelCFG('INP_plate.cfg');
 % user_model=preModelCFG('geo_test.cfg');
 
@@ -26,9 +26,9 @@ preModelPanel();
 % displayMarker('waverider')
 % displayMarker('Part-plate')
 
-% displayModel('Cp')
-% displayModel('SL')
-% displayModel('Q')
-% displayModel('Cf')
+displayModel('Cp')
+displayModel('SL')
+displayModel('Q')
+displayModel('Cf')
 
 
