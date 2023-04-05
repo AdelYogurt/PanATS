@@ -7,6 +7,7 @@ addpath([pwd,'\input']);
 addpath([pwd,'\mesh']);
 addpath([pwd,'\assit']);
 addpath([pwd,'\data']);
+addpath([pwd,'\lib']);
 
 global user_model
 

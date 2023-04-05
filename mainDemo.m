@@ -5,6 +5,7 @@ close all hidden;
 addpath([pwd,'\src']);
 addpath([pwd,'\input']);
 addpath([pwd,'\mesh']);
+addpath([pwd,'\lib']);
 
 global user_model
 

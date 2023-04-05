@@ -1,5 +1,5 @@
-function writeMeshSTL...
-    (filename_mesh,data_X,data_Y,data_Z)
+function convertWGSToSTL()
+
 % write Binary STL mesh file;
 % data_X, data_Y, data_Z are 1 x face_number cell
 %
@@ -95,4 +95,7 @@ fwrite(file_mesh,total_element,'uint32');
 
 fclose(file_mesh);
 clear('file_mesh');
+
+
+
 end

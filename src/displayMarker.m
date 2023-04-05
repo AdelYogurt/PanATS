@@ -11,11 +11,11 @@ marker_list=user_model.marker_list;
 point_list=user_model.point_list;
 
 if isempty(marker_name_list)
-    marker_name_list=marker_list(:,1);
-else
-    if ischar(marker_name_list)
-        marker_name_list={marker_name_list};
-    end
+    marker_name_list=marker_list.name;
+end
+
+if ischar(marker_name_list)
+    marker_name_list={marker_name_list};
 end
 
 if dimension == 2

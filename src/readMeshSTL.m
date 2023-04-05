@@ -11,10 +11,13 @@ function [point_list,element_list,marker_list,element_empty,geometry,marker_moni
 % marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
 % marker_element contain contain element(element_type, node_index1, node_index2, ...)
 %
-if nargin < 3
-    file_type=[];
-    if nargin < 2
-        scale=[];
+if nargin < 4
+    INFORMATION=true(1);
+    if nargin < 3
+        file_type=[];
+        if nargin < 2
+            scale=[];
+        end
     end
 end
 
@@ -116,6 +119,10 @@ for marker_index=1:length(filename_mesh_list)
         marker_name=strsplit(marker_name);
         marker_name=marker_name{2};
 
+        % initial sort space
+        marker_point_list=zeros(99,3);
+        point_number=0;
+
         % read normal vector
         vector_normal_string=strsplit(fgetl(file_mesh));
         while ~strcmp(vector_normal_string{1},'endsolid')
@@ -137,11 +144,18 @@ for marker_index=1:length(filename_mesh_list)
                     norm(point_2-point_3) < geometry_torlance ||...
                     norm(point_3-point_1) < geometry_torlance
             else
-                marker_point_list=[marker_point_list;point_1'];
-                marker_point_list=[marker_point_list;point_2'];
-                marker_point_list=[marker_point_list;point_3'];
+                marker_point_list(point_number+1,:)=point_1';
+                marker_point_list(point_number+2,:)=point_2';
+                marker_point_list(point_number+3,:)=point_3';
+                point_number=point_number+3;
+            end
+
+            % add more sort space
+            if point_number == size(marker_point_list,1)
+                marker_point_list=[marker_point_list;zeros(99,3)];
             end
         end
+        marker_point_list=marker_point_list(1:point_number,:);
 
         marker_element_number=size(marker_point_list,1)/3;
     end
