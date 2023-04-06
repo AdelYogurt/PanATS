@@ -7,7 +7,7 @@ function part=readMeshSTL(filename_mesh,scale,file_type,INFORMATION,geometry_tor
 % geometry_torlance(default is 1e-12)
 %
 % output:
-% part
+% part(only one part)
 %
 % part(part.name, part.mesh_list{mesh.element_list, mesh.element_type, mesh.element_ID})
 %

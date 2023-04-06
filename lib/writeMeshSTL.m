@@ -2,7 +2,7 @@ function writeMeshSTL(filename_mesh,part)
 % write Binary STL mesh file
 %
 % input:
-% filename_mesh, part[part.name, part.mesh_list[mesh.element_list, mesh.element_type, mesh.element_ID]]
+% filename_mesh, part(only one part)
 %
 % notice:
 % mesh.element_ID if not is 5(tri), will be convert into tri

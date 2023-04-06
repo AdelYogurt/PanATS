@@ -20,11 +20,12 @@ fprintf(file_mesh,'Create by writeMeshWGS.m\n');
 % write start of part
 for part_index=1:length(part_list)
     part=part_list{part_index};
-    mesh=part.mesh_list{1};
+    mesh_list=part.mesh_list;
 
     % write part name
     fprintf(file_mesh,'%s\n',part.name);
 
+    mesh=mesh_list{1};
     X=mesh.X;Y=mesh.Y;Z=mesh.Z;
     [point_number,line_number]=size(X);
 
@@ -35,6 +36,28 @@ for part_index=1:length(part_list)
     for line_index=1:line_number
         for point_index=1:point_number
             fprintf(file_mesh,'%14f %14f %14f\n',X(point_index,line_index),Y(point_index,line_index),Z(point_index,line_index));
+        end
+    end
+
+    if length(mesh_list) > 1
+        for mesh_index=2:length(mesh_list)
+            mesh=mesh_list{mesh_index};
+            X=mesh.X;Y=mesh.Y;Z=mesh.Z;
+            if size(X,1) ~= point_number
+                error('writeMeshWGS: point number in line of mesh_list do not equal');
+            end
+
+            [point_number,line_number]=size(X);
+
+            % write part information data
+            fprintf(file_mesh,' %d %d %d 0 0 0 0 0 0 0 1 1 1 0\n',part_index,line_number,point_number);
+
+            % write element data
+            for line_index=1:line_number
+                for point_index=1:point_number
+                    fprintf(file_mesh,'%14f %14f %14f\n',X(point_index,line_index),Y(point_index,line_index),Z(point_index,line_index));
+                end
+            end
         end
     end
 end
