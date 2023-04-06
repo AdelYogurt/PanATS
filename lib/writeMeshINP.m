@@ -80,13 +80,16 @@ end
 fprintf(file_mesh,'**\n');
 fprintf(file_mesh,'** ASSEMBLY\n');
 fprintf(file_mesh,'**\n');
+fprintf(file_mesh,'*Assembly, name=Assembly\n');
 
 % import part
-fprintf(file_mesh,'*Assembly, name=Assembly\n');
-fprintf(file_mesh,'**  \n');
-fprintf(file_mesh,'*Instance, name=Part-%s-1, part=Part-%s\n',filename_mesh,filename_mesh);
-fprintf(file_mesh,'*End Instance\n');
-fprintf(file_mesh,'**\n');
+for part_index=1:length(part_list)
+    part=part_list{part_index};
+    fprintf(file_mesh,'**  \n');
+    fprintf(file_mesh,'*Instance, name=Part-%s-1, part=Part-%s\n',part.name,part.name);
+    fprintf(file_mesh,'*End Instance\n');
+    fprintf(file_mesh,'**\n');
+end
 
 % write end of assembly
 fprintf(file_mesh,'*End Assembly\n');

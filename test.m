@@ -19,7 +19,7 @@ close all hidden;
 % [point_list,part_list,geometry]=readMeshINP('mixed_mesh.inp');
 % writeMeshINP('test.inp',point_list,part_list);
 
-% % part_list=readMeshWGS('tmx1242.wgs');
-% % part_list=convertWGSToSTL(part_list);
-% % writeMeshSTL('test.stl',part_list{2})
+% part_list=readMeshWGS('tmx1242.wgs');
+% [point_list,part_list]=convertWGSToMesh(part_list,false(1));
+% writeMeshINP('test.inp',point_list,part_list)
 

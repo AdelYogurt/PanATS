@@ -25,7 +25,7 @@ for part_index=1:length(part_list)
 
         [point_number,line_number]=size(X);
 
-        % write each face to file
+        % convert each element to stl
         calculate_element=(point_number-1)*(line_number-1)*2;
         element_number=0;
         element_list=zeros(calculate_element*3,3);
@@ -85,6 +85,10 @@ for part_index=1:length(part_list)
 
     part.mesh_list=mesh_list;
     part_list{part_index}=part;
+end
+
+if length(part_list) == 1
+    part_list={part_list};
 end
 
 end
