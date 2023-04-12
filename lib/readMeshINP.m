@@ -1,6 +1,6 @@
-function [point_list,part_list,geometry]=readMeshINP...
+function [part_list,point_list,geometry]=readMeshINP...
     (filename_mesh,scale,INFORMATION)
-% read mash data from inp file
+% read shell mash data from inp file
 %
 % input:
 % filename_mesh(support .inp file), scale(geometry zoom scale), ...
@@ -30,8 +30,8 @@ else
 end
 
 % check file if exist
-if exist(filename_mesh,'file')~=2
-    error('readMeshDataINP: mesh file do not exist')
+if exist(filename_mesh,'file') ~= 2
+    error('readMeshINP: mesh file do not exist')
 else
     file_mesh=fopen(filename_mesh,'r');
 end
@@ -45,7 +45,7 @@ if isempty(scale)
 end
 
 if INFORMATION
-    disp('readMeshDataINP: read mash data begin');
+    disp('readMeshINP: read mash data begin');
 end
 
 read_part_flag=0;
@@ -92,13 +92,13 @@ while ~feof(file_mesh)
         mesh_element_type=string_list{2};
         switch mesh_element_type
             case 'S3'
-                mesh_element_ID=int8(3);
-            case {'S4R','S4'}
                 mesh_element_ID=int8(5);
-            case 'S8'
+            case {'S4R','S4'}
                 mesh_element_ID=int8(9);
+            case 'S8'
+                mesh_element_ID=int8(12);
             otherwise
-                error('readMeshDataINP: unknown element type')
+                error('readMeshINP: unknown element type')
         end
         mesh_element_list=[];
 
@@ -153,13 +153,13 @@ while ~feof(file_mesh)
             mesh_element_type=string_list{2};
             switch mesh_element_type
                 case 'S3'
-                    mesh_element_ID=int8(3);
-                case {'S4R','S4'}
                     mesh_element_ID=int8(5);
-                case 'S8'
+                case {'S4R','S4'}
                     mesh_element_ID=int8(9);
+                case 'S8'
+                    mesh_element_ID=int8(12);
                 otherwise
-                    error('readMeshDataINP: unknown element type')
+                    error('readMeshINP: unknown element type')
             end
             mesh_element_list=[];
 
@@ -183,7 +183,7 @@ geometry.max_bou=max(point_list);
 geometry.dimension=3;
 
 if INFORMATION
-    disp('readMeshDataINP: read mash data done');
+    disp('readMeshINP: read mash data done');
 end
 
 end

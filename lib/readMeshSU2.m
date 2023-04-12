@@ -1,18 +1,25 @@
-function [point_list,element_list,marker_list,element_empty,geometry]=readMeshSU2...
+function [part_list,point_list,geometry]=readMeshSU2...
     (filename_mesh,scale,INFORMATION)
-% read mash data from data file
-% input mesh_filename(support .su2 file), scale(geometry zoom scale)
-% return point_list, element_list(all evaluated marker element), marker_list
+% read mash data from su2 file, only include marker mesh data
 %
+% input:
+% filename_mesh(support .inp file), scale(geometry zoom scale), ...
+% INFORMATION(true or false)
+%
+% output:
+% point_list, part_list
+%
+% notice:
 % point_list is coordinate of all node
-% element_list contain element which will be aero function evaluated
-% element contain HATSelement
-% marker_list is struct list, {marker.name, marker.element_number,marker.element_list}
-% marker_element contain contain element(element_type, node_index1, node_index2, ...)
+% part_list{part.name, part.mesh_list{mesh.element_list, mesh.element_type, mesh.element_ID}}
 %
-if nargin < 2
-    scale=[];
+if nargin < 3
+    INFORMATION=true(1);
+    if nargin < 2
+        scale=[];
+    end
 end
+
 
 % cheak file definition
 if length(filename_mesh) > 4
@@ -22,31 +29,31 @@ if length(filename_mesh) > 4
 else
     filename_mesh=[filename_mesh,'.su2'];
 end
-if exist(filename_mesh,'file')==2
-    file_mesh=fopen(filename_mesh,'r');
+
+% check file if exist
+if exist(filename_mesh,'file') ~= 2
+    error('readMeshSU2: mesh file do not exist')
 else
-    error('readMeshDataSU2: mesh file do not exist')
+    file_mesh=fopen(filename_mesh,'r');
 end
 
 point_list=[];
-element_list=[];
-marker_list=[];
-element_empty=HATSElement([],[]);
+part_list={};
 
 if isempty(scale)
     scale=1;
 end
 
 if INFORMATION
-    disp('readMeshDataSU2: read mash data begin');
+    disp('readMeshSU2: read mash data begin');
 end
 
-dimension_string=fgetl(file_mesh);
-dimension_string=strsplit(dimension_string,' ');
+% read mesh dimension
+dimension_string=strsplit(fgetl(file_mesh),' ');
 dimension=str2double(dimension_string{2});
 
-element_number_string=fgetl(file_mesh);
-element_number_string=strsplit(element_number_string,' ');
+% read volume element number
+element_number_string=strsplit(fgetl(file_mesh),' ');
 element_number=str2double(element_number_string{2});
 
 % jump over volume element data
@@ -60,7 +67,7 @@ point_number_string=strsplit(point_number_string,' ');
 if strcmp(point_number_string{1},'NPOIN=')
     point_number=str2double(point_number_string{2});
 else
-    error('readMeshDataSU2:NPOIN do not exist')
+    error('readMeshSU2:NPOIN do not exist')
 end
 point_position=ftell(file_mesh);
 
@@ -70,144 +77,177 @@ for point_index=1:point_number
 end
 
 % read marker data
-marker_number_string=fgetl(file_mesh);
-marker_number_string=strsplit(marker_number_string);
-if strcmp(marker_number_string{1},'NMARK=')
-    marker_number=str2double(marker_number_string{2});
+part_number_string=strsplit(fgetl(file_mesh));
+if strcmp(part_number_string{1},'NMARK=')
+    part_number=str2double(part_number_string{2});
 else
     error('readMeshData:NMARK do not exist')
 end
 
-marker_list=repmat(struct('name',[],'element_number',[],'element_list',[]),marker_number,1);
-for marker_index=1:marker_number
+part_point_number=0;
+part_list=cell(part_number,1);
+for part_index=1:part_number
     % read marker name
-    marker_name_string=strsplit(fgetl(file_mesh));
-    marker_name=marker_name_string{2};
+    part_name_string=strsplit(fgetl(file_mesh));
+    part_name=part_name_string{2};
 
     % read marker element number
-    marker_element_number_string=strsplit(fgetl(file_mesh));
-    marker_element_number=str2double(marker_element_number_string{2});
+    part_element_number_string=strsplit(fgetl(file_mesh));
+    part_element_number=str2double(part_element_number_string{2});
+
+    % initialize mesh list
+    mesh_tri.element_ID=5;
+    mesh_tri.element_type='S3';
+    mesh_tri.element_list=zeros(part_element_number,3);
+    mesh_tri.element_number=0;
+
+    mesh_quad.element_ID=9;
+    mesh_quad.element_ID='S4R';
+    mesh_quad.element_list=zeros(part_element_number,4);
+    mesh_quad.element_number=0;
+
+    mesh_list={mesh_tri,mesh_quad};
 
     % read marker element node index
-    marker_element_list=repmat(HATSElement([],[]),marker_element_number,1);
-    for element_index=1:marker_element_number
-        marker_element_string=strsplit(fgetl(file_mesh));
-        marker_element_type=int8(str2double(marker_element_string{1}));
-        switch marker_element_type
-            case 3
-                element_node_number=2;
+    for element_index=1:part_element_number
+        element_string=strsplit(fgetl(file_mesh));
+        element_ID=int8(str2double(element_string{1}));
+        
+        switch element_ID
+            case 5
+                element_node_number=3;
+                mesh_index=1;
+            case 9
+                element_node_number=4;
+                mesh_index=2;
+        end
+
+        % su2 file point index is start from 0, so we need to add 1
+        point_index=int32(str2double(element_string(2:1+element_node_number)))+1;
+
+        % give element
+        addMesh(mesh_index,point_index);
+    end
+
+    % delete empty mesh
+    mesh_index=1;
+    while mesh_index <= length(mesh_list)
+        if mesh_list{mesh_index}.element_number == 0
+            mesh_list(mesh_index)=[];
+        else
+            element_number=mesh_list{mesh_index}.element_number;
+            mesh_list{mesh_index}.element_list=...
+                mesh_list{mesh_index}.element_list(1:element_number,:);
+            part_point_number=part_point_number+element_number*element_node_number;
+            mesh_index=mesh_index+1;
+        end
+    end
+
+    part.name=part_name;
+    part.mesh_list=mesh_list;
+
+    part_list{part_index}=part;
+end
+
+% read all point index of part element
+flag_number=0;
+total_point_index_list=zeros(1,part_point_number);
+for part_index=1:length(part_list)
+    mesh_list=part_list{part_index}.mesh_list;
+
+    for mesh_index=1:length(mesh_list)
+        mesh=mesh_list{mesh_index};
+
+        element_number=size(mesh.element_list,1);
+
+        switch mesh.element_ID
             case 5
                 element_node_number=3;
             case 9
                 element_node_number=4;
         end
+        
+        mesh_point_number=element_number*element_node_number;
 
-        % create new HATSElement
-        % su2 file point index is start from 0, so we need to add 1
-        element=HATSElement(marker_element_type,...
-            int32(str2double(marker_element_string(2:1+element_node_number)))+1);
-        element.marker_index=marker_index;
-        element.element_index=element_index;
-
-        % give element
-        marker_element_list(element_index)=element;
-    end
-
-    marker_list(marker_index).name=marker_name;
-    marker_list(marker_index).element_number=marker_element_number;
-    marker_list(marker_index).element_list=marker_element_list;
-end
-
-% read all point index of marker element
-marker_point_number=0;
-marker_element_number=0;
-for marker_index=1:length(marker_list)
-    marker_element_number=marker_element_number+marker_list(marker_index).element_number;
-end
-marker_point_index_list=zeros(1,4*marker_element_number);
-for marker_index=1:length(marker_list)
-    marker_element_list=marker_list(marker_index).element_list;
-    for element_index=1:marker_list(marker_index).element_number
-        switch marker_element_list(element_index).element_type
-            case 3
-                marker_point_index_list(marker_point_number+1:marker_point_number+2)=...
-                    marker_element_list(element_index).point_index_list;
-                marker_point_number=marker_point_number+2;
-            case 5
-                marker_point_index_list(marker_point_number+1:marker_point_number+3)=...
-                    marker_element_list(element_index).point_index_list;
-                marker_point_number=marker_point_number+3;
-            case 9
-                marker_point_index_list(marker_point_number+1:marker_point_number+4)=...
-                    marker_element_list(element_index).point_index_list;
-                marker_point_number=marker_point_number+4;
-        end
+        % add all point_index to total_point_index_list
+        total_point_index_list((flag_number+1):(flag_number+mesh_point_number))=...
+            reshape(mesh.element_list',1,mesh_point_number);
+        flag_number=flag_number+mesh_point_number;
     end
 end
 
 % deleta useless point, get all point index of marker
-% mapping_list: old marker_point_index_list to new marker_point_index_list
-% read_list: old marker_point_index_list to new marker_point_index_list
-% read point should accord with marker_point_index_list
-% marker_point_index_list is sort from small to large
-marker_point_index_list(marker_point_number+1:end)=[];
-[marker_point_index_list,~,mapping_list]=unique(marker_point_index_list);
+% mapping_list: old total_point_index_list to new total_point_index_list
+% total_point_index_list is sorted from small to large
+[total_point_index_list,~,mapping_list]=unique(total_point_index_list);
 
 % updata element_list point index to new list
-marker_point_number=0;
-for marker_index=1:length(marker_list)
-    marker_element_list=marker_list(marker_index).element_list;
-    for element_index=1:marker_list(marker_index).element_number
-        switch marker_element_list(element_index).element_type
-            case 2
-                element_node_number=2;
-                marker_point_number=marker_point_number+2;
+flag_number=0;
+for part_index=1:length(part_list)
+    mesh_list=part_list{part_index}.mesh_list;
+
+    for mesh_index=1:length(mesh_list)
+        mesh=mesh_list{mesh_index};
+
+        element_number=size(mesh.element_list,1);
+
+        switch mesh.element_ID
             case 5
                 element_node_number=3;
-                marker_point_number=marker_point_number+3;
             case 9
                 element_node_number=4;
-                marker_point_number=marker_point_number+4;
         end
-        for point_index=1:element_node_number
-            marker_element_list(element_index).point_index_list(point_index)=...
-                mapping_list(marker_point_number-element_node_number+point_index);
-        end
+        
+        mesh_point_number=element_number*element_node_number;
+
+        % generate new element list
+        mesh.element_list=reshape(mapping_list((flag_number+1):(flag_number+mesh_point_number))...
+            ,element_node_number,element_number)';
+
+        flag_number=flag_number+mesh_point_number;
+
+        mesh_list{mesh_index}=mesh;
     end
-    marker_list(marker_index).element_list=marker_element_list;
+
+    part_list{part_index}.mesh_list=mesh_list;
 end
 
-marker_point_number=length(marker_point_index_list);
-
 % reread point data
+part_point_number=length(total_point_index_list);
 fseek(file_mesh,point_position,"bof");
-point_list=zeros(marker_point_number,dimension);
-point_index_position=1;
+point_list=zeros(part_point_number,3);
+flag_point=1;
 for node_index=1:point_number
     point_string=fgetl(file_mesh);
 
     % only on marker point will be read
-    if marker_point_index_list(point_index_position) == node_index
+    if total_point_index_list(flag_point) == node_index
+
         point_string=strsplit(point_string,{char(32),char(9)});
-        point_list(point_index_position,1:dimension)=str2double(point_string(1:dimension))*scale;
-        point_index_position=point_index_position+1;
+        point_list(flag_point,1:3)=str2double(point_string(1:3))*scale;
+        flag_point=flag_point+1;
     end
 
-    if point_index_position > marker_point_number
+    if flag_point > part_point_number
         % stop reading
         break;
     end
 end
 
+fclose(file_mesh);
+clear('file_mesh')
+
 geometry.min_bou=min(point_list);
 geometry.max_bou=max(point_list);
 geometry.dimension=3;
 
-fclose(file_mesh);
-clear('file_mesh')
-
 if INFORMATION
-    disp('readMeshDataSU2: read mash data done!')
+    disp('readMeshSU2: read mash data done!')
 end
+
+    function addMesh(mesh_index,point_index)
+        mesh_list{mesh_index}.element_number=mesh_list{mesh_index}.element_number+1;
+        mesh_list{mesh_index}.element_list(mesh_list{mesh_index}.element_number,:)=point_index;
+    end
 
 end

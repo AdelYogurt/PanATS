@@ -13,9 +13,14 @@ classdef ADTreePoint < handle
     methods
         function [ADT,index_list]=ADTreePoint(raw_point_list,min_bou,max_bou,torlance)
             % generate ADT by repeat_point_list
-            % raw_point_list is point_number x dimension matrix
-            % min low_bou and max up_bou will search in point_list
-            % index_list is raw_point_list index in point_list
+            %
+            % input:
+            % raw_point_list(point_number x dimension matrix), ...
+            % min_bou, max_bou(default search in point_list), ...
+            % torlance(min distance of point to point)
+            %
+            % output:
+            % ADT, index_list(raw_point_list index in point_list)
             %
             if nargin > 0
                 if nargin < 4

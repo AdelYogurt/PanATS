@@ -1,8 +1,11 @@
 function [marker_element,marker_index]=getMarkerElement(marker_name,marker_list)
 % function to find specified marker element
 %
-% input marker_name(char list), marker_list(struct)
-% return marker_element, marker_index(specified marker index in marker_list)
+% input:
+% marker_name(char list), marker_list(struct)
+%
+% output:
+% marker_element, marker_index(specified marker index in marker_list)
 %
 marker_element=[];
 for marker_index=1:length(marker_list)

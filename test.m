@@ -2,24 +2,35 @@ clc;
 clear;
 close all hidden;
 
-% part_list=readMeshWGS('tmx1242.wgs');
-% view(3);
-% axis equal;
-% hold on;
-% for part_index=1:length(part_list)
-%     part=part_list(part_index);
-%     surf(part.mesh_list.X,part.mesh_list.Y,part.mesh_list.Z)
-% end
-% hold off;
-% writeMeshWGS('test.wgs',part_list);
+addpath([pwd,'\src']);
+addpath([pwd,'\lib']);
+addpath([pwd,'\mesh']);
 
-% part=readMeshSTL('sphere.stl');
+part=readMeshSTL('waverider_wing.stl');
+
+% displayPart(part);
 % writeMeshSTL('test.stl',part);
 
-% [point_list,part_list,geometry]=readMeshINP('mixed_mesh.inp');
-% writeMeshINP('test.inp',point_list,part_list);
+[part_list,point_list,geometry]=convertSTLToMesh(part,false(1));
+displayPart(part_list,point_list);
+% writeMeshINP('test.inp',part_list,point_list)
 
 % part_list=readMeshWGS('tmx1242.wgs');
-% [point_list,part_list]=convertWGSToMesh(part_list,false(1));
-% writeMeshINP('test.inp',point_list,part_list)
+
+% displayPart(part_list);
+% writeMeshWGS('test.wgs',part_list);
+
+% [part_list,point_list,geometry]=convertWGSToMesh(part_list,true(1));
+% displayPart(part_list,point_list);
+% writeMeshINP('test.inp',part_list,point_list)
+
+
+% [part_list,point_list,geometry]=readMeshINP('mixed_mesh.inp');
+% displayPart(part_list,point_list);
+% writeMeshINP('test.inp',part_list,point_list);
+
+
+% [part_list,point_list,geometry]=readMeshSU2('slender.su2');
+% displayPart(part_list,point_list);
+% writeMeshINP('test.inp',part_list,point_list);
 

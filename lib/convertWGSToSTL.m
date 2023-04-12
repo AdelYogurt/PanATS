@@ -71,14 +71,14 @@ for part_index=1:length(part_list)
         end
 
         element_list=element_list(1:element_number*3,:);
-        element_type='stl';
 
         mesh=rmfield(mesh,'X');
         mesh=rmfield(mesh,'Y');
         mesh=rmfield(mesh,'Z');
 
+        % sort element
         mesh.element_list=element_list;
-        mesh.element_type=element_type;
+        mesh.element_type='stl';
 
         mesh_list{mesh_index}=mesh;
     end
@@ -88,7 +88,7 @@ for part_index=1:length(part_list)
 end
 
 if length(part_list) == 1
-    part_list={part_list};
+    part_list=part_list{1};
 end
 
 end

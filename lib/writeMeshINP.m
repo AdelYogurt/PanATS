@@ -1,4 +1,4 @@
-function writeMeshINP(filename_mesh,point_list,part_list)
+function writeMeshINP(filename_mesh,part_list,point_list)
 % write mesh data into inp file(ABAQUS analysis format)
 %
 % input:
@@ -13,6 +13,10 @@ if strcmp(filename_mesh(end-3:end),'.inp')
 end
 
 file_mesh=fopen([filename_mesh,'.inp'],'w');
+
+if ~iscell(part_list)
+    part_list={part_list};
+end
 
 % write basic information of inp file
 fprintf(file_mesh,'*Heading\n');
@@ -31,10 +35,12 @@ for part_index=1:length(part_list)
     % write part name
     fprintf(file_mesh,'*Part, name=Part-%s\n',part.name);
 
+    % notice, element index in each part of inp file start from 1
+    % search min and max element index of mesh
     mesh_list=part.mesh_list;
     min_point_index=int32(2147483647);
     max_point_index=int32(0);
-    for mesh_index=length(mesh_list)
+    for mesh_index=1:length(mesh_list)
         mesh=mesh_list{mesh_index};
         min_point_index=min(min_point_index,min(min(mesh.element_list)));
         max_point_index=max(max_point_index,max(max(mesh.element_list)));
@@ -51,6 +57,7 @@ for part_index=1:length(part_list)
     end
 
     % write element data
+    % notice, element index in each part of inp file start from 1
     element_off_set=0;
     for mesh_index=1:length(mesh_list)
         mesh=mesh_list{mesh_index};

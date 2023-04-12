@@ -41,7 +41,7 @@ else
     filename_mesh=[filename_mesh,'.stl'];
 end
 if exist(filename_mesh,'file')~=2
-    error('readMeshDataSTL: mesh file do not exist')
+    error('readMeshSTL: mesh file do not exist')
 end
 
 
@@ -64,7 +64,7 @@ if isempty(file_type)
 end
 
 if INFORMATION
-    disp(['readMeshDataSTL: read mash data begin, file type read as ',file_type]);
+    disp(['readMeshSTL: read mash data begin, file type read as ',file_type]);
 end
 
 if strcmp(file_type,'binary')
@@ -79,7 +79,7 @@ if strcmp(file_type,'binary')
     mesh_element_list=zeros(3*mesh_element_number,3);
 
     % read element
-    repeat_list=[];
+    overlap_list=[];
     for element_index=1:mesh_element_number
         % read normal vector
         vector_normal=fread(file_mesh,3,'float32');
@@ -97,12 +97,12 @@ if strcmp(file_type,'binary')
         if norm(point_1-point_2) < geometry_torlance ||...
                 norm(point_2-point_3) < geometry_torlance ||...
                 norm(point_3-point_1) < geometry_torlance
-            repeat_list=[repeat_list;element_index];
+            overlap_list=[overlap_list;element_index];
         end
     end
 
-    mesh_element_list([3*repeat_list-2;3*repeat_list-1;repeat_list],:)=[];
-    mesh_element_number=mesh_element_number-length(repeat_list);
+    mesh_element_list([3*overlap_list-2;3*overlap_list-1;overlap_list],:)=[];
+    mesh_element_number=mesh_element_number-length(overlap_list);
 else
     % read head
     part_name=fgetl(file_mesh);
@@ -158,7 +158,7 @@ part.name=part_name;
 part.mesh_list={mesh};
 
 if INFORMATION
-    disp('readMeshDataSTL: read mash data done');
+    disp('readMeshSTL: read mash data done');
 end
 
     function point=getASCIIPoint(file_mesh)

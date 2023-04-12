@@ -119,20 +119,6 @@ while ~feof(file_mesh)
     end
 
     % process rotation
-    if rotation(1) ~= 0
-        cRX=cos(rotation(1));sRX=sin(rotation(1));
-        rotation_matrix=[
-            1 0 0;
-            0 cRX -sRX
-            0 sRX cRX];
-        X_old=X;
-        Y_old=Y;
-        Z_old=Z;
-        X=rotation_matrix(1,1)*X_old+rotation_matrix(1,2)*Y_old+rotation_matrix(1,3)*Z_old;
-        Y=rotation_matrix(2,1)*X_old+rotation_matrix(2,2)*Y_old+rotation_matrix(2,3)*Z_old;
-        Z=rotation_matrix(3,1)*X_old+rotation_matrix(3,2)*Y_old+rotation_matrix(3,3)*Z_old;
-    end
-
     if rotation(2) ~= 0
         cRY=cos(rotation(2));sRY=sin(rotation(2));
         rotation_matrix=[
@@ -145,12 +131,24 @@ while ~feof(file_mesh)
         Z=rotation_matrix(3,1)*X_old+rotation_matrix(3,2)*Y_old+rotation_matrix(3,3)*Z_old;
     end
 
-    if rotation(2) ~= 0
+    if rotation(3) ~= 0
         cRZ=cos(rotation(3));sRZ=sin(rotation(3));
         rotation_matrix=[
             cRZ -sRZ 0
             sRZ cRZ 0
             0 0 1];
+        X_old=X;Y_old=Y;Z_old=Z;
+        X=rotation_matrix(1,1)*X_old+rotation_matrix(1,2)*Y_old+rotation_matrix(1,3)*Z_old;
+        Y=rotation_matrix(2,1)*X_old+rotation_matrix(2,2)*Y_old+rotation_matrix(2,3)*Z_old;
+        Z=rotation_matrix(3,1)*X_old+rotation_matrix(3,2)*Y_old+rotation_matrix(3,3)*Z_old;
+    end
+
+    if rotation(1) ~= 0
+        cRX=cos(rotation(1));sRX=sin(rotation(1));
+        rotation_matrix=[
+            1 0 0;
+            0 cRX -sRX
+            0 sRX cRX];
         X_old=X;Y_old=Y;Z_old=Z;
         X=rotation_matrix(1,1)*X_old+rotation_matrix(1,2)*Y_old+rotation_matrix(1,3)*Z_old;
         Y=rotation_matrix(2,1)*X_old+rotation_matrix(2,2)*Y_old+rotation_matrix(2,3)*Z_old;
