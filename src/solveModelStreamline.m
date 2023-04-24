@@ -18,7 +18,7 @@ global user_model
 
 geometry_torlance=1e-9;
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 
 point_list=user_model.point_list;
 edge_list=user_model.edge_list;
@@ -175,7 +175,7 @@ streamline_list={};
 max_streamline_len=0; % max length of streamline
 
 % select stagnation element center point as start point to generate streamline
-for attachment_index=1:length(attachment_list)
+for attachment_index=1:size(attachment_list,1)
     attachment_data=attachment_list(attachment_index,:);
     element=marker_list(attachment_data(1)).element_list(attachment_data(2));
 

@@ -13,7 +13,7 @@ function [max_heat_flow]=solveModelHypersonicHeat()
 %
 global user_model
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 
 point_list=user_model.point_list;
 edge_list=user_model.edge_list;

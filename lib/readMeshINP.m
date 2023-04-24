@@ -69,7 +69,8 @@ while ~feof(file_mesh)
         % read part
         part_name=string_list{2}(6:end);
         part_index=part_index+1;
-        part_mesh_list=[];
+        part_element_number=0;
+        part_mesh_list={};
         continue;
     end
 
@@ -82,11 +83,9 @@ while ~feof(file_mesh)
     if strcmp(string_list{1},'*Element') && read_part_flag && ~read_element_flag
         read_point_flag=0;
         read_element_flag=1;
-        element_index=0;
 
         % begin new mesh read
         mesh_number=0;
-        mesh_list={};
 
         string_list=strsplit(string_list{2},'=');
         mesh_element_type=string_list{2};
@@ -101,6 +100,7 @@ while ~feof(file_mesh)
                 error('readMeshINP: unknown element type')
         end
         mesh_element_list=[];
+        element_number=0;
 
         continue;
     end
@@ -115,13 +115,15 @@ while ~feof(file_mesh)
             mesh.element_list=mesh_element_list;
             mesh.element_type=mesh_element_type;
             mesh.element_ID=mesh_element_ID;
+            part_element_number=part_element_number+length(mesh_element_list,1);
 
             mesh_number=mesh_number+1;
-            mesh_list{mesh_number}=mesh;
+            part_mesh_list{mesh_number}=mesh;
 
             % add old part to part_list
             part.name=part_name;
-            part.mesh_list=mesh_list;
+            part.mesh_list=part_mesh_list;
+            part.element_number=part_element_number;
 
             part_number=part_number+1;
             part_list{part_number}=part;
@@ -144,11 +146,14 @@ while ~feof(file_mesh)
             mesh.element_list=mesh_element_list;
             mesh.element_type=mesh_element_type;
             mesh.element_ID=mesh_element_ID;
+            mesh.element_number=element_number;
+            part_element_number=part_element_number+length(mesh_element_list,1);
 
             mesh_number=mesh_number+1;
-            mesh_list{mesh_number}=mesh;
+            part_mesh_list{mesh_number}=mesh;
 
             % begin new mesh read
+            element_number=0;
             string_list=strsplit(string_list{2},'=');
             mesh_element_type=string_list{2};
             switch mesh_element_type
@@ -166,8 +171,7 @@ while ~feof(file_mesh)
             continue;
         else
             % add element point index
-            element_index=element_index+1;
-
+            element_number=element_number+1;
             mesh_element_list=[mesh_element_list;
                 int32( str2double( string_list(2:end) ) )+point_index_offset];
         end

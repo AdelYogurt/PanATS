@@ -52,6 +52,7 @@ if remove_redundance
     exist_point_number=int32(0); % offset index of point index list
     for part_index=1:length(part_list)
         mesh_list=part_list{part_index}.mesh_list;
+        part_element_number=0;
         
         % process each mesh
         for mesh_index=1:length(mesh_list)
@@ -104,9 +105,11 @@ if remove_redundance
             mesh_list{mesh_index}=mesh;
 
             exist_point_number=exist_point_number+int32(mesh_point_number);
+            part_element_number=part_element_number+element_number;
         end
 
         part_list{part_index}.mesh_list=mesh_list;
+        part_list{part_index}.element_number=part_element_number;
     end
 
     geometry.min_bou=ADT.min_bou;

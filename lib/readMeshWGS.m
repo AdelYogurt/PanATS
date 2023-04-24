@@ -1,7 +1,7 @@
 function part_list=readMeshWGS(filename_mesh,scale,INFORMATION)
-% read mash data from inp file
+% read mash data from wgs file
 % input:
-% filename_mesh(support .inp file), scale(geometry zoom scale), ...
+% filename_mesh(support .wgs file), scale(geometry zoom scale), ...
 % INFORMATION(true or false)
 %
 % output:
@@ -69,6 +69,9 @@ while ~feof(file_mesh)
     part_ID=information_list(1);
     line_number=information_list(2);
     point_number=information_list(3);
+    element_number=(line_number-1)*(point_number-1);
+
+    part_element_number=0;
 
     lsymmetry=information_list(4);
 
@@ -181,12 +184,10 @@ while ~feof(file_mesh)
     mesh.Y=Y;
     mesh.Z=Z;
     mesh.element_type='wgs';
-
-    part.name=part_name;
-    part.mesh_list={mesh};
-
-    part_number=part_number+1;
-    part_list{part_number}=part;
+    mesh.element_number=element_number;
+    
+    mesh_list={mesh};
+    part_element_number=part_element_number+element_number;
 
     % process global symmetry
     % if exist global, add mirror part 
@@ -204,12 +205,16 @@ while ~feof(file_mesh)
         mesh.Z=Z;
         mesh.element_type='wgs';
 
-        part.name=[part_name,'_sym'];
-        part.mesh_list={mesh};
-
-        part_number=part_number+1;
-        part_list{part_number}=part;
+        mesh_list{length(mesh_list)+1}=mesh;
+        part_element_number=part_element_number+element_number;
     end
+
+    part.name=part_name;
+    part.mesh_list=mesh_list;
+    part.element_number=part_element_number;
+
+    part_number=part_number+1;
+    part_list{part_number}=part;
 end
 
 fclose(file_mesh);

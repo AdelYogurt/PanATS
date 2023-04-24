@@ -10,7 +10,7 @@ function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid()
 %
 global user_model
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 
 point_list=user_model.point_list;
 marker_list=user_model.marker_list;

@@ -3,7 +3,7 @@ function [part_list,point_list,geometry]=readMeshSU2...
 % read mash data from su2 file, only include marker mesh data
 %
 % input:
-% filename_mesh(support .inp file), scale(geometry zoom scale), ...
+% filename_mesh(support .su2 file), scale(geometry zoom scale), ...
 % INFORMATION(true or false)
 %
 % output:
@@ -131,6 +131,7 @@ for part_index=1:part_number
 
     % delete empty mesh
     mesh_index=1;
+    element_number_total=0;
     while mesh_index <= length(mesh_list)
         if mesh_list{mesh_index}.element_number == 0
             mesh_list(mesh_index)=[];
@@ -145,6 +146,7 @@ for part_index=1:part_number
 
     part.name=part_name;
     part.mesh_list=mesh_list;
+    part.element_number=part_element_number;
 
     part_list{part_index}=part;
 end

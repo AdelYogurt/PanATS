@@ -75,12 +75,12 @@ if strcmp(file_type,'binary')
     part_name=part_name{2};
 
     % read total element_number
-    mesh_element_number=fread(file_mesh,1,'int32');
-    mesh_element_list=zeros(3*mesh_element_number,3);
+    part_element_number=fread(file_mesh,1,'int32');
+    mesh_element_list=zeros(3*part_element_number,3);
 
     % read element
     overlap_list=[];
-    for element_index=1:mesh_element_number
+    for element_index=1:part_element_number
         % read normal vector
         vector_normal=fread(file_mesh,3,'float32');
 
@@ -102,7 +102,7 @@ if strcmp(file_type,'binary')
     end
 
     mesh_element_list([3*overlap_list-2;3*overlap_list-1;overlap_list],:)=[];
-    mesh_element_number=mesh_element_number-length(overlap_list);
+    part_element_number=part_element_number-length(overlap_list);
 else
     % read head
     part_name=fgetl(file_mesh);
@@ -144,7 +144,7 @@ else
     end
     mesh_element_list=mesh_element_list(1:element_number*3,:);
 
-    mesh_element_number=size(mesh_element_list,1)/3;
+    part_element_number=size(mesh_element_list,1)/3;
 end
 
 fclose(file_mesh);
@@ -153,9 +153,11 @@ clear('file_mesh');
 mesh.element_list=mesh_element_list;
 mesh.element_type='stl';
 mesh.element_ID=int8(5);
+mesh.element_number=part_element_number;
 
 part.name=part_name;
 part.mesh_list={mesh};
+part.element_number=part_element_number;
 
 if INFORMATION
     disp('readMeshSTL: read mash data done');
