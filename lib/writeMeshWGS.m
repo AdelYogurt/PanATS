@@ -41,6 +41,9 @@ for part_index=1:length(part_list)
 
     if length(mesh_list) > 1
         for mesh_index=2:length(mesh_list)
+            % write part name
+            fprintf(file_mesh,'%s\n',part.name);
+
             mesh=mesh_list{mesh_index};
             X=mesh.X;Y=mesh.Y;Z=mesh.Z;
             if size(X,1) ~= point_number

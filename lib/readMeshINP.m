@@ -115,10 +115,11 @@ while ~feof(file_mesh)
             mesh.element_list=mesh_element_list;
             mesh.element_type=mesh_element_type;
             mesh.element_ID=mesh_element_ID;
-            part_element_number=part_element_number+length(mesh_element_list,1);
+            mesh.element_number=element_number;
+            part_element_number=part_element_number+element_number;
 
             mesh_number=mesh_number+1;
-            part_mesh_list{mesh_number}=mesh;
+            part_mesh_list{mesh_number,1}=mesh;
 
             % add old part to part_list
             part.name=part_name;
@@ -126,7 +127,7 @@ while ~feof(file_mesh)
             part.element_number=part_element_number;
 
             part_number=part_number+1;
-            part_list{part_number}=part;
+            part_list{part_number,1}=part;
 
             point_index_offset=int32(size(point_list,1));
             continue;
@@ -147,10 +148,10 @@ while ~feof(file_mesh)
             mesh.element_type=mesh_element_type;
             mesh.element_ID=mesh_element_ID;
             mesh.element_number=element_number;
-            part_element_number=part_element_number+length(mesh_element_list,1);
+            part_element_number=part_element_number+element_number;
 
             mesh_number=mesh_number+1;
-            part_mesh_list{mesh_number}=mesh;
+            part_mesh_list{mesh_number,1}=mesh;
 
             % begin new mesh read
             element_number=0;

@@ -186,7 +186,7 @@ while ~feof(file_mesh)
     mesh.element_type='wgs';
     mesh.element_number=element_number;
     
-    mesh_list={mesh};
+    mesh_list(1,1)={mesh};
     part_element_number=part_element_number+element_number;
 
     % process global symmetry
@@ -205,7 +205,7 @@ while ~feof(file_mesh)
         mesh.Z=Z;
         mesh.element_type='wgs';
 
-        mesh_list{length(mesh_list)+1}=mesh;
+        mesh_list{length(mesh_list)+1,1}=mesh;
         part_element_number=part_element_number+element_number;
     end
 
@@ -214,7 +214,7 @@ while ~feof(file_mesh)
     part.element_number=part_element_number;
 
     part_number=part_number+1;
-    part_list{part_number}=part;
+    part_list{part_number,1}=part;
 end
 
 fclose(file_mesh);
