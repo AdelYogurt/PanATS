@@ -194,11 +194,17 @@ while ~feof(file_mesh)
     if gsymmetry
         switch gsymmetry
             case 1 % X-Z
-                Y=-Y;
+                X=flipud(X);
+                Y=-flipud(Y);
+                Z=flipud(Z);
             case 2 % X-Y
-                Z=-Z;
+                X=flipud(X);
+                Y=flipud(Y);
+                Z=-flipud(Z);
             case 3 % Y-Z
-                X=-X;
+                X=-flipud(X);
+                Y=flipud(Y);
+                Z=flipud(Z);
         end
         mesh.X=X;
         mesh.Y=Y;

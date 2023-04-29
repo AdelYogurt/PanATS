@@ -41,9 +41,9 @@ for part_index=1:length(part_list)
 
                 % write first small element
                 point1=[x_list(1),y_list(1),z_list(1)];
-                point2=[x_list(2),y_list(2),z_list(2)];
+                point2=[x_list(3),y_list(3),z_list(3)];
                 point3=[x_list(4),y_list(4),z_list(4)];
-                point4=[x_list(3),y_list(3),z_list(3)];
+                point4=[x_list(2),y_list(2),z_list(2)];
 
                 d12=point2-point1;
                 d23=point3-point2;

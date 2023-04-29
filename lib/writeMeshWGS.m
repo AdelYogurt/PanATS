@@ -14,6 +14,10 @@ end
 
 file_mesh=fopen([filename_mesh,'.wgs'],'w');
 
+if ~iscell(part_list)
+    part_list={part_list};
+end
+
 % write basic information of inp file
 fprintf(file_mesh,'Create by writeMeshWGS.m\n');
 
@@ -23,7 +27,11 @@ for part_index=1:length(part_list)
     mesh_list=part.mesh_list;
 
     % write part name
-    fprintf(file_mesh,'%s\n',part.name);
+    if length(mesh_list) > 1
+        fprintf(file_mesh,'%s1\n',part.name);
+    else
+        fprintf(file_mesh,'%s\n',part.name);
+    end
 
     mesh=mesh_list{1};
     X=mesh.X;Y=mesh.Y;Z=mesh.Z;
@@ -42,14 +50,10 @@ for part_index=1:length(part_list)
     if length(mesh_list) > 1
         for mesh_index=2:length(mesh_list)
             % write part name
-            fprintf(file_mesh,'%s\n',part.name);
+            fprintf(file_mesh,'%s%d\n',part.name,mesh_index);
 
             mesh=mesh_list{mesh_index};
             X=mesh.X;Y=mesh.Y;Z=mesh.Z;
-            if size(X,1) ~= point_number
-                error('writeMeshWGS: point number in line of mesh_list do not equal');
-            end
-
             [point_number,line_number]=size(X);
 
             % write part information data

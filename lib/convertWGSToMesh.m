@@ -71,9 +71,9 @@ if remove_redundance
                 base_offset=point_number*(line_index-1);
                 for point_index=1:point_number-1
                     point1_index=index_list(base_offset+point_index+exist_point_number);
-                    point2_index=index_list(base_offset+point_index+1+exist_point_number);
+                    point2_index=index_list(base_offset+point_index+point_number+exist_point_number);
                     point3_index=index_list(base_offset+point_index+1+point_number+exist_point_number);
-                    point4_index=index_list(base_offset+point_index+point_number+exist_point_number);
+                    point4_index=index_list(base_offset+point_index+1+exist_point_number);
 
                     if point1_index == point2_index || point2_index == point3_index || point1_index == point3_index
                         % small element degeneration to line, discard it
@@ -138,9 +138,9 @@ else
                 base_offset=point_number*(line_index-1);
                 for point_index=1:point_number-1
                     point1_index=base_offset+point_index+exist_point_number;
-                    point2_index=base_offset+point_index+1+exist_point_number;
+                    point2_index=base_offset+point_index+point_number+exist_point_number;
                     point3_index=base_offset+point_index+1+point_number+exist_point_number;
-                    point4_index=base_offset+point_index+point_number+exist_point_number;
+                    point4_index=base_offset+point_index+1+exist_point_number;
 
                     d12=point_list(point2_index,:)-point_list(point1_index,:);
                     d23=point_list(point3_index,:)-point_list(point2_index,:);
