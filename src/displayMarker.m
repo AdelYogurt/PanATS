@@ -6,12 +6,12 @@ if nargin < 1
     marker_name_list=[];
 end
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 marker_list=user_model.marker_list;
 point_list=user_model.point_list;
 
 if isempty(marker_name_list)
-    marker_name_list=marker_list.name;
+    marker_name_list={marker_list.name};
 end
 
 if ischar(marker_name_list)

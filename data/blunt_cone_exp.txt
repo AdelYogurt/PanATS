@@ -2,7 +2,7 @@ R = 152.4 mm, theta = 15, L = 568.7 mm
 
 R/rb = 0 
 Mach 10.6, Velocity 1461.92, Re 0.4e6, Pressure 44.02
-Total Temperature 47.3397, Total Pressure 2758000
+Total Temperature 58.2176, Total Pressure 2758000
 Q0 1.2719e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0
@@ -25,11 +25,11 @@ AOA = 20
 180 .290 .264 .238 .216 .186 NaN .168 .152 .137 .133
 
 Mach 10.6, Velocity 1461.92, Re 1.2e6, Pressure 132.0611
-Total Temperature 47.3397, Total Pressure 8.2737e6
+Total Temperature 58.2176, Total Pressure 8.2737e6
 Q0 2.1577e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0 
-0 .124 .110 .108 .100 .0811 .0832 .0826 .0848 .0887 .0963 
+0 0.124 0.110 0.108 0.100 0.0811 0.0832 0.0826 0.0848 0.0887 0.0963 
 AOA = 5 
 0 .0641 .0561 .0507 .0481 .0454 .0547 .0668 .0817 .0950 .107 
 15 .0698 .0620 .0568 .0517 .0465 .0408 .0522 .0661 .07 62 .0894 
@@ -88,7 +88,7 @@ AOA = 20
 180 .344 .326 .282 .260 .234 NaN .202 .188 .175 .173
 
 Mach 10.6, Velocity 1461.92, Re 1.8e6, Pressure 198.0916
-Total Temperature 47.3397, Total Pressure 1.2411e7
+Total Temperature 58.2176, Total Pressure 1.2411e7
 Q0 2.6006e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897
 AOA = 0
@@ -113,14 +113,14 @@ AOA = 20
 
 R/rb = 0.0625
 Mach 10.6, Velocity 1461.92, Re 0.4e6, Pressure 44.02
-Total Temperature 47.3397, Total Pressure 2758000
+Total Temperature 58.2176, Total Pressure 2758000
 Q0 1.2719e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0
 0 .0998 .0918 .0897 NaN .0738 .0656 .0630 .0639 .0618 .0549 
 
 Mach 10.6, Velocity 1461.92, Re 1.2e6, Pressure 132.0611
-Total Temperature 47.3397, Total Pressure 8.2737e6
+Total Temperature 58.2176, Total Pressure 8.2737e6
 Q0 2.1577e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0
@@ -183,7 +183,7 @@ AOA = 20
 180 .377 .343 .290 .269 .238 .214 .206 .193 .181 NaN
 
 Mach 10.6, Velocity 1461.92, Re 1.8e6, Pressure 198.0916
-Total Temperature 47.3397, Total Pressure 1.2411e7
+Total Temperature 58.2176, Total Pressure 1.2411e7
 Q0 2.6006e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0
@@ -208,7 +208,7 @@ AOA = 20
 
 R/rb = 0.183
 Mach 10.6, Velocity 1461.92, Re 0.4e6, Pressure 44.02
-Total Temperature 47.3397, Total Pressure 2758000
+Total Temperature 58.2176, Total Pressure 2758000
 Q0 1.2719e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897 
 AOA = 0 
@@ -227,7 +227,7 @@ AOA = 20
 180 .225 .238 .236 .214 . 187 .173 .155 NaN .134 .134
 
 Mach 10.6, Velocity 1461.92, Re 1.2e6, Pressure 132.0611
-Total Temperature 47.3397, Total Pressure 8.2737e6
+Total Temperature 58.2176, Total Pressure 8.2737e6
 Q0 2.1577e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897
 AOA = 0
@@ -290,7 +290,7 @@ AOA = 20
 180 .296 .306 .306 .276 .240 .230 .217 .209 .204 .199
 
 Mach 10.6, Velocity 1461.92, Re 1.8e6, Pressure 198.0916
-Total Temperature 47.3397, Total Pressure 1.2411e7
+Total Temperature 58.2176, Total Pressure 1.2411e7
 Q0 2.6006e5
 fai 0.207 0.250 0.293 0.380 0.466 0.552 0.638 0.724 0.811 0.897
 AOA = 0

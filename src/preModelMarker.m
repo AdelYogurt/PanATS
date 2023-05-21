@@ -1,5 +1,6 @@
 function [marker_list,element_empty]=preModelMarker(part_list)
 % base on mesh format part_list generate marker list
+% each part will generater each marker
 %
 part_number=length(part_list);
 

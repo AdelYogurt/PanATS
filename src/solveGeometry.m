@@ -9,13 +9,14 @@ point_list=user_model.point_list;
 area=0;
 volume=0;
 
-base_z=user_model.min_bou(3)-1;
+base_z=user_model.geometry.min_bou(3)-1;
 
 % calculate each moniter marker
 for moniter_index=1:length(user_model.MARKER_MONITORING)
     [marker_element,marker_index]=getMarkerElement...
         (user_model.MARKER_MONITORING(moniter_index),marker_list);
-    for element_index=1:marker_list{marker_index,2}
+    
+    for element_index=1:marker_list(marker_index).element_number
         % area is sum of all element area
         area=area+marker_element(element_index).area;
 

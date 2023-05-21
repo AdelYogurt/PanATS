@@ -7,6 +7,12 @@ function [marker_element,marker_index]=getMarkerElement(marker_name,marker_list)
 % output:
 % marker_element, marker_index(specified marker index in marker_list)
 %
+if isnumeric(marker_name)
+    if marker_name == 0
+        marker_name={marker_list.name};
+    end
+end
+
 marker_element=[];
 for marker_index=1:length(marker_list)
     if strcmp(marker_list(marker_index).name,marker_name)

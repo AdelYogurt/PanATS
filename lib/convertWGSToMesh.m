@@ -101,6 +101,7 @@ if remove_redundance
             mesh.element_list=element_list(1:element_number,:);
             mesh.element_type='S3';
             mesh.element_ID=int8(5);
+            mesh.element_number=element_number;
 
             mesh_list{mesh_index}=mesh;
 

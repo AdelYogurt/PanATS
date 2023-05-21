@@ -80,9 +80,10 @@ for part_index=1:length(part_list)
         % sort element
         mesh.element_list=element_list;
         mesh.element_type='stl';
-        part_element_number=part_element_number+element_number;
+        mesh.element_number=element_number;
 
         mesh_list{mesh_index}=mesh;
+        part_element_number=part_element_number+element_number;
     end
 
     part.mesh_list=mesh_list;

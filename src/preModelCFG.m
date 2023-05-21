@@ -129,7 +129,7 @@ switch user_model.MESH_FORMAT
         [user_model.part_list,user_model.point_list,user_model.geometry]=readMeshINP...
             (user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
 
-    case 'LaWGS'
+    case 'WGS'
         % read LaWGS format mesh data into mesh format
         part_list=readMeshWGS...
             (user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
@@ -148,6 +148,14 @@ user_model.element_number=sum([user_model.marker_list.element_number]);
 if ~isfield(user_model,'MARKER_MONITORING')
     error('preModelCFG: lack marker moniter');
 else
+    if isnumeric(user_model.MARKER_MONITORING)
+        if user_model.MARKER_MONITORING == 0
+            user_model.MARKER_MONITORING={user_model.marker_list.name};
+        else
+            error('preModelCFG: marker moniter can not be number other than 0');
+        end
+    end
+    
     if ischar(user_model.MARKER_MONITORING)
         user_model.MARKER_MONITORING={user_model.MARKER_MONITORING};
     end
