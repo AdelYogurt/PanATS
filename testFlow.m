@@ -2,10 +2,12 @@ clc;
 clear;
 close all hidden;
 
-jacobian=[
-    9,0;0,-0.01];
-stagnation_point=[-60,0];
-bias=jacobian*stagnation_point(:);
+load('matlab.mat');
+
+% jacobian=[
+%     9,0;0,-0.01];
+% stagnation_point=[-60,0];
+% bias=jacobian*stagnation_point(:);
 
 for j=-0.5:0.2:0.5
     for i=-0.5:0.1:0.5

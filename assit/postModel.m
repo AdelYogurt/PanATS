@@ -3,10 +3,9 @@ function postModel()
 %
 global user_model
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 
 point_list=user_model.point_list;
-edge_list=user_model.edge_list;
 marker_list=user_model.marker_list;
 
 MARKER_MONITERING=user_model.MARKER_MONITORING;
@@ -14,8 +13,9 @@ MARKER_MONITERING=user_model.MARKER_MONITORING;
 % load data form user_model
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
-output_heat=user_model.output_heat;
+output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
+output_heat=user_model.output_heat;
 
 output_post=user_model.output_post;
 
@@ -30,19 +30,30 @@ else
 end
 
 % load data
-marker_Cp_list=output_inviscid.Cp_list;
-marker_P_list=output_inviscid.P_list;
-marker_dFn_list=output_inviscid.dFn_list;
-marker_dMn_list=output_inviscid.dMn_list;
+if ~isempty(output_inviscid)
+    marker_Cp_list=output_inviscid.Cp_list;
+    marker_P_list=output_inviscid.P_list;
+    marker_dFn_list=output_inviscid.dFn_list;
+    marker_dMn_list=output_inviscid.dMn_list;
+end
 
-marker_streamline_len_list=output_streamline.streamline_len_list;
+if ~isempty(output_streamline)
+    marker_streamline_len_list=output_streamline.streamline_len_list;
+end
 
-marker_Q_list=output_heat.Q_list;
-marker_Re_x_list=output_heat.Re_x_list;
+if ~isempty(output_boulay)
+    marker_Re_x_list=output_boulay.Re_x_list;
+end
 
-marker_Cf_list=output_viscid.Cf_list;
-marker_dFs_list=output_viscid.dFs_list;
-marker_dMs_list=output_viscid.dMs_list;
+if ~isempty(output_viscid)
+    marker_Cf_list=output_viscid.Cf_list;
+    marker_dFs_list=output_viscid.dFs_list;
+    marker_dMs_list=output_viscid.dMs_list;
+end
+
+if ~isempty(output_heat)
+    marker_Q_list=output_heat.Q_list;
+end
 
 % initialize data array
 total_point_number=size(point_list,1);
@@ -68,19 +79,27 @@ for moniter_index=1:length(MARKER_MONITERING)
 
         point_index_list=element.point_index_list;
 
-        Cp_list(point_index_list,:)=Cp_list(point_index_list,:)+marker_Cp_list{marker_index}(element_index);
-        P_list(point_index_list,:)=P_list(point_index_list,:)+marker_P_list{marker_index}(element_index);
-        dFn_list(point_index_list,:)=dFn_list(point_index_list,:)+marker_dFn_list{marker_index}(element_index);
-        dMn_list(point_index_list,:)=dMn_list(point_index_list,:)+marker_dMn_list{marker_index}(element_index);
+        if ~isempty(output_inviscid)
+            Cp_list(point_index_list,:)=Cp_list(point_index_list,:)+marker_Cp_list{marker_index}(element_index);
+            P_list(point_index_list,:)=P_list(point_index_list,:)+marker_P_list{marker_index}(element_index);
+            dFn_list(point_index_list,:)=dFn_list(point_index_list,:)+marker_dFn_list{marker_index}(element_index);
+            dMn_list(point_index_list,:)=dMn_list(point_index_list,:)+marker_dMn_list{marker_index}(element_index);
+        end
 
-        streamline_len_list(point_index_list,:)=streamline_len_list(point_index_list,:)+marker_streamline_len_list{marker_index}(element_index);
+        if ~isempty(output_streamline)
+            streamline_len_list(point_index_list,:)=streamline_len_list(point_index_list,:)+marker_streamline_len_list{marker_index}(element_index);
+        end
 
-        Q_list(point_index_list,:)=Q_list(point_index_list,:)+marker_Q_list{marker_index}(element_index);
-        Re_x_list(point_index_list,:)=Re_x_list(point_index_list,:)+marker_Re_x_list{marker_index}(element_index);
+        if ~isempty(output_heat)
+            Q_list(point_index_list,:)=Q_list(point_index_list,:)+marker_Q_list{marker_index}(element_index);
+            Re_x_list(point_index_list,:)=Re_x_list(point_index_list,:)+marker_Re_x_list{marker_index}(element_index);
+        end
 
-        Cf_list(point_index_list,:)=Cf_list(point_index_list,:)+marker_Cf_list{marker_index}(element_index);
-        dFs_list(point_index_list,:)=dFs_list(point_index_list,:)+marker_dFs_list{marker_index}(element_index);
-        dMs_list(point_index_list,:)=dMs_list(point_index_list,:)+marker_dMs_list{marker_index}(element_index);
+        if ~isempty(output_viscid)
+            Cf_list(point_index_list,:)=Cf_list(point_index_list,:)+marker_Cf_list{marker_index}(element_index);
+            dFs_list(point_index_list,:)=dFs_list(point_index_list,:)+marker_dFs_list{marker_index}(element_index);
+            dMs_list(point_index_list,:)=dMs_list(point_index_list,:)+marker_dMs_list{marker_index}(element_index);
+        end
 
         if vertex_flag
             vertex_repeat_times(point_index_list)=vertex_repeat_times(point_index_list)+1;

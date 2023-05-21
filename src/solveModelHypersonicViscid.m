@@ -12,7 +12,7 @@ global user_model
 
 geometry_torlance=1e-9;
 
-dimension=user_model.dimension;
+dimension=user_model.geometry.dimension;
 
 point_list=user_model.point_list;
 edge_list=user_model.edge_list;
@@ -23,8 +23,7 @@ SYMMETRY=user_model.SYMMETRY;
 
 % heat calculate need inviscid and streamline result
 output_inviscid=user_model.output_inviscid;
-output_streamline=user_model.output_streamline;
-output_heat=user_model.output_heat;
+output_boulay=user_model.output_boulay;
 
 % calculate inflow vector
 free_flow_vector=[1;0;0];
@@ -56,32 +55,30 @@ ref_length=user_model.REF_LENGTH;
 T_1=user_model.FREESTREAM_TEMPERATURE;
 P_1=user_model.FREESTREAM_PRESSURE;
 Ma_1=user_model.MACH_NUMBER;
-gama=user_model.GAMA_VALUE;
+gamma=user_model.GAMMA_VALUE;
 Re=user_model.REYNOLDS_NUMBER;
-T_w=user_model.MARKER_ISOTHERMAL;
 
-% load data from inviscid and streamline result
-Re_x_list=output_heat.Re_x_list;
+% load data from inviscid and boundary layer result
 force_inviscid=output_inviscid.force_inviscid;
 moment_inviscid=output_inviscid.moment_inviscid;
 
+rho_e_list=output_boulay.rho_e_list;
+rho_ref_list=output_boulay.rho_ref_list;
+
+Re_x_list=output_boulay.Re_x_list;
+Re_x_ref_list=output_boulay.Re_x_ref_list;
+
 % air parameter
-rou_sl=1.225;
+rho_sl=1.225;
 
 R=287.0955;
-Pr=0.71;
-Le=1.4;
-a=0.52;
-r_l=Pr^(1/3); % temperature recovery coefficient
-gama_plus=gama+1;
-gama_sub=gama-1;
 
 % free flow parameter
-rou_1=P_1/R/T_1;
-a_1=sqrt(gama*R*T_1);
+rho_1=P_1/R/T_1;
+a_1=sqrt(gamma*R*T_1);
 V_1=a_1*Ma_1;
 V_1_sq=V_1*V_1;
-q_1=rou_1*V_1_sq/2;
+q_1=rho_1*V_1_sq/2;
 
 % solve prepare
 Re_x_tri=10^(5.37+0.2326*Ma_1-0.004015*Ma_1*Ma_1); % transition Reynolds number
@@ -108,22 +105,24 @@ for monitor_index=1:length(MARKER_MONITORING)
         area=element.area;
         surface_flow=element.surface_flow;
 
-        Re_x=Re_x_list{marker_index}(element_index);
+        % load data
+        rho_e=rho_e_list{marker_index}(element_index);
+        rho_ref=rho_ref_list{marker_index}(element_index);
 
-        if Re_x == 0
-            Re_x=10;
-        end
+        Re_x=Re_x_list{marker_index}(element_index);
+        Re_x_ref=Re_x_ref_list{marker_index}(element_index);
 
         if Re_x <= Re_x_tri
             % laminar flow
-            Cf=0.6640*Re_x^-0.5;
-%         elseif Re_x < 1e7
-%             % transition flow
-%             Cf=0.0296*Re_x^-0.2;
+            Cf_ref=0.6640*Re_x_ref^-0.5;
+        elseif Re_x < 1e7
+            % transition flow
+            Cf_ref=0.0296*Re_x_ref^-0.2;
         else
             % turbulent flow
-            Cf=0.288*(log(Re_x)/log(10))^2.584;
+            Cf_ref=0.288*(log(Re_x_ref)/log(10))^2.584;
         end
+        Cf=Cf_ref*rho_ref/rho_e;
 
         % Shear stress
         S=q_1*Cf;
@@ -198,6 +197,7 @@ output_viscid.dFs_list=dFs_list;
 output_viscid.dMs_list=dMs_list;
 output_viscid.force_viscid=force_viscid;
 output_viscid.moment_viscid=moment_viscid;
+
 user_model.output_viscid=output_viscid;
 
 if user_model.INFORMATION

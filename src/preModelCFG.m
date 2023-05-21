@@ -92,29 +92,55 @@ end
 % load mesh data
 switch user_model.MESH_FORMAT
     case 'SU2'
-        [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            user_model.element_empty,output]=readMeshSU2(user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
-        user_model.dimension=output.dimension;
-        user_model.min_bou=output.min_bou;
-        user_model.max_bou=output.max_bou;
+        % read SU2 format mesh data into mesh format
+        [user_model.part_list,user_model.point_list,user_model.geometry]=readMeshSU2...
+            (user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
+
     case 'STL'
-        [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            user_model.element_empty,output,marker_moniter]=readMeshSTL(user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.MESH_ENCODE,user_model.INFORMATION);
-        user_model.dimension=output.dimension;
-        user_model.min_bou=output.min_bou;
-        user_model.max_bou=output.max_bou;
+        % read each STL format mesh data into STL format
+        filename_mesh_list=user_model.MESH_FILENAME;
+        if ischar(filename_mesh_list)
+            filename_mesh_list={filename_mesh_list};
+        end
+        part_list=cell(length(filename_mesh_list),1);
+        marker_moniter=cell(length(filename_mesh_list),1);
+
+        for file_index=1:length(filename_mesh_list)
+            filename_mesh=filename_mesh_list{file_index};
+            part_list{file_index}=readMeshSTL...
+                (filename_mesh,user_model.MESH_SCALE,user_model.MESH_ENCODE,user_model.INFORMATION);
+            marker_moniter{file_index}=part_list{file_index}.name;
+        end
+        
+        % convert STL format into mesh format
+        [user_model.part_list,user_model.point_list,user_model.geometry]=convertSTLToMesh(part_list);
+
+        if ~iscell(user_model.part_list)
+            user_model.part_list={user_model.part_list};
+        end
 
         % for STL file, if MARKER_MONITORING than will analysis all file
         if ~isfield(user_model,'MARKER_MONITORING')
             user_model.MARKER_MONITORING=marker_moniter;
         end
+
     case 'INP'
-        [user_model.point_list,user_model.element_list,user_model.marker_list,...
-            user_model.element_empty,output]=readMeshINP(user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
-        user_model.dimension=output.dimension;
-        user_model.min_bou=output.min_bou;
-        user_model.max_bou=output.max_bou;
+        % read SU2 format mesh data into mesh format
+        [user_model.part_list,user_model.point_list,user_model.geometry]=readMeshINP...
+            (user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
+
+    case 'WGS'
+        % read LaWGS format mesh data into mesh format
+        part_list=readMeshWGS...
+            (user_model.MESH_FILENAME,user_model.MESH_SCALE,user_model.INFORMATION);
+
+        % convert LaWGS format into mesh format
+        [user_model.part_list,user_model.point_list,user_model.geometry]=convertWGSToMesh(part_list);
+        
 end
+
+% generate marker_list
+[user_model.marker_list,user_model.element_empty]=preModelMarker(user_model.part_list);
 
 user_model.point_number=size(user_model.point_list,1);
 user_model.element_number=sum([user_model.marker_list.element_number]);
@@ -122,6 +148,14 @@ user_model.element_number=sum([user_model.marker_list.element_number]);
 if ~isfield(user_model,'MARKER_MONITORING')
     error('preModelCFG: lack marker moniter');
 else
+    if isnumeric(user_model.MARKER_MONITORING)
+        if user_model.MARKER_MONITORING == 0
+            user_model.MARKER_MONITORING={user_model.marker_list.name};
+        else
+            error('preModelCFG: marker moniter can not be number other than 0');
+        end
+    end
+    
     if ischar(user_model.MARKER_MONITORING)
         user_model.MARKER_MONITORING={user_model.MARKER_MONITORING};
     end
