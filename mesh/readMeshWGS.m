@@ -1,31 +1,20 @@
-function [grid,geometry]=readMeshWGS(mesh_filestr,scale)
+function mesh_data=readMeshWGS(mesh_filestr,scale)
 % read mesh data from wgs file
 %
 % input:
-% filename_mesh(support .wgs file), scale(geometry zoom scale)
+% mesh_filestr(support .wgs file), scale(geometry zoom scale)
 %
 % output:
 % point_list, part_list
 %
 % point_list is coordinate of all node
-% grid(single zone): grid.name, grid.(marker)
+% mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
 % marker: marker.type, marker.X, marker.Y, marker.Z
+% geometry: dimension
 % notice: marker which has the same name of file is volume element
 %
-if nargin < 3
-    INFORMATION=true(1);
-    if nargin < 2
-        scale=[];
-    end
-end
-
-% cheak filename
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.wgs')
-        mesh_filestr=[mesh_filestr,'.wgs'];
-    end
-else
-    mesh_filestr=[mesh_filestr,'.wgs'];
+if nargin < 2
+    scale=[];
 end
 
 % check file if exist
@@ -35,16 +24,10 @@ else
     mesh_file=fopen(mesh_filestr,'r');
 end
 
-[~,mesh_filename,~]=fileparts(mesh_filestr);
-
 if isempty(scale)
     scale=1;
 end
 dimension=3;
-
-if INFORMATION
-    disp('readMeshWGS: read mash data begin');
-end
 
 % initial information
 fgetl(mesh_file);
@@ -96,7 +79,11 @@ while ~feof(mesh_file)
             data_number=data_number+length(string_list);
         end
 
-        point_list=reshape(point_list,3,point_number)'*scale;
+        point_list=reshape(point_list,3,point_number)';
+
+        if scale ~= 1
+            point_list=point_list*scale;
+        end
 
         X(:,line_index)=point_list(:,1);
         Y(:,line_index)=point_list(:,2);
@@ -178,10 +165,10 @@ while ~feof(mesh_file)
         Z=Z*scale_part(3);
     end
 
-    grid.(marker_name).X=X;
-    grid.(marker_name).Y=Y;
-    grid.(marker_name).Z=Z;
-    grid.(marker_name).type='wgs';
+    mesh_data.(marker_name).X=X;
+    mesh_data.(marker_name).Y=Y;
+    mesh_data.(marker_name).Z=Z;
+    mesh_data.(marker_name).type='wgs';
 
     % process global symmetry
     % if exist global, add mirror part 
@@ -201,17 +188,17 @@ while ~feof(mesh_file)
                 Z=flipud(Z);
         end
         
-        grid.([marker_name,'_SYM']).X=X;
-        grid.([marker_name,'_SYM']).Y=Y;
-        grid.([marker_name,'_SYM']).Z=Z;
-        grid.([marker_name,'_SYM']).type='wgs';
+        mesh_data.([marker_name,'_SYM']).X=X;
+        mesh_data.([marker_name,'_SYM']).Y=Y;
+        mesh_data.([marker_name,'_SYM']).Z=Z;
+        mesh_data.([marker_name,'_SYM']).type='wgs';
     end
 end
 
 fclose(mesh_file);
 clear('mesh_file');
 
-grid.name=mesh_filename;
 geometry.dimension=dimension;
+mesh_data.geometry=geometry;
 
 end

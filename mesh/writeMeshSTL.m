@@ -1,8 +1,8 @@
-function writeMeshSTL(mesh_filestr,grid,marker_name_list)
+function writeMeshSTL(mesh_filestr,mesh_data,marker_name_list)
 % write Binary STL mesh file
 %
 % input:
-% filename_mesh, part(only one part)
+% mesh_filestr, mesh_data, marker_name_list(default all markers)
 %
 % notice:
 % mesh.element_ID if not is 5(tri), will be convert into tri
@@ -12,26 +12,24 @@ if nargin < 3
     marker_name_list=[];
 end
 if isempty(marker_name_list)
-    marker_name_list=fieldnames(grid);
+    marker_name_list=fieldnames(mesh_data);
 end
-
-% check file name
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.stl')
-        mesh_filestr=[mesh_filestr,'.stl'];
+marker_index=1;
+while marker_index <= length(marker_name_list)
+    marker_name=marker_name_list{marker_index};
+    if strcmp(marker_name,'geometry')
+        marker_name_list(marker_index)=[];
+    else
+        marker_index=marker_index+1;
     end
-else
-    mesh_filestr=[mesh_filestr,'.stl'];
 end
 
+[~,mesh_filename,~]=fileparts(mesh_filestr);
 mesh_file=fopen(mesh_filestr,'w');
 
-% load mesh name
-mesh_name=grid.name;
-
 % write name to file
-name_length=length(mesh_name);
-fwrite(mesh_file,['solid ',mesh_name],'char');
+name_length=length(mesh_filename);
+fwrite(mesh_file,['solid ',mesh_filename],'char');
 fwrite(mesh_file,32*ones(80-6-name_length,1,'int8'),'int8');
 
 % element number sort place
@@ -40,15 +38,13 @@ fwrite(mesh_file,0,'uint32');
 % write each marker to file
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
-        continue;
-    end
+    marker=mesh_data.(marker_name);
 
-    if ~strcmp(grid.(marker_name).type,'stl')
+    if ~strcmp(marker.type,'stl')
         error('writeMeshSTL: element_type of mesh is not stl format');
     end
 
-    element_list=grid.(marker_name).element_list;
+    element_list=marker.element_list;
 
     % write element
     total_element=0;

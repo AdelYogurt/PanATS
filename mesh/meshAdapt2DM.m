@@ -53,7 +53,7 @@ data_list=data_list(1:data_num,:);
 [v_list,~,v_idx]=unique(data_list(:,2));
 idx_list=[u_idx,v_idx];
 
-[U,V]=meshgrid(u_list,v_list);
+[U,V]=meshmesh_data(u_list,v_list);
 
 % local data to Fval
 Fval=nan(length(v_list),length(u_list),fval_num);

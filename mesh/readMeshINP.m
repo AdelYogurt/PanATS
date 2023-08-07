@@ -1,32 +1,20 @@
-function [grid,geometry]=readMeshINP(mesh_filestr,scale)
+function mesh_data=readMeshINP(mesh_filestr,scale)
 % read mesh data from inp file
 %
 % input:
-% filename_mesh(support .inp file), scale(geometry zoom scale)
+% mesh_filestr(support .inp file), scale(geometry zoom scale)
 %
 % output:
-% grid, geometry
+% mesh_data, geometry
 %
 % notice:
 % point_list is coordinate of all node
-% grid(single zone): grid.name, grid.point_list, grid.(marker)
-% marker: marker.type, marker.element_list, marker.number_list, marker.ID_list
+% mesh_data(single zone): mesh_data.name, mesh_data.point_list, mesh_data.(marker)
+% marker: marker.type, marker.ID, marker.element_list, marker.number_list
 % notice: marker which has the same name of file is volume element
 %
-if nargin < 3
-    INFORMATION=true(1);
-    if nargin < 2
-        scale=[];
-    end
-end
-
-% cheak filename
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.inp')
-        mesh_filestr=[mesh_filestr,'.inp'];
-    end
-else
-    mesh_filestr=[mesh_filestr,'.inp'];
+if nargin < 2
+    scale=[];
 end
 
 % check file if exist
@@ -66,12 +54,11 @@ while ~feof(mesh_file)
         % read part
         marker_name=regexprep(string_list{2}(6:end),{'[',']','"','''','-'},'');
 
-        node_index=0;
+        data_index=0;
         element_index=0;
 
         element_list=zeros(add_number,1);
         number_list=zeros(add_number,1);
-        ID_list=zeros(add_number,1);
     elseif strcmp(string_list{1},'*Node') && read_marker_flag
         % detact read point begain
         read_point_flag=1;
@@ -103,72 +90,65 @@ while ~feof(mesh_file)
             read_marker_flag=0;
             read_element_flag=0;
 
-            element_list=element_list(1:node_index);
+            element_list=element_list(1:data_index);
             number_list=number_list(1:element_index);
-            ID_list=ID_list(1:element_index);
 
             SAME_TYPE=true(1);
 
             % check if have same type
             node_number=number_list(1);
-            for element_index=1:numel(number_list)
+            for element_index=1:length(number_list)
                 if number_list(element_index) ~= node_number
                     SAME_TYPE=false(1);
                     break;
                 end
             end
 
-             % if same type, reshape element
-             if SAME_TYPE
-                 element_list=reshape(element_list,node_number,[])';
-                 number_list=number_list(1);
-                 ID_list=ID_list(1);
-                 type=idType(ID_list);
-             else
-                 if dimension == 2
-                     type = 'MIXED2';
-                 elseif dimension == 3
-                     type = 'MIXED3';
-                 else
-                     error('readMeshSU2.readElement: for mixed meshes, dimension must be 2 or 3.');
-                 end
-             end
+            % if same type, reshape element
+            if SAME_TYPE
+                ID=element_list(1);
+                element_list=reshape(element_list,node_number+1,[])';
+                element_list=element_list(:,2:node_number+1);
+                number_list=number_list(1);
+            else
+                ID=20;
+            end
+            type=convertIDToType(ID,dimension);
 
             % end mesh read, add marker
-            grid.(marker_name).type=type;
-            grid.(marker_name).element_list=element_list;
-            grid.(marker_name).number_list=number_list;
-            grid.(marker_name).ID_list=ID_list;
+            mesh_data.(marker_name).type=type;
+            mesh_data.(marker_name).ID=ID;
+            mesh_data.(marker_name).element_list=element_list;
+            mesh_data.(marker_name).number_list=number_list;
 
             point_index_offset=uint32(size(point_list,1));
         end
     else
         % read point data
         if read_point_flag
-            point=str2double(string_list(2:1+dimension))*scale;
+            point=str2double(string_list(2:1+dimension));
             point_list=[point_list;point];
         end
 
         % read part element data
         if read_element_flag
             % add element point index
-            if numel(element_list) < node_index+node_number
+            if length(element_list) < data_index+node_number+1
                 element_list=[element_list;zeros(add_number,1)];
             end
 
+            element_list(data_index+1)=element_id;
             for index=1:node_number
-                element_list(node_index+index)=uint32(str2double(string_list(1+index)))+point_index_offset;
+                element_list(data_index+index+1)=uint32(str2double(string_list(1+index)))+point_index_offset;
             end
 
-            if numel(ID_list) < element_index+1
-                ID_list=[ID_list;zeros(add_number,1)];
+            if length(number_list) < element_index+1
                 number_list=[number_list;zeros(add_number,1)];
             end
 
-            ID_list(element_index+1)=element_id;
             number_list(element_index+1)=node_number;
 
-            node_index=node_index+node_number;
+            data_index=data_index+node_number+1;
             element_index=element_index+1;
         end
     end
@@ -177,14 +157,17 @@ end
 fclose(mesh_file);
 clear('mesh_file');
 
-grid.point_list=point_list;
+if scale ~= 1
+    point_list=point_list*scale;
+end
 
-grid.name=mesh_filename;
 geometry.dimension=dimension;
+geometry.point_list=point_list;
+mesh_data.geometry=geometry;
 
 end
 
-function type=idType(id)
+function type=convertIDToType(id,dimension)
 switch id
     case 3
         type='BAR_2';
@@ -200,8 +183,16 @@ switch id
         type='PENTA_6';
     case 12
         type='PYRA_5';
+    case 20
+        if dimension == 2
+            type = 'MIXED2';
+        elseif dimension == 3
+            type = 'MIXED3';
+        else
+            error('convertIDToType: for mixed meshes, dimension must be 2 or 3.');
+        end
     otherwise
-        error('idType: unknown identifier')
+        error('convertIDToType: unknown identifier')
 end
 
 end

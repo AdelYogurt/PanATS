@@ -1,4 +1,4 @@
-function [grid,geometry]=readMeshSTL(mesh_filestr,scale,file_type,geometry_torlance)
+function mesh_data=readMeshSTL(mesh_filestr,scale,file_type,geometry_torlance)
 % read mesh data from stl file
 %
 % input:
@@ -7,10 +7,10 @@ function [grid,geometry]=readMeshSTL(mesh_filestr,scale,file_type,geometry_torla
 % geometry_torlance(default is 1e-12)
 %
 % output:
-% grid
+% mesh_data
 %
 % notice:
-% grid(single zone): grid.name, grid.(marker)
+% mesh_data(single zone): mesh_data.name, mesh_data.(marker)
 % marker: marker.type, marker.element_list
 %
 if nargin < 4
@@ -27,21 +27,10 @@ if isempty(scale)
     scale=1;
 end
 
-% cheak file definition
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.stl')
-        mesh_filestr=[mesh_filestr,'.stl'];
-    end
-else
-    mesh_filestr=[mesh_filestr,'.stl'];
-end
-
 % check file if exist
 if exist(mesh_filestr,'file')~=2
     error('readMeshSTL: mesh file do not exist')
 end
-
-[~,mesh_filename,~]=fileparts(mesh_filestr);
 
 dimension=3;
 
@@ -81,9 +70,9 @@ if strcmp(file_type,'binary')
         vector_normal=fread(mesh_file,3,'float32');
 
         % read point coordinate
-        point_1=fread(mesh_file,3,'float32')*scale;
-        point_2=fread(mesh_file,3,'float32')*scale;
-        point_3=fread(mesh_file,3,'float32')*scale;
+        point_1=fread(mesh_file,3,'float32');
+        point_2=fread(mesh_file,3,'float32');
+        point_3=fread(mesh_file,3,'float32');
 
         element_list(3*element_index-2:3*element_index,:)=...
             [point_1,point_2,point_3]';
@@ -115,9 +104,9 @@ else
         fgetl(mesh_file);
 
         % read point1 coordinate
-        point_1=getASCIIPoint(mesh_file)*scale;
-        point_2=getASCIIPoint(mesh_file)*scale;
-        point_3=getASCIIPoint(mesh_file)*scale;
+        point_1=getASCIIPoint(mesh_file);
+        point_2=getASCIIPoint(mesh_file);
+        point_3=getASCIIPoint(mesh_file);
 
         fgetl(mesh_file);fgetl(mesh_file);
 
@@ -146,11 +135,15 @@ end
 fclose(mesh_file);
 clear('mesh_file');
 
-grid.(marker_name).element_list=element_list;
-grid.(marker_name).type='stl';
+if scale ~= 1
+    element_list=element_list*scale;
+end
 
-grid.name=mesh_filename;
+mesh_data.(marker_name).element_list=element_list;
+mesh_data.(marker_name).type='stl';
+
 geometry.dimension=dimension;
+mesh_data.geometry=geometry;
 
     function point=getASCIIPoint(mesh_file)
         % read ASCII point data

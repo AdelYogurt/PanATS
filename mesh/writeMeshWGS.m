@@ -1,8 +1,8 @@
-function writeMeshWGS(mesh_filestr,grid,marker_name_list)
+function writeMeshWGS(mesh_filestr,mesh_data,marker_name_list)
 % write LaWGS format mesh data into wgs file
 %
 % input:
-% filename_mesh, part_list 
+% mesh_filestr, mesh_data, marker_name_list(default all markers)
 %
 % notice:
 % point_list is coordinate of all node
@@ -12,16 +12,16 @@ if nargin < 3
     marker_name_list=[];
 end
 if isempty(marker_name_list)
-    marker_name_list=fieldnames(grid);
+    marker_name_list=fieldnames(mesh_data);
 end
-
-% check file name
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.wgs')
-        mesh_filestr=[mesh_filestr,'.wgs'];
+marker_index=1;
+while marker_index <= length(marker_name_list)
+    marker_name=marker_name_list{marker_index};
+    if strcmp(marker_name,'geometry')
+        marker_name_list(marker_index)=[];
+    else
+        marker_index=marker_index+1;
     end
-else
-    mesh_filestr=[mesh_filestr,'.wgs'];
 end
 
 file_mesh=fopen(mesh_filestr,'w');
@@ -32,14 +32,12 @@ fprintf(file_mesh,'Create by writeMeshWGS.m\n');
 % write each marker to file
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
-        continue;
-    end
+    marker=mesh_data.(marker_name);
 
     % write part name
     fprintf(file_mesh,'''%s''\n',marker_name);
 
-    X=grid.(marker_name).X;Y=grid.(marker_name).Y;Z=grid.(marker_name).Z;
+    X=marker.X;Y=marker.Y;Z=marker.Z;
     [point_number,line_number]=size(X);
 
     % write part information data

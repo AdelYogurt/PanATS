@@ -1,16 +1,21 @@
-function grid=convertWGSToSTL(grid)
+function mesh_data=convertWGSToSTL(mesh_data)
 % convert WSG format part_list into STL format part_list
 %
-
-marker_name_list=fieldnames(grid);
+% input:
+% mesh_data
+%
+% output:
+% mesh_data
+%
+marker_name_list=fieldnames(mesh_data);
 
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
+    if strcmp(marker_name,'geometry')
         continue;
     end
 
-    marker=grid.(marker_name);
+    marker=mesh_data.(marker_name);
     if ~strcmp(marker.type,'wgs')
         error('convertWGSToSTL: element_type of mesh is not LaWGS format');
     end
@@ -72,13 +77,13 @@ for marker_index=1:length(marker_name_list)
 
     element_list=element_list(1:mesh_element_number*3,:);
 
-    grid.(marker_name)=rmfield(marker,'X');
-    grid.(marker_name)=rmfield(marker,'Y');
-    grid.(marker_name)=rmfield(marker,'Z');
+    mesh_data.(marker_name)=rmfield(marker,'X');
+    mesh_data.(marker_name)=rmfield(marker,'Y');
+    mesh_data.(marker_name)=rmfield(marker,'Z');
 
     % sort element
-    grid.(marker_name).element_list=element_list;
-    grid.(marker_name).type='stl';
+    mesh_data.(marker_name).element_list=element_list;
+    mesh_data.(marker_name).type='stl';
 end
 
 end

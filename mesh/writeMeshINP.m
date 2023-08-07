@@ -1,28 +1,28 @@
-function writeMeshINP(mesh_filestr,grid,marker_name_list)
+function writeMeshINP(mesh_filestr,mesh_data,marker_name_list)
 % write mesh data into inp file(ABAQUS analysis format)
 %
 % input:
-% filename_mesh, grid
+% mesh_filestr, mesh_data, marker_name_list(default all markers)
 %
 % notice:
-% grid(single zone): grid.name, grid.point_list, grid.(marker)
-% marker: marker.type, marker.element_list, marker.number_list, marker.ID_list
+% mesh_data(single zone): mesh_data.name, mesh_data.point_list, mesh_data.(marker)
+% marker: marker.type, marker.ID, marker.element_list, marker.number_list
 % notice: marker which has the same name of file is volume element
 %
 if nargin < 3
     marker_name_list=[];
 end
 if isempty(marker_name_list)
-    marker_name_list=fieldnames(grid);
+    marker_name_list=fieldnames(mesh_data);
 end
-
-% cheak filename
-if length(mesh_filestr) > 4
-    if ~strcmpi(mesh_filestr((end-3):end),'.inp')
-        mesh_filestr=[mesh_filestr,'.inp'];
+marker_index=1;
+while marker_index <= length(marker_name_list)
+    marker_name=marker_name_list{marker_index};
+    if strcmp(marker_name,'geometry')
+        marker_name_list(marker_index)=[];
+    else
+        marker_index=marker_index+1;
     end
-else
-    mesh_filestr=[mesh_filestr,'.inp'];
 end
 
 file_mesh=fopen(mesh_filestr,'w');
@@ -39,21 +39,21 @@ fprintf(file_mesh,'** PARTS\n');
 fprintf(file_mesh,'**\n');
 
 % write all part
-point_list=grid.point_list;
+point_list=mesh_data.geometry.point_list;
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
-        continue;
-    end
+    marker=mesh_data.(marker_name);
 
     % write part name
     fprintf(file_mesh,'*Part, name=%s\n',marker_name);
 
     % notice, element index in each part of inp file start from 1
     % search min and max element index of mesh
-    element_list=grid.(marker_name).element_list;
-    number_list=grid.(marker_name).number_list;
-    ID_list=grid.(marker_name).ID_list;
+    element_list=marker.element_list;
+    number_list=marker.number_list;
+    if marker.ID == 20
+        [element_list,ID_list]=getSeparteElement(element_list,number_list);
+    end
 
     min_node_index=min(min(element_list));
     max_point_index=max(max(element_list));
@@ -70,8 +70,8 @@ for marker_index=1:length(marker_name_list)
 
     % write element data
     % notice, element index in each part of inp file start from 1
-    if strcmp(grid.(marker_name).type,'MIXED2') || strcmp(grid.(marker_name).type,'MIXED3')
-        element_number=numel(ID_list);
+    if marker.ID == 20
+        element_number=length(ID_list);
         [ID_list,index_list]=sort(ID_list);
         map_list=sort(index_list);
         node_index_list=cumsum(number_list);
@@ -110,7 +110,7 @@ for marker_index=1:length(marker_name_list)
         end
 
     else
-        fprintf(file_mesh,'*Element, type=%s\n',typeINPID(ID_list));
+        fprintf(file_mesh,'*Element, type=%s\n',marker.type);
 
         [element_number,node_number]=size(element_list);
         for element_index=1:element_number
@@ -152,6 +152,28 @@ fprintf(file_mesh,'*End Assembly\n');
 fclose(file_mesh);
 clear('file_mesh');
 
+end
+
+function [element_list,ID_list]=getSeparteElement(element_list,number_list)
+% separate mixed into element_list, number_list, ID_list
+%
+
+data_number=length(element_list);
+% calculate element number
+ID_list=zeros(length(number_list),1,'int64');
+index_list=zeros(length(number_list),1,'int64');
+
+element_index=1;
+index=1;
+while index < data_number
+    ID_list(element_index)=element_list(index);
+    index_list(element_index)=index;
+
+    index=index+number_list(element_index)+1;
+    element_index=element_index+1;
+end
+
+element_list(index_list)=[];
 end
 
 function type=typeINPID(id)

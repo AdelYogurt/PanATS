@@ -1,29 +1,33 @@
-function [grid,geometry]=convertWGSToMesh...
-    (grid,remove_redundance,geometry_torlance)
+function mesh_data=convertWGSToMesh(mesh_data,remove_redundance,geometry_torlance)
 % convert LaWGS format part into mesh format part
 %
 % if remove_redundance, function will call ADTreePoint to remove repeat
 % point, change element_idx to same coordinate point
 %
-if nargin < 2
+% input:
+% mesh_data, remove_redundance, geometry_torlance
+%
+% output:
+% mesh_data
+%
+if nargin < 2 || isempty(remove_redundance)
     remove_redundance=true(1);
 end
-
 if nargin < 3 || isempty(geometry_torlance)
     geometry_torlance=1e-12;
 end
 
-marker_name_list=fieldnames(grid);
+marker_name_list=fieldnames(mesh_data);
 
 % add all surface to point list
 point_list=[];
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
+    if strcmp(marker_name,'geometry')
         continue;
     end
 
-    marker=grid.(marker_name);
+    marker=mesh_data.(marker_name);
     if ~strcmp(marker.type,'wgs')
         error('convertWGSToSTL: type of mesh is not LaWGS format');
     end
@@ -50,11 +54,11 @@ if remove_redundance
     node_index=uint32(0); % offset idx of point idx list
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
-        if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
+        if strcmp(marker_name,'geometry')
             continue;
         end
 
-        [point_number,line_number]=size(grid.(marker_name).X);
+        [point_number,line_number]=size(mesh_data.(marker_name).X);
 
         % initialize element sort space
         calculate_element=(point_number-1)*(line_number-1)*2;
@@ -87,31 +91,27 @@ if remove_redundance
         end
         node_index=node_index+uint32(point_number*line_number);
 
-        grid.(marker_name)=rmfield(grid.(marker_name),'X');
-        grid.(marker_name)=rmfield(grid.(marker_name),'Y');
-        grid.(marker_name)=rmfield(grid.(marker_name),'Z');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'X');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Y');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Z');
 
         % sort element
-        grid.(marker_name).type='TRI_3';
-        grid.(marker_name).element_list=element_list(1:element_indx,:);
-        grid.(marker_name).ID_list=uint8(5);
-        grid.(marker_name).number_list=3;
+        mesh_data.(marker_name).type='TRI_3';
+        mesh_data.(marker_name).ID=uint8(5);
+        mesh_data.(marker_name).element_list=element_list(1:element_indx,:);
+        mesh_data.(marker_name).number_list=3;
     end
-
-    grid.point_list=point_list;
-
-    geometry.dimension=3;
 else
     % do not delete same coordination point
     node_index=uint32(0); % offset idx of point idx list
 
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
-        if strcmp(marker_name,'point_list') || strcmp(marker_name,'name')
+        if strcmp(marker_name,'geometry')
             continue;
         end
 
-        [point_number,line_number]=size(grid.(marker_name).X);
+        [point_number,line_number]=size(mesh_data.(marker_name).X);
 
         % initialize element sort space
         calculate_element=(point_number-1)*(line_number-1)*2;
@@ -150,20 +150,20 @@ else
         end
         node_index=node_index+uint32(point_number*line_number);
 
-        grid.(marker_name)=rmfield(grid.(marker_name),'X');
-        grid.(marker_name)=rmfield(grid.(marker_name),'Y');
-        grid.(marker_name)=rmfield(grid.(marker_name),'Z');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'X');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Y');
+        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Z');
 
         % sort element
-        grid.(marker_name).type='TRI_3';
-        grid.(marker_name).element_list=element_list(1:element_indx,:);
-        grid.(marker_name).ID_list=uint8(5);
-        grid.(marker_name).number_list=3;
+        mesh_data.(marker_name).type='TRI_3';
+        mesh_data.(marker_name).ID=uint8(5);
+        mesh_data.(marker_name).element_list=element_list(1:element_indx,:);
+        mesh_data.(marker_name).number_list=3;
     end
-
-    grid.point_list=point_list;
-
-    geometry.dimension=3;
 end
+
+geometry.point_list=point_list;
+geometry.dimension=3;
+mesh_data.geometry=geometry;
 
 end

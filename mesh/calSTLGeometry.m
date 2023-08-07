@@ -1,26 +1,45 @@
-function [area,volume]=calSTLGeometry(part)
+function [area,volume]=calSTLGeometry(mesh_data,marker_name_list)
 % calclulate stl mesh volume and surface area
 %
-mesh_list=part.mesh_list;
-mesh_number=length(mesh_list);
+% input:
+% mesh_data, marker_name_list(default all markers)
+%
+% output:
+% area, volume
+%
+if nargin < 2
+    marker_name_list=[];
+end
+if isempty(marker_name_list)
+    marker_name_list=fieldnames(mesh_data);
+end
+marker_index=1;
+while marker_index <= length(marker_name_list)
+    marker_name=marker_name_list{marker_index};
+    if strcmp(marker_name,'geometry')
+        marker_name_list(marker_index)=[];
+    else
+        marker_index=marker_index+1;
+    end
+end
 
 area=0;
 volume=0;
-
 base_z=0;
 
-for mesh_index=1:mesh_number
-    % calculate each mesh
-    mesh=mesh_list{mesh_index};
+% write each marker to file
+for marker_index=1:length(marker_name_list)
+    marker_name=marker_name_list{marker_index};
+    marker=mesh_data.(marker_name);
 
-    mesh_element_number=mesh.element_number;
-    mesh_element_list=mesh.element_list;
+    element_list=marker.element_list;
+    element_number=size(element_list,1)/3;
 
-    for element_index=1:mesh_element_number
+    for element_index=1:element_number
         % volume is up volume subtract down volume
-        pnt_1=mesh_element_list(3*element_index-2,1:3);
-        pnt_2=mesh_element_list(3*element_index-1,1:3);
-        pnt_3=mesh_element_list(3*element_index,1:3);
+        pnt_1=element_list(3*element_index-2,1:3);
+        pnt_2=element_list(3*element_index-1,1:3);
+        pnt_3=element_list(3*element_index,1:3);
 
         % area is sum of all element area
         area=area+norm(cross(pnt_2-pnt_1,pnt_3-pnt_2))/2;
@@ -47,4 +66,5 @@ for mesh_index=1:mesh_number
         volume=volume-VL;
     end
 end
+
 end

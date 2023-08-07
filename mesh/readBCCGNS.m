@@ -1,11 +1,11 @@
-function [point_list,marker_index_list]=readMarkerCGNS(cgns_filestr,marker_name_list)
+function [point_list,marker_index_list]=readMarkerCGNS(mesh_filestr,marker_name_list)
 % read BC data and point data from CGNS file
 %
 idx_base=1;
 idx_zone=1;
 
 % open file
-[idx_file, ierr] = cg_open(cgns_filestr, CG_MODE_READ);
+[idx_file, ierr] = cg_open(mesh_filestr, CG_MODE_READ);
 
 % read point
 [~, ~, iphysdim, ierr] = cg_base_read(idx_file, idx_base);
@@ -15,7 +15,7 @@ idx_zone=1;
 rmin = 1; % lower range idx of vertices
 rmax = size(1); % upper range idx of vertices
 
-% Read grid coordinates (must use SIDS-standard names here)
+% Read mesh_data coordinates (must use SIDS-standard names here)
 point_list = zeros(rmax(1), iphysdim);
 [point_list(:, 1), ierr] = cg_coord_read(idx_file, idx_base, idx_zone, ...
     'CoordinateX', RealDouble, rmin, rmax, point_list(:, 1));
