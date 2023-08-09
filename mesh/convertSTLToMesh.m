@@ -49,9 +49,10 @@ if remove_redundance
         if strcmp(marker_name,'geometry')
             continue;
         end
+        marker=mesh_data.(marker_name);
 
         % process each mesh
-        element_list=mesh_data.(marker_name).element_list;
+        element_list=marker.element_list;
 
         marker_point_number=size(element_list,1);
         marker_point_number=uint32(marker_point_number);
@@ -64,10 +65,12 @@ if remove_redundance
         node_index=node_index+uint32(marker_point_number);
 
         % sort element
-        mesh_data.(marker_name).type='TRI_3';
-        mesh_data.(marker_name).ID=uint8(5);
-        mesh_data.(marker_name).element_list=element_list;
+        marker.type='TRI_3';
+        marker.ID=uint8(5);
+        marker.element_list=element_list;
         mesh_data.(marker_name).number_list=3;
+
+        mesh_data.(marker_name)=marker;
     end
 
 else
@@ -79,6 +82,7 @@ else
         if strcmp(marker_name,'geometry')
             continue;
         end
+        marker=mesh_data.(marker_name);
 
         element_list=mesh_data.(marker_name).element_list;
 
@@ -90,10 +94,12 @@ else
         node_index=node_index+marker_point_number;
 
         % sort element
-        mesh_data.(marker_name).type='TRI_3';
-        mesh_data.(marker_name).ID=uint8(5);
-        mesh_data.(marker_name).element_list=element_list;
-        mesh_data.(marker_name).number_list=3;
+        marker.type='TRI_3';
+        marker.ID=uint8(5);
+        marker.element_list=element_list;
+        marker.number_list=3;
+
+        mesh_data.(marker_name)=marker;
     end
 end
 

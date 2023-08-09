@@ -77,13 +77,15 @@ for marker_index=1:length(marker_name_list)
 
     element_list=element_list(1:mesh_element_number*3,:);
 
-    mesh_data.(marker_name)=rmfield(marker,'X');
-    mesh_data.(marker_name)=rmfield(marker,'Y');
-    mesh_data.(marker_name)=rmfield(marker,'Z');
+    marker=rmfield(marker,'X');
+    marker=rmfield(marker,'Y');
+    marker=rmfield(marker,'Z');
 
     % sort element
-    mesh_data.(marker_name).element_list=element_list;
-    mesh_data.(marker_name).type='stl';
+    marker.element_list=element_list;
+    marker.type='stl';
+
+    mesh_data.(marker_name)=marker;
 end
 
 end

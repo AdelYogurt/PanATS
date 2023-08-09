@@ -235,4 +235,3 @@ if ierr
     error(['Error: ', cg_get_error()]);
 end
 end
-

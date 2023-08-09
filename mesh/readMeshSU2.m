@@ -75,8 +75,9 @@ while ~feof(mesh_file)
         element_number=str2double(string{2});
         if READ_VOLUME && ~ONLY_MARKER
             % read volume element
-            [type,element_list,number_list]=readElement(element_number,mesh_file);
+            [type,ID,element_list,number_list]=readElement(element_number,mesh_file);
             mesh_data.(mesh_filename).type=type;
+            mesh_data.(mesh_filename).ID=ID;
             mesh_data.(mesh_filename).element_list=element_list;
             mesh_data.(mesh_filename).number_list=number_list;
         else

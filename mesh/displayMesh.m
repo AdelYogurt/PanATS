@@ -20,7 +20,7 @@ while marker_index <= length(marker_name_list)
     end
 end
 
-if isfield(mesh_data.geometry,'point_list')
+if isfield(mesh_data,'geometry') && isfield(mesh_data.geometry,'point_list')
     point_list=mesh_data.geometry.point_list;
     dimension=size(point_list,2);
 else
@@ -41,10 +41,25 @@ for marker_index=1:length(marker_name_list)
 
     marker=mesh_data.(marker_name);
 
-    if strcmp(marker.type,'wgs')
+    if strcmp(marker.type,'scatter')
+        % scatter format data
+        hold on;
+        if isfield(marker,'Z')
+            scatter3(marker.X,marker.Y,marker.Z);
+        else
+            scatter(marker.X,marker.Y);
+            dimension=2;
+        end
+        hold off;
+    elseif strcmp(marker.type,'wgs')
         % LaWGS format data
         hold on;
-        surface(marker.X,marker.Y,marker.Z,'FaceColor','none');
+        if isfield(marker,'Z')
+            surface(marker.X,marker.Y,marker.Z,'FaceColor','none');
+        else
+            surface(marker.X,marker.Y,'FaceColor','none');
+            dimension=2;
+        end
         hold off;
     elseif strcmp(marker.type,'stl')
         % stl format data

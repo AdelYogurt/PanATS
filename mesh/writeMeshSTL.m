@@ -29,13 +29,14 @@ mesh_file=fopen(mesh_filestr,'w');
 
 % write name to file
 name_length=length(mesh_filename);
-fwrite(mesh_file,['solid ',mesh_filename],'char');
-fwrite(mesh_file,32*ones(80-6-name_length,1,'int8'),'int8');
+fwrite(mesh_file,['solid ',mesh_filename],'uint8');
+fwrite(mesh_file,32*ones(80-6-name_length,1,'uint8'),'uint8');
 
 % element number sort place
 fwrite(mesh_file,0,'uint32');
 
 % write each marker to file
+total_element=0;
 for marker_index=1:length(marker_name_list)
     marker_name=marker_name_list{marker_index};
     marker=mesh_data.(marker_name);
@@ -47,7 +48,6 @@ for marker_index=1:length(marker_name_list)
     element_list=marker.element_list;
 
     % write element
-    total_element=0;
     element_number=size(element_list,1)/3;
     for element_index=1:element_number
         element=element_list(3*element_index-2:3*element_index,:);
@@ -68,7 +68,7 @@ for marker_index=1:length(marker_name_list)
             fwrite(mesh_file,point1,'float32');
             fwrite(mesh_file,point2,'float32');
             fwrite(mesh_file,point3,'float32');
-            fwrite(mesh_file,[0,0],'int8');
+            fwrite(mesh_file,0,'uint16');
             total_element=total_element+1;
         end
             

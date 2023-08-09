@@ -57,8 +57,9 @@ if remove_redundance
         if strcmp(marker_name,'geometry')
             continue;
         end
+        marker=mesh_data.(marker_name);
 
-        [point_number,line_number]=size(mesh_data.(marker_name).X);
+        [point_number,line_number]=size(marker.X);
 
         % initialize element sort space
         calculate_element=(point_number-1)*(line_number-1)*2;
@@ -91,15 +92,17 @@ if remove_redundance
         end
         node_index=node_index+uint32(point_number*line_number);
 
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'X');
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Y');
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Z');
+        marker=rmfield(marker,'X');
+        marker=rmfield(marker,'Y');
+        marker=rmfield(marker,'Z');
 
         % sort element
-        mesh_data.(marker_name).type='TRI_3';
-        mesh_data.(marker_name).ID=uint8(5);
-        mesh_data.(marker_name).element_list=element_list(1:element_indx,:);
-        mesh_data.(marker_name).number_list=3;
+        marker.type='TRI_3';
+        marker.ID=uint8(5);
+        marker.element_list=element_list(1:element_indx,:);
+        marker.number_list=3;
+
+        mesh_data.(marker_name)=marker;
     end
 else
     % do not delete same coordination point
@@ -110,8 +113,9 @@ else
         if strcmp(marker_name,'geometry')
             continue;
         end
+        marker=mesh_data.(marker_name);
 
-        [point_number,line_number]=size(mesh_data.(marker_name).X);
+        [point_number,line_number]=size(marker.X);
 
         % initialize element sort space
         calculate_element=(point_number-1)*(line_number-1)*2;
@@ -150,15 +154,17 @@ else
         end
         node_index=node_index+uint32(point_number*line_number);
 
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'X');
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Y');
-        mesh_data.(marker_name)=rmfield(mesh_data.(marker_name),'Z');
+        marker=rmfield(marker,'X');
+        marker=rmfield(marker,'Y');
+        marker=rmfield(marker,'Z');
 
         % sort element
-        mesh_data.(marker_name).type='TRI_3';
-        mesh_data.(marker_name).ID=uint8(5);
-        mesh_data.(marker_name).element_list=element_list(1:element_indx,:);
-        mesh_data.(marker_name).number_list=3;
+        marker.type='TRI_3';
+        marker.ID=uint8(5);
+        marker.element_list=element_list(1:element_indx,:);
+        marker.number_list=3;
+
+        mesh_data.(marker_name)=marker;
     end
 end
 
