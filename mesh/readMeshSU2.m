@@ -51,24 +51,12 @@ while ~feof(mesh_file)
         % read node data
         point_number=str2double(string{2});
 
-        if ONLY_MARKER
-            point_position=ftell(mesh_file);
-            % jump over node data first, after read marker, read node data
-            for point_index=1:point_number
-                fgets(mesh_file);
-            end
-        else
-            point_list=zeros(point_number,dimension);
-            for point_index=1:point_number
-                node_string=strsplit(fgetl(mesh_file));
-                for dimension_index=1:dimension
-                    point_list(point_index,dimension_index)=str2double(node_string{dimension_index});
-                end
-            end
+        point_list=textscan(mesh_file,'%f');
+        point_list=reshape(point_list{1},[],point_number)';
+        point_list=point_list(:,1:dimension);
 
-            if scale ~= 1
-                point_list=point_list*scale;
-            end
+        if scale ~= 1
+            point_list=point_list*scale;
         end
     elseif strcmp(string{1},'NELEM=')
         % read volume element number
@@ -81,10 +69,7 @@ while ~feof(mesh_file)
             mesh_data.(mesh_filename).element_list=element_list;
             mesh_data.(mesh_filename).number_list=number_list;
         else
-            % jump over volume element data
-            for index=1:element_number
-                fgetl(mesh_file);
-            end
+            textscan(mesh_file,'%d');
         end
     elseif strcmp(string{1},'NMARK=')
         % read marker data
@@ -133,37 +118,12 @@ if ONLY_MARKER
 
         % generate new element list
         mesh_data.(marker_name).element_list(1:marker_node_number)=map_list((flag_number+1):(flag_number+marker_node_number));
-        
+
         flag_number=flag_number+marker_node_number;
     end
 
-    % reread point data
-    point_number=length(total_point_index_list);
-    fseek(mesh_file,point_position,"bof");
-    point_list=zeros(point_number,dimension);
-    flag_point=1;
-    for point_index=1:point_number
-        point_string=fgetl(mesh_file);
-
-        % only on marker point will be read
-        if total_point_index_list(flag_point) == point_index
-            % point_string=strsplit(point_string,{char(32),char(9)});
-            point_string=strsplit(point_string);
-            for dimension_index=1:dimension
-                point_list(flag_point,dimension_index)=str2double(point_string{dimension_index});
-            end
-            flag_point=flag_point+1;
-        end
-
-        if flag_point > point_number
-            % stop reading
-            break;
-        end
-    end
-
-    if scale ~= 1
-        point_list=point_list*scale;
-    end
+    % delete no marker point data
+    point_list=point_list(total_point_index_list,:);
 end
 
 fclose(mesh_file);
@@ -178,30 +138,82 @@ mesh_data.geometry=geometry;
         %
         SAME_TYPE=true(1);
 
-        add_number=element_number*2;
-        element_list=zeros(add_number,1,'uint32');
-        number_list=zeros(element_number,1,'uint8');
+        % read unstructure element list
+        element_list=textscan(mesh_file,'%d');
+        element_list=element_list{1}+1;
 
-        % read marker element node index
-        data_index=0;
-        for element_index=1:element_number
-            element_string=strsplit(fgetl(mesh_file));
-            SU2_ID=str2double(element_string{1});
-            node_number=convertSU2IDToNumber(SU2_ID);
-            number_list(element_index,1)=convertSU2IDToNumber(SU2_ID);
-
-            % append element
-            if data_index+node_number+1 > length(element_list)
-                element_list=[element_list;zeros(add_number,1,'uint32');];
-            end
-
-            element_list(data_index+1)=convertSU2IDToID(SU2_ID);
-            for node_idx=1:node_number
-                element_list(data_index+node_idx+1)=str2double(element_string{1+node_idx})+1;
-            end
-            data_index=data_index+node_number+1;
+        % judge if have element index in each line
+        switch element_list(1)-1
+            case 3
+                node_number=2;
+            case 5
+                node_number=3;
+            case 9
+                node_number=4;
+            case 10
+                node_number=4;
+            case 12
+                node_number=8;
+            case 13
+                node_number=6;
+            case 14
+                node_number=5;
+            otherwise
+                error('idSU2Number: unknown SU2 identifier')
         end
-        element_list=element_list(1:data_index);
+        if element_list(node_number+2) == 1
+            offset=1;
+        else
+            offset=0;
+        end
+
+        % change SU2 ID into ID and create number_list
+        number_list=zeros(element_number,1);
+        index_list=zeros(element_number,1);
+        data_number=length(element_list);
+        data_index=1;
+        element_index=1;
+        while data_index < data_number
+            switch element_list(data_index)-1
+                case 3
+                    node_number=2;
+                    id=3;
+                case 5
+                    node_number=3;
+                    id=5;
+                case 9
+                    node_number=4;
+                    id=7;
+                case 10
+                    node_number=4;
+                    id=10;
+                case 12
+                    node_number=8;
+                    id=17;
+                case 13
+                    node_number=6;
+                    id=14;
+                case 14
+                    node_number=5;
+                    id=12;
+                otherwise
+                    error('idSU2Number: unknown SU2 identifier')
+            end
+            element_list(data_index)=id;
+            number_list(element_index)=node_number;
+
+            data_index=data_index+1+node_number;
+            if offset
+                index_list(element_index)=data_index;
+                data_index=data_index+1;
+            end
+            element_index=element_index+1;
+        end
+
+        % remove element index
+        if offset
+            element_list(index_list)=[];
+        end
 
         % check if have same type
         node_number=number_list(1);
@@ -222,53 +234,7 @@ mesh_data.geometry=geometry;
             ID=20;
         end
         type=convertIDToType(ID,dimension);
-
     end
-
-end
-
-function node_number=convertSU2IDToNumber(SU2_ID)
-switch SU2_ID
-    case 3
-        node_number=2;
-    case 5
-        node_number=3;
-    case 9
-        node_number=4;
-    case 10
-        node_number=4;
-    case 12
-        node_number=8;
-    case 13
-        node_number=6;
-    case 14
-        node_number=5;
-    otherwise
-        error('idSU2Number: unknown identifier')
-end
-
-end
-
-function id=convertSU2IDToID(SU2_ID)
-switch SU2_ID
-    case 3
-        id=3;
-    case 5
-        id=5;
-    case 9
-        id=7;
-    case 10
-        id=10;
-    case 12
-        id=17;
-    case 13
-        id=14;
-    case 14
-        id=12;
-    otherwise
-        error('idSU2Number: unknown identifier')
-end
-
 end
 
 function type=convertIDToType(id,dimension)
