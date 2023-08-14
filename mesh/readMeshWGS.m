@@ -8,10 +8,8 @@ function mesh_data=readMeshWGS(mesh_filestr,scale)
 % point_list, part_list
 %
 % point_list is coordinate of all node
-% mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
+% mesh_data(single zone): mesh_data.(marker)
 % marker: marker.type, marker.X, marker.Y, marker.Z
-% geometry: dimension
-% notice: marker which has the same name of file is volume element
 %
 if nargin < 2
     scale=[];
@@ -27,7 +25,6 @@ end
 if isempty(scale)
     scale=1;
 end
-dimension=3;
 
 % initial information
 fgetl(mesh_file);
@@ -197,8 +194,5 @@ end
 
 fclose(mesh_file);
 clear('mesh_file');
-
-geometry.dimension=dimension;
-mesh_data.geometry=geometry;
 
 end

@@ -5,9 +5,9 @@ function writeMeshINP(mesh_filestr,mesh_data,marker_name_list)
 % mesh_filestr, mesh_data, marker_name_list(default all markers)
 %
 % notice:
-% mesh_data(single zone): mesh_data.name, mesh_data.point_list, mesh_data.(marker)
+% mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
 % marker: marker.type, marker.ID, marker.element_list, marker.number_list
-% notice: marker which has the same name of file is volume element
+% geometry: point_list, dimension
 %
 if nargin < 3
     marker_name_list=[];

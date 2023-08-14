@@ -10,7 +10,7 @@ function mesh_data=readMeshSTL(mesh_filestr,scale,file_type,geometry_torlance)
 % mesh_data
 %
 % notice:
-% mesh_data(single zone): mesh_data.name, mesh_data.(marker)
+% mesh_data(single zone): mesh_data.(marker)
 % marker: marker.type, marker.element_list
 %
 if nargin < 4
@@ -141,9 +141,6 @@ end
 
 mesh_data.(marker_name).element_list=element_list;
 mesh_data.(marker_name).type='stl';
-
-geometry.dimension=dimension;
-mesh_data.geometry=geometry;
 
     function point=getASCIIPoint(mesh_file)
         % read ASCII point data

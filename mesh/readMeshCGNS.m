@@ -9,9 +9,9 @@ function mesh_data=readMeshCGNS(mesh_filestr,scale)
 % mesh_data, geometry
 %
 % notice:
-% mesh_data(single zone): mesh_data.name, mesh_data.point_list, mesh_data.(marker)
+% mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
 % marker: marker.type, marker.ID, marker.element_list, marker.number_list
-% notice: marker which has the same name of file is volume element
+% geometry: point_list, dimension
 %
 if nargin < 2
     scale=[];

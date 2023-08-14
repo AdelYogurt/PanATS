@@ -9,9 +9,9 @@ function mesh_data=readMeshINP(mesh_filestr,scale)
 %
 % notice:
 % point_list is coordinate of all node
-% mesh_data(single zone): mesh_data.name, mesh_data.point_list, mesh_data.(marker)
+% mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
 % marker: marker.type, marker.ID, marker.element_list, marker.number_list
-% notice: marker which has the same name of file is volume element
+% geometry: point_list, dimension
 %
 if nargin < 2
     scale=[];

@@ -6,7 +6,8 @@ function writeMeshWGS(mesh_filestr,mesh_data,marker_name_list)
 %
 % notice:
 % point_list is coordinate of all node
-% part_list{part.name, part.mesh_list{mesh.element_list, mesh.element_type, mesh.element_ID}}
+% mesh_data(single zone): mesh_data.(marker)
+% marker: marker.type, marker.X, marker.Y, marker.Z
 %
 if nargin < 3
     marker_name_list=[];

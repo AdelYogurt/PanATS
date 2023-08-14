@@ -5,8 +5,8 @@ function writeMeshSTL(mesh_filestr,mesh_data,marker_name_list)
 % mesh_filestr, mesh_data, marker_name_list(default all markers)
 %
 % notice:
-% mesh.element_ID if not is 5(tri), will be convert into tri
-% part(part.name, part.mesh_list{mesh.element_list, mesh.element_type, mesh.element_ID})
+% mesh_data(single zone): mesh_data.(marker)
+% marker: marker.type, marker.element_list
 %
 if nargin < 3
     marker_name_list=[];

@@ -13,7 +13,7 @@ function mesh_data=readMeshSU2(mesh_filestr,scale,READ_VOLUME,ONLY_MARKER)
 % mesh_data(single zone): mesh_data.geometry, mesh_data.(marker)
 % marker: marker.type, marker.ID, marker.element_list, marker.number_list
 % geometry: point_list, dimension
-% notice: marker which has the same name of file is volume element
+% 'Fluid' marker is volume element
 %
 if nargin < 4
     ONLY_MARKER=[];
@@ -64,10 +64,10 @@ while ~feof(mesh_file)
         if READ_VOLUME && ~ONLY_MARKER
             % read volume element
             [type,ID,element_list,number_list]=readElement(element_number,mesh_file);
-            mesh_data.(mesh_filename).type=type;
-            mesh_data.(mesh_filename).ID=ID;
-            mesh_data.(mesh_filename).element_list=element_list;
-            mesh_data.(mesh_filename).number_list=number_list;
+            mesh_data.('fluid').type=type;
+            mesh_data.('fluid').ID=ID;
+            mesh_data.('fluid').element_list=element_list;
+            mesh_data.('fluid').number_list=number_list;
         else
             textscan(mesh_file,'%d');
         end
