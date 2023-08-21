@@ -62,7 +62,7 @@ for marker_index=1:marker_number
     [marker_name, ID, istart, iend, nbndry, pflag, ierr]=cg_section_read(mesh_file, ...
         base_index, zone_index, marker_index); chk_error(ierr);
 
-    [node_number, type]=typeID(ID, cell_dimension);
+    [node_number, type]=convertIDToType(ID, cell_dimension);
 
     % Get element connectivity
     [node_number_total, ierr]=cg_ElementDataSize(mesh_file, base_index, zone_index, ...
@@ -77,7 +77,7 @@ for marker_index=1:marker_number
 
     if ID == 20
         % for mixed elemenet, separate into number_list and ID_list
-        [element_list,number_list]=getSeparteElement(element_list);
+        [element_list,number_list]=getNumberElement(element_list);
     else
         number_list=node_number;
     end
@@ -98,71 +98,71 @@ mesh_data.geometry=geometry;
 
 end
 
-function [node_number, typestr]=typeID(ID, cell_dimension)
+function [node_number, type]=convertIDToType(ID, cell_dimension)
 % Obtain a string of element type
 switch (ID)
     case NODE
-        typestr='NODE';
+        type='NODE';
         node_number=1;
     case BAR_2
-        typestr='BAR_2';
+        type='BAR_2';
         node_number=2;
     case BAR_3
-        typestr='BAR_3';
+        type='BAR_3';
         node_number=3;
     case TRI_3
-        typestr='TRI_3';
+        type='TRI_3';
         node_number=3;
     case TRI_6
-        typestr='TRI_6';
+        type='TRI_6';
         node_number=6;
     case QUAD_4
-        typestr='QUAD_4';
+        type='QUAD_4';
         node_number=4;
     case QUAD_8
-        typestr='QUAD_8';
+        type='QUAD_8';
         node_number=8;
     case QUAD_9
-        typestr='QUAD_9';
+        type='QUAD_9';
         node_number=9;
     case TETRA_4
-        typestr='TETRA_4';
+        type='TETRA_4';
         node_number=4;
     case TETRA_10
-        typestr='TETRA_10';
+        type='TETRA_10';
         node_number=10;
     case PYRA_5
-        typestr='PYRA_5';
+        type='PYRA_5';
         node_number=5;
     case PYRA_13
-        typestr='PYRA_13';
+        type='PYRA_13';
         node_number=13;
     case PYRA_14
-        typestr='PYRA_14';
+        type='PYRA_14';
         node_number=14;
     case PENTA_6
-        typestr='PENTA_6';
+        type='PENTA_6';
         node_number=6;
     case PENTA_15
-        typestr='PENTA_15';
+        type='PENTA_15';
         node_number=15;
     case PENTA_18
-        typestr='PENTA_18';
+        type='PENTA_18';
         node_number=18;
     case HEXA_8
-        typestr='HEXA_8';
+        type='HEXA_8';
         node_number=8;
     case HEXA_20
-        typestr='HEXA_20';
+        type='HEXA_20';
         node_number=20;
     case HEXA_27
-        typestr='HEXA_27';
+        type='HEXA_27';
         node_number=27;
     case MIXED
         if cell_dimension == 2
-            typestr='MIXED2';
+            type='MIXED2';
         elseif cell_dimension == 3
-            typestr='MIXED3';
+            type='MIXED3';
         else
             error('For mixed meshes, dimension must be 2 or 3.');
         end
@@ -173,8 +173,8 @@ switch (ID)
 end
 end
 
-function [element_list,number_list]=getSeparteElement(element_list)
-% separate mixed into element_list, number_list, ID_list
+function [element_list,number_list]=getNumberElement(element_list)
+% obtain number list by element list
 %
 
 % calculate element number

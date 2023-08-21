@@ -28,129 +28,35 @@ end
 
 point_list=[];
 dimension=3;
-add_number=50;
 
 if isempty(scale)
     scale=1;
 end
-
-read_marker_flag=0;
-read_point_flag=0;
-read_element_flag=0;
 
 % loop each line
 point_index_offset=0; % different part point index offset
 while ~feof(mesh_file)
     string_data=fgetl(mesh_file);
     string_list=strsplit(string_data,{' ',',',char(9)});
-    if isempty(string_list{1})
-        string_list=string_list(2:end);
-    end
 
     if strcmp(string_list{1},'*Part')
-        % detact read part
-        read_marker_flag=1;
-
         % read part
         marker_name=regexprep(string_list{2}(6:end),{'[',']','"','''','-'},'');
 
-        data_index=0;
-        element_index=0;
+        [point_list_new,type,ID,element_list,number_list]=readPart(point_index_offset,mesh_file);
 
-        element_list=zeros(add_number,1);
-        number_list=zeros(add_number,1);
-    elseif strcmp(string_list{1},'*Node') && read_marker_flag
-        % detact read point begain
-        read_point_flag=1;
+        % end mesh read, add marker
+        mesh_data.(marker_name).type=type;
+        mesh_data.(marker_name).ID=ID;
+        mesh_data.(marker_name).element_list=element_list;
+        mesh_data.(marker_name).number_list=number_list;
 
-    elseif strcmp(string_list{1},'*Element') && read_marker_flag
-        % end read point and read element
-        read_point_flag=0;
-        read_element_flag=1;
-
-        string_list=strsplit(string_list{2},'=');
-        mesh_element_type=string_list{2};
-        switch mesh_element_type
-            case 'S3'
-                element_id=uint8(5);
-                node_number=3;
-            case {'S4R','S4'}
-                element_id=uint8(7);
-                node_number=4;
-            case 'S8'
-                element_id=uint8(17);
-                node_number=8;
-            otherwise
-                error('readMeshINP: unknown element type')
-        end
-
-    elseif strcmp(string_list{1},'*End')
-        % end read part
-        if ((length(string_list) ==2) && (strcmp(string_list{2},'Part')))
-            read_marker_flag=0;
-            read_element_flag=0;
-
-            element_list=element_list(1:data_index);
-            number_list=number_list(1:element_index);
-
-            SAME_TYPE=true(1);
-
-            % check if have same type
-            node_number=number_list(1);
-            for element_index=1:length(number_list)
-                if number_list(element_index) ~= node_number
-                    SAME_TYPE=false(1);
-                    break;
-                end
-            end
-
-            % if same type, reshape element
-            if SAME_TYPE
-                ID=element_list(1);
-                element_list=reshape(element_list,node_number+1,[])';
-                element_list=element_list(:,2:node_number+1);
-                number_list=number_list(1);
-            else
-                ID=20;
-            end
-            type=convertIDToType(ID,dimension);
-
-            % end mesh read, add marker
-            mesh_data.(marker_name).type=type;
-            mesh_data.(marker_name).ID=ID;
-            mesh_data.(marker_name).element_list=element_list;
-            mesh_data.(marker_name).number_list=number_list;
-
-            point_index_offset=uint32(size(point_list,1));
-        end
-    else
-        % read point data
-        if read_point_flag
-            point=str2double(string_list(2:1+dimension));
-            point_list=[point_list;point];
-        end
-
-        % read part element data
-        if read_element_flag
-            % add element point index
-            if length(element_list) < data_index+node_number+1
-                element_list=[element_list;zeros(add_number,1)];
-            end
-
-            element_list(data_index+1)=element_id;
-            for index=1:node_number
-                element_list(data_index+index+1)=uint32(str2double(string_list(1+index)))+point_index_offset;
-            end
-
-            if length(number_list) < element_index+1
-                number_list=[number_list;zeros(add_number,1)];
-            end
-
-            number_list(element_index+1)=node_number;
-
-            data_index=data_index+node_number+1;
-            element_index=element_index+1;
-        end
+        point_list=[point_list;point_list_new];
+        point_index_offset=int32(size(point_list,1));
+    end
+    
+    if strcmp(string_list{1},'*Assembly')
+        break;
     end
 end
 
@@ -165,35 +71,87 @@ geometry.dimension=dimension;
 geometry.point_list=point_list;
 mesh_data.geometry=geometry;
 
-end
+    function [point_list,type,ID,element_list,number_list]=readPart(point_index_offset,mesh_file)
+        % read part data
+        %
 
-function type=convertIDToType(id,dimension)
-switch id
-    case 3
-        type='BAR_2';
-    case 5
-        type='TRI_3';
-    case 7
-        type='QUAD_4';
-    case 10
-        type='TETRA_4';
-    case 17
-        type='HEXA_8';
-    case 14
-        type='PENTA_6';
-    case 12
-        type='PYRA_5';
-    case 20
-        if dimension == 2
-            type = 'MIXED2';
-        elseif dimension == 3
-            type = 'MIXED3';
-        else
-            error('convertIDToType: for mixed meshes, dimension must be 2 or 3.');
+        % read point list
+        string_data=fgetl(mesh_file);
+        string_list=strsplit(string_data,{' ',',',char(9)});
+        if strcmp(string_list{1},'*Node')
+            point_list=textscan(mesh_file,'%f,%f,%f,%f');
+            point_list=[point_list{2:4}];
         end
+
+        string_data=fgetl(mesh_file);
+        string_list=strsplit(string_data,{' ',',',char(9)});
+        % read element list
+        element_list=[];
+        while ~strcmp(string_list{1},'*End')
+            if strcmp(string_list{1},'*Element')
+                % element type
+                string_list=strsplit(string_list{2},'=');
+                type_new=string_list{2};
+                [ID_new,number_list_new]=convertTypeToID(type_new);
+
+                % read element list
+                scan_format=['%d',repmat(',%d',1,number_list_new)];
+                element_list_new=textscan(mesh_file,scan_format);
+                element_list_new=[element_list_new{2:(1+number_list_new)}]+(point_index_offset);
+
+                if isempty(element_list)
+                    element_list=element_list_new;
+                    type=type_new;
+                    ID=ID_new;
+                    number_list=number_list_new;
+                else
+                    % mixed element
+                    number_list_new=repmat(number_list_new,size(element_list_new,1),1);
+
+                    if number_list_new(end) ~= number_list(end) && length(number_list) == 1
+                        number_list=repmat(number_list,size(element_list,1),1);
+                        element_list=[repmat(ID,size(element_list,1),1),element_list]';
+                        element_list=element_list(:);
+                        type='MIXED3';
+                    end
+
+                    element_list_new=[repmat(ID_new,size(element_list_new,1),1),element_list_new]';
+                    element_list=[element_list;element_list_new(:)];
+                    ID=20;
+                    number_list=[number_list;number_list_new];
+                end
+            end
+
+            string_data=fgetl(mesh_file);
+            string_list=strsplit(string_data,{' ',',',char(9)});
+        end
+
+    end
+end
+
+function [ID,node_number]=convertTypeToID(type)
+% inp version of ID and type converter
+%
+switch type
+    case 'S3'
+        ID=uint8(5);
+        node_number=3;
+    case {'S4R','S4'}
+        ID=uint8(7);
+        node_number=4;
+    case {'S8R','S8R5'}
+        ID=uint8(8);
+        node_number=8;
+    case 'S9R'
+        ID=uint8(9);
+        node_number=9;
+    case 'C3D4'
+        ID=uint8(10);
+        node_number=4;
+    case {'C3D8','C3D8R'}
+        ID=uint8(17);
+        node_number=8;
     otherwise
-        error('convertIDToType: unknown identifier')
+        error('readMeshINP: unknown element type')
 end
-
 end
-

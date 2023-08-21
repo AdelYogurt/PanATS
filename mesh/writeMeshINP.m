@@ -52,6 +52,9 @@ for marker_index=1:length(marker_name_list)
     element_list=marker.element_list;
     number_list=marker.number_list;
     if marker.ID == 20
+        % for mixed element, separte it into element list and number list
+        % than, element list will be sort by ID
+        % the same ID element will be print in same *Element
         [element_list,ID_list]=getSeparteElement(element_list,number_list);
     end
 
@@ -61,11 +64,7 @@ for marker_index=1:length(marker_name_list)
     % write part point data
     fprintf(file_mesh,'*Node\n');
     for point_index=min_node_index:max_point_index
-        fprintf(file_mesh,'% 7d',point_index-min_node_index+1);
-        for dimension_index=1:3
-            fprintf(file_mesh,',% 14f',point_list(point_index,dimension_index));
-        end
-        fprintf(file_mesh,'\n');
+        fprintf(file_mesh,'% 7d,% 14f,% 14f,% 14f\n',point_index-min_node_index+1,point_list(point_index,1:3));
     end
 
     % write element data
@@ -81,44 +80,39 @@ for marker_index=1:length(marker_name_list)
         node_index=0;
         for element_index=1:element_number
             node_number=number_list(map_list(element_index));
-            element_list(node_index+(1:node_number))=element_list_old...
-                (node_index_list(map_list(element_index))-(node_number:-1:1)+1);
+            if map_list(element_index) ~= element_index
+                element_list(node_index+(1:node_number))=element_list_old...
+                    (node_index_list(map_list(element_index))-(node_number:-1:1)+1);
+            end
             node_index=node_index+node_number;
         end
 
-        number_list=number_list(index_list);
         id=ID_list(1);
-        
-        fprintf(file_mesh,'*Element, type=%s\n',typeINPID(id));
+        [type,node_number]=convertIDToType(id);
+        fprintf(file_mesh,'*Element, type=%s\n',type);
+        print_format=['%d',repmat(',%d',1,node_number),'\n'];
+
+        % print element list
         node_index=0;
         for element_index=1:element_number
             % if element type change, state new type
             if ID_list(element_index) ~= id
                 id=ID_list(element_index);
-                fprintf(file_mesh,'*Element, type=%s\n',typeINPID(id));
+                [type,node_number]=convertIDToType(id);
+                fprintf(file_mesh,'*Element, type=%s\n',type);
+                print_format=['%d',repmat(',%d',1,node_number),'\n'];
             end
 
-            fprintf(file_mesh,'% 4d',element_index);
-            node_number=number_list(element_index);
-
-            for index=1:node_number
-                fprintf(file_mesh,',% 4d',element_list(index+node_index)-min_node_index+1);
-            end
+            fprintf(file_mesh,print_format,element_index,element_list(node_index+(1:node_number))-min_node_index+1);
             node_index=node_index+node_number;
-
-            fprintf(file_mesh,'\n');
         end
-
     else
         fprintf(file_mesh,'*Element, type=%s\n',marker.type);
 
         [element_number,node_number]=size(element_list);
+        print_format=['%d',repmat(',%d',1,node_number),'\n'];
         for element_index=1:element_number
-            fprintf(file_mesh,'% 4d',element_index);
-            for node_index=1:node_number
-                fprintf(file_mesh,',% 4d',element_list(element_index,node_index)-min_node_index+1);
-            end
-            fprintf(file_mesh,'\n');
+            fprintf(file_mesh,print_format,element_index,element_list(element_index,1:node_number)-min_node_index+1);
         end
     end
 
@@ -160,8 +154,8 @@ function [element_list,ID_list]=getSeparteElement(element_list,number_list)
 
 data_number=length(element_list);
 % calculate element number
-ID_list=zeros(length(number_list),1,'int64');
-index_list=zeros(length(number_list),1,'int64');
+ID_list=zeros(length(number_list),1,'uint32');
+index_list=zeros(length(number_list),1,'uint32');
 
 element_index=1;
 index=1;
@@ -176,18 +170,31 @@ end
 element_list(index_list)=[];
 end
 
-function type=typeINPID(id)
+function [type,node_number]=convertIDToType(id)
+% inp version of type and ID converter
+%
 switch id
     case 3
-        type='B31';
+        type='B21';
+        node_number=2;
     case 5
         type='S3';
+        node_number=3;
     case 7
-        type='S4';
+        type='S4R';
+        node_number=4;
+    case 8
+        type='S8R';
+        node_number=8;
+    case 9
+        type='S9R';
+        node_number=9;
     case 10
-        type='C3D4I';
+        type='C3D4';
+        node_number=4;
     case 17
-        type='C3D8I';
+        type='C3D8R';
+        node_number=8;
     otherwise
         error('idType: unknown identifier')
 end
