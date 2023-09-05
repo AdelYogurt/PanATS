@@ -1,4 +1,5 @@
 # .gitignore
+.gitignore
 
 # cache file
 **/matlab.mat
@@ -6,11 +7,9 @@
 # temp file
 temp/
 test.m
+test_mesh.m
 test_panel.m
 test_topology.m
 
 # SHABP original file
 SHABP/
-
-# cgns4m original file
-cgns4m/
