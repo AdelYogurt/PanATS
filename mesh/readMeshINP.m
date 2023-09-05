@@ -43,13 +43,17 @@ while ~feof(mesh_file)
         % read part
         marker_name=regexprep(string_list{2}(6:end),{'[',']','"','''','-'},'');
 
-        [point_list_new,type,ID,element_list,number_list]=readPart(point_index_offset,mesh_file);
+        [point_list_new,type,ID,element_list,number_list,...
+            Nset,Elset,material]=readPart(point_index_offset,mesh_file);
 
         % end mesh read, add marker
         mesh_data.(marker_name).type=type;
         mesh_data.(marker_name).ID=ID;
         mesh_data.(marker_name).element_list=element_list;
         mesh_data.(marker_name).number_list=number_list;
+        mesh_data.(marker_name).Nset=Nset;
+        mesh_data.(marker_name).Elset=Elset;
+        mesh_data.(marker_name).material=material;
 
         point_list=[point_list;point_list_new];
         point_index_offset=int32(size(point_list,1));
@@ -60,6 +64,12 @@ while ~feof(mesh_file)
     end
 end
 
+% residual_data=textscan(mesh_file,'%s');
+% residual_data=[string(string_data);residual_data{1}];
+
+residual_data=textscan(mesh_file,'%s','delimiter','\n','whitespace','');
+residual_data=[string(string_data);residual_data{1}];
+
 fclose(mesh_file);
 clear('mesh_file');
 
@@ -69,29 +79,35 @@ end
 
 geometry.dimension=dimension;
 geometry.point_list=point_list;
+geometry.residual_data=residual_data;
 mesh_data.geometry=geometry;
 
-    function [point_list,type,ID,element_list,number_list]=readPart(point_index_offset,mesh_file)
+    function [point_list,type,ID,element_list,number_list,...
+            Nset,Elset,material]=readPart(point_index_offset,mesh_file)
         % read part data
         %
 
         % read point list
-        string_data=fgetl(mesh_file);
-        string_list=strsplit(string_data,{' ',',',char(9)});
-        if strcmp(string_list{1},'*Node')
+        str_data=fgetl(mesh_file);
+        str_list=strsplit(str_data,{' ',',',char(9)});
+        if strcmp(str_list{1},'*Node')
             point_list=textscan(mesh_file,'%f,%f,%f,%f');
             point_list=[point_list{2:4}];
         end
 
-        string_data=fgetl(mesh_file);
-        string_list=strsplit(string_data,{' ',',',char(9)});
-        % read element list
+        str_data=fgetl(mesh_file);
+        str_list=strsplit(str_data,{' ',',',char(9)});
         element_list=[];
-        while ~strcmp(string_list{1},'*End')
-            if strcmp(string_list{1},'*Element')
+        Nset=[];
+        Elset=[];
+        material=[];
+        while ~strcmp(str_list{1},'*End')
+
+            % read element list
+            if strcmp(str_list{1},'*Element')
                 % element type
-                string_list=strsplit(string_list{2},'=');
-                type_new=string_list{2};
+                str_list=strsplit(str_list{2},'=');
+                type_new=str_list{2};
                 [ID_new,number_list_new]=convertTypeToID(type_new);
 
                 % read element list
@@ -122,8 +138,45 @@ mesh_data.geometry=geometry;
                 end
             end
 
-            string_data=fgetl(mesh_file);
-            string_list=strsplit(string_data,{' ',',',char(9)});
+            % read node setting
+            if strcmp(str_list{1},'*Nset')
+                % name
+                temp_list=strsplit(str_list{2},'=');
+                set_name=regexprep(temp_list{2},{'[',']','"','-'},'');
+                node_index=textscan(mesh_file,'%d,');
+                node_index=node_index{1};
+                if length(str_list) > 2 && strcmp(str_list{end},'generate')
+                    % mean generate from start to end
+                    node_index=(node_index(1):node_index(3):node_index(2))';
+                end
+                Nset.(set_name)=node_index;
+            end
+
+            % read element setting
+            if strcmp(str_list{1},'*Elset')
+                % name
+                temp_list=strsplit(str_list{2},'=');
+                set_name=regexprep(temp_list{2},{'[',']','"','-'},'');
+                elememt_index=textscan(mesh_file,'%d,');
+                elememt_index=elememt_index{1};
+                if length(str_list) > 2 && strcmp(str_list{end},'generate')
+                    % mean generate from start to end
+                    elememt_index=(elememt_index(1):elememt_index(3):elememt_index(2))';
+                end
+                Elset.(set_name)=elememt_index;
+            end
+
+            % read materials setting
+            if strcmp(str_list{1},'*Solid')
+                temp_list=strsplit(str_list{3},'=');
+                Nset_name=regexprep(temp_list{2},{'[',']','"','-'},'');
+                temp_list=strsplit(str_list{4},'=');
+                marterial_name=regexprep(temp_list{2},{'[',']','"','-'},'');
+                material.(Nset_name)=marterial_name;
+            end
+
+            str_data=fgetl(mesh_file);
+            str_list=strsplit(str_data,{' ',',',char(9)});
         end
 
     end

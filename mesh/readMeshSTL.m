@@ -52,12 +52,11 @@ if isempty(file_type)
     end
 end
 
+[~,marker_name,~]=fileparts(mesh_filestr);
+
 if strcmp(file_type,'binary')
     % read head
-    marker_name=fread(mesh_file,80,'int8');
-    marker_name=char(marker_name');
-    marker_name=strsplit(marker_name);
-    marker_name=regexprep(marker_name{2},{'[',']','"','''','-'},'');
+    marker_name_string=fread(mesh_file,80,'int8');
 
     % read total element_number
     element_number=fread(mesh_file,1,'int32');
@@ -90,9 +89,7 @@ if strcmp(file_type,'binary')
     element_number=element_number-length(overlap_list);
 else
     % read head
-    marker_name=fgetl(mesh_file);
-    marker_name=strsplit(marker_name);
-    marker_name=regexprep(marker_name{2},{'[',']','"','''','-'},'');
+    marker_name_string=fgetl(mesh_file);
 
     % initial sort space
     element_list=zeros(99,3);

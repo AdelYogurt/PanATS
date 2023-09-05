@@ -68,7 +68,7 @@ if remove_redundance
         marker.type='TRI_3';
         marker.ID=uint8(5);
         marker.element_list=element_list;
-        mesh_data.(marker_name).number_list=3;
+        marker.number_list=3;
 
         mesh_data.(marker_name)=marker;
     end

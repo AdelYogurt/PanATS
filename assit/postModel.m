@@ -52,7 +52,7 @@ if ~isempty(output_viscid)
 end
 
 if ~isempty(output_heat)
-    marker_Q_list=output_heat.Q_list;
+    marker_HF_list=output_heat.HF_list;
 end
 
 % initialize data array
@@ -65,7 +65,7 @@ dMn_list=zeros(total_point_number,1);
 
 streamline_len_list=zeros(total_point_number,1);
 
-Q_list=zeros(total_point_number,1);
+HF_list=zeros(total_point_number,1);
 Re_x_list=zeros(total_point_number,1);
 
 Cf_list=zeros(total_point_number,1);
@@ -91,7 +91,7 @@ for moniter_index=1:length(MARKER_MONITERING)
         end
 
         if ~isempty(output_heat)
-            Q_list(point_index_list,:)=Q_list(point_index_list,:)+marker_Q_list{marker_index}(element_index);
+            HF_list(point_index_list,:)=HF_list(point_index_list,:)+marker_HF_list{marker_index}(element_index);
             Re_x_list(point_index_list,:)=Re_x_list(point_index_list,:)+marker_Re_x_list{marker_index}(element_index);
         end
 
@@ -117,7 +117,7 @@ dMn_list(marker_boolean,:)=dMn_list(marker_boolean,:)./vertex_repeat_times(marke
 
 streamline_len_list(marker_boolean,:)=streamline_len_list(marker_boolean,:)./vertex_repeat_times(marker_boolean);
 
-Q_list(marker_boolean,:)=Q_list(marker_boolean,:)./vertex_repeat_times(marker_boolean);
+HF_list(marker_boolean,:)=HF_list(marker_boolean,:)./vertex_repeat_times(marker_boolean);
 Re_x_list(marker_boolean,:)=Re_x_list(marker_boolean,:)./vertex_repeat_times(marker_boolean);
 
 Cf_list(marker_boolean,:)=Cf_list(marker_boolean,:)./vertex_repeat_times(marker_boolean);
@@ -132,7 +132,7 @@ output_post.dMn_list=dMn_list;
 
 output_post.streamline_len_list=streamline_len_list;
 
-output_post.Q_list=Q_list;
+output_post.HF_list=HF_list;
 output_post.Re_x_list=Re_x_list;
 
 output_post.Cf_list=Cf_list;

@@ -21,6 +21,7 @@ end
 if exist(mesh_filestr,'file') ~= 2
     error('readMeshCGNS: mesh file do not exist')
 end
+mesh_filestr=which(mesh_filestr);
 [~,mesh_filename,~]=fileparts(mesh_filestr);
 if isempty(scale)
     scale=1;
@@ -185,37 +186,37 @@ index=1;
 data_number=length(element_list);
 while index < data_number
     switch element_list(index)
-        case 5
+        case 5 % TRI_3
             number_list(element_index)=3;
-        case 7
+        case 7 % TRI_6
             number_list(element_index)=4;
-        case 6
+        case 6 % QUAD_4
             number_list(element_index)=6;
-        case 8
+        case 8 % QUAD_8
             number_list(element_index)=8;
-        case 9
+        case 9 % QUAD_9
             number_list(element_index)=9;
-        case 10
+        case 10 % TETRA_4
             number_list(element_index)=4;
-        case 12
-            number_list(element_index)=5;
-        case 14
-            number_list(element_index)=6;
-        case 17
-            number_list(element_index)=8;
-        case 11
+        case 11 % TETRA_10
             number_list(element_index)=10;
-        case 21
+        case 12 % PYRA_5
+            number_list(element_index)=5;
+        case 21 % PYRA_13
             number_list(element_index)=13;
-        case 13
+        case 13 % PYRA_14
             number_list(element_index)=14;
-        case 15
+        case 14 % PENTA_6
+            number_list(element_index)=6;
+        case 15 % PENTA_15
             number_list(element_index)=15;
-        case 16
+        case 16 % PENTA_18
             number_list(element_index)=18;
-        case 18
+        case 17 % HEXA_8
+            number_list(element_index)=8;
+        case 18 % HEXA_20
             number_list(element_index)=20;
-        case 19
+        case 19 % HEXA_27
             number_list(element_index)=27;
         otherwise
             error('ERROR: unknown element type in elems(%d).', element_index);

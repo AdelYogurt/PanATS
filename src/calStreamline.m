@@ -1,421 +1,240 @@
-function streamline=calStreamline...
-    (free_flow_vector,point_list,edge_list,element,point_start,...
-    max_size,streamline_index,geometry_torlance)
+function [streamline,line_len,cross_idx]=calStreamline(elem_idx,...
+    point_list,element_list,boolean_attach_list,elem_flow_list,normal_vector_list)
 % calculate streamline from point_start and element
 %
-streamline=zeros(max_size,4); % cross point, current length
-edge_cross_list=zeros(max_size,2,'int32'); % cross edge vertex, use for reverse search
-index=1;
-streamline(index,:)=[point_start,0];
+geometry_torlance=1e-9;
 
-% upstream search begin
+elem_num=length(element_list);
+max_size=elem_num;
 
-% if element is no attachment, begin upstream search
-if ~element.attachment
-    surface_flow=element.surface_flow;
-    point_index_list=element.point_index_list;
-    point_number=length(point_index_list);
+streamline=zeros(max_size,3); % cross point
+line_len=zeros(max_size,1); % current length
+cross_idx=zeros(max_size,1,'uint32'); % [cross elem_idx, cross edge_idx]
+data_idx=1;
+point_start=sum(point_list(element_list(elem_idx).Node_idx,:),1)/element_list(elem_idx).node_num;
+% line(point_start(:,1),point_start(:,2),point_start(:,3),'Marker','o','Color','b')
+streamline(data_idx,:)=point_start;
+cross_idx(data_idx,:)=elem_idx;
 
-    % edge should place on upstream of point_start
-    % downstream edge will become start edge
-    for point_index=1:point_number
-        vertex_index=point_index_list(point_index);
-        if point_index == point_number
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(point_index+1);
-        end
-        point=point_list(vertex_index,1:3);
-        point_ref=point_list(vertex_ref_index,1:3);
+%% upwind search begin
 
-        dr=point-point_start;
-        dr_ref=point_ref-point_start;
-        if ((dr/norm(dr)+dr_ref/norm(dr_ref))*surface_flow') >= 0
-            if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0 % edge should cross surface_flow
-                vertex_forbid_index=vertex_index;
-                break;
-            end
-        end
-    end
-
-    upstream_flag=true(1);
-end
-
-% upstream cross point search
-while ~isempty(element) && index < max_size && ...
-        ~element.attachment && upstream_flag
+while elem_idx ~= 0 && data_idx <= max_size/2
     % load element information
-    point_index_list=element.point_index_list;
-    surface_flow=element.surface_flow;
-    point_number=length(point_index_list);
+    elem=element_list(elem_idx);
+    Node_idx=elem.Node_idx;
+    node_num=elem.node_num;
+    elem_flow=-elem_flow_list(elem_idx,:);
+    normal_vector=normal_vector_list(elem_idx,:);
+    norm_elem_flow=norm(elem_flow);
+    if norm_elem_flow <= geometry_torlance % end in no flow element
+        break;
+    end
+    elem_flow=elem_flow/norm_elem_flow;
+    node_list=point_list(Node_idx,:);
 
-    % calculate next cross point
-    % calculate streamline cross point on edge
-    % vertex_index, vertex_ref_index is edge than this surface_flow cross
-    point_end=[];
-    for point_index=1:point_number
-        vertex_index=point_index_list(point_index);
-
-        % start edge donot need to check
-        if vertex_index == vertex_forbid_index
-            continue;
-        end
-
-        if point_index == point_number
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(point_index+1);
-        end
-        point=point_list(vertex_index,1:3);
-        point_ref=point_list(vertex_ref_index,1:3);
-
-        dr=point-point_start;
-        dr_ref=point_ref-point_start;
-
-        dr_norm=norm(dr);
-        dr_ref_norm=norm(dr_ref);
-
-        if dr_ref_norm == 0 || dr_norm == 0
-            continue;
-        end
-
-        % check if edge was upstream 
-        if ((dr/dr_norm+dr_ref/dr_ref_norm)*surface_flow') <= -1e-12 % float error
-            % check if edge was crossed by surface_flow
-            if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0
-                point_end=calCrossPoint(point,point_ref,point_start,surface_flow);
-                break;
-            end
+    % serach flow upwind end point
+    [point_end,node_idx,d_len]=calElementCross...
+        (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
+    if d_len < geometry_torlance % try upwind by node point
+        proj_direct=(node_list-point_start)*elem_flow';
+        [proj_direct_max,node_max_idx]=max(proj_direct);node_max_idx=node_max_idx(1);
+        if proj_direct_max > 0
+            point_end=node_list(node_max_idx,:);
+            d_len=norm(point_start-point_end);
         end
     end
 
-    if isempty(point_end)
-        % means cannot upstream from face, search by edge
-        dedge_ref_list=(point_list(point_index_list,1:3)-point_start);
-        dedge_ref_list=dedge_ref_list./sqrt(sum(dedge_ref_list.^2,2));
-        proj_vec=dedge_ref_list*free_flow_vector;
-        [~,upstream_index]=min(proj_vec);
-        vertex_index=point_index_list(upstream_index);
-        if upstream_index == length(point_index_list)
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(upstream_index+1);
-        end
-        point_end=point_list(vertex_index,1:3);
-        %     line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o')
+    if d_len < geometry_torlance
+        % cannot find upwind end point, stop
+        break;
+    end
 
-        % record parameter
-        index=index+1;
-        streamline(index,:)=[point_end,streamline(index-1,4)-norm(point_start-point_end)];
-        edge_cross_list(index-1,:)=[vertex_index,vertex_ref_index];
+    % record parameter
+    data_idx=data_idx+1;
+    streamline(data_idx,:)=point_end;
+    line_len(data_idx)=line_len(data_idx-1)+d_len;
+    cross_idx(data_idx)=elem_idx;
+    % line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o','Color','r')
 
-        % search next element
-        edge=edge_list(vertex_index);
-        
-        % search if exist element that surface flow is between two edge
-        element_search_flag=false(1);
-        for edge_index=1:edge.edge_number
-            element_ref=edge.element_ref_list(edge_index);
-            vertex_ref_index=edge.vertex_ref_list(edge_index);
-            [~,point_index]=judgeMatExistNum...
-                (element_ref.point_index_list,vertex_index);
-            if point_index == 1
-                vertex_prev_index=element_ref.point_index_list(end);
-            else
-                vertex_prev_index=element_ref.point_index_list(point_index-1);
-            end
-
-            dedge_ref=point_list(vertex_ref_index,1:3)-point_end;
-            dedge_prev=point_list(vertex_prev_index,1:3)-point_end;
-
-            % check if edge was upstream 
-            if ((dedge_ref/norm(dedge_ref)+dedge_prev/norm(dedge_prev))*element_ref.surface_flow') <= -1e-12 % float error
-                % check if edge was crossed by surface_flow
-                if cross(element_ref.surface_flow,dedge_ref)*cross(element_ref.surface_flow,dedge_prev)' <= 0 % edge should cross surface_flow
-                    element_search_flag=true(1);
-                    break;
-                end
-            end
-        end
-
-        % if cannot find element that surface flow is between two edge
-        % upstream search from edge
-        if ~element_search_flag
-            dedge_ref_list=point_list(edge.vertex_ref_list(1:edge.edge_number),1:3)-point_end;
-            dedge_ref_list=dedge_ref_list./sqrt(sum(dedge_ref_list.^2,2));
-            proj_edge=dedge_ref_list*free_flow_vector;
-            [~,point_index]=min(proj_edge);
-            element_ref=edge.element_ref_list(point_index);
-        end
-
-        % next search element
-        element=element_ref;
-        vertex_forbid_index=0;
-        point_start=point_end;
+    % end in attach element
+    if boolean_attach_list(elem_idx)
+        break;
+    end
+   
+    % search next element
+    % check if is point_start overlap node list
+    node_overlap_idx=find(vecnorm(node_list-point_end,2,2) < geometry_torlance,1);
+    if ~isempty(node_overlap_idx)
+        % if overlap, we need to find next element that can upwind
+        [Elem_arou,Vertex_arou]=getAroundElement(element_list,elem_idx,node_overlap_idx);
+        Direct_arou=(point_list(Vertex_arou,:)-point_end);
+        Direct_arou=Direct_arou./vecnorm(Direct_arou,2,2);
+        Angle_arou=Direct_arou*elem_flow';
+        [~,upwind_idx]=max(Angle_arou);
+        elem_idx=Elem_arou(upwind_idx);
     else
-        % search next edge
-        %     line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o')
-
-        % record parameter
-        index=index+1;
-        streamline(index,:)=[point_end,streamline(index-1,4)-norm(point_start-point_end)];
-        edge_cross_list(index-1,:)=[vertex_index,vertex_ref_index];
-
-        % search element_ref of edge opposite
-        % next search element
-        edge=edge_list(vertex_ref_index);
-        element_ref=edge.element_ref_list(edge.getRefIndex(vertex_index));
-
-        if ~isempty(element_ref)
-            element=element_ref;
-        end
-
-        vertex_forbid_index=vertex_ref_index;
-        point_start=point_end;
+        % if not overlap, use node_idx to find next element to upwind
+        elem_idx_new=elem.Vertex_next(node_idx);
+        if elem_idx_new ~= 0,elem_idx=elem_idx_new;end
     end
-end
-
-% reverse and connect point
-if index > 1
-    if isempty(element)
-        % call back last time element
-        edge=edge_list(edge_cross_list(index-1,1));
-        element=edge.element_ref_list(edge.getRefIndex(edge_cross_list(index-1,2)));
-        streamline(index,:)=zeros(1,4);
-        edge_cross_list(index-1,:)=zeros(1,2,'int32');
-        index=index-1;
-    else
-        if element.attachment
-            % load element information
-            point_index_list=element.point_index_list;
-            surface_flow=element.surface_flow;
-            point_number=length(point_index_list);
-
-            % calculate next cross point
-            point_end=[];
-            for point_index=1:point_number
-                vertex_index=point_index_list(point_index);
-
-                % start edge donot need to check
-                if vertex_index == vertex_forbid_index
-                    continue;
-                end
-
-                if point_index == point_number
-                    vertex_ref_index=point_index_list(1);
-                else
-                    vertex_ref_index=point_index_list(point_index+1);
-                end
-                point=point_list(vertex_index,1:3);
-                point_ref=point_list(vertex_ref_index,1:3);
-
-                dr=point-point_start;
-                dr_ref=point_ref-point_start;
-                if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0 % edge should cross surface_flow
-                    point_end=calCrossPoint(point,point_ref,point_start,surface_flow);
-                    break;
-                end
-
-                if isempty(point_end)
-                    point_end=element.center_point;
-                end
-            end
-
-            % record parameter
-            index=index+1;
-            streamline(index,:)=[point_end,streamline(index-1,4)-norm(point_start-point_end)];
-            edge_cross_list(index-1,:)=[vertex_index,vertex_ref_index];
-        end
-    end
-
-    max_length=-streamline(index,4);
-    streamline(1:index,:)=streamline(index:-1:1,:);
-
-    streamline(1:index,4)=streamline(1:index,4)+max_length;
-
-    index=index-1;
-    point_start=streamline(index,1:3);
-
-    % add element.streamline_ref downstream
-    for down_index=1:index
-        element.streamline_ref=[element.streamline_ref;...
-            streamline_index,down_index];
-        last_index=index-down_index+1;
-        edge=edge_list(edge_cross_list(last_index,1));
-        element=edge.element_ref_list(edge.getRefIndex(edge_cross_list(last_index,2)));
-    end
-
-    vertex_forbid_index=edge_cross_list(last_index,1);
-else
-    % downstream search begin
-    surface_flow=element.surface_flow;
-    point_index_list=element.point_index_list;
-    point_number=length(point_index_list);
-
-    % edge should place on upstream of point_start
-    % downstream edge will become start edge
-    for point_index=1:point_number
-        vertex_index=point_index_list(point_index);
-        if point_index == point_number
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(point_index+1);
-        end
-        point=point_list(vertex_index,1:3);
-        point_ref=point_list(vertex_ref_index,1:3);
-
-        dr=point-point_start;
-        dr_ref=point_ref-point_start;
-        if ((dr/norm(dr)+dr_ref/norm(dr_ref))*surface_flow') >= 1e-12 % float error
-            if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0
-                vertex_forbid_index=vertex_index;
-                break;
-            end
-        end
-    end
-
-end
-
-% downstream search begin
-
-downstream_flag=true(1);
-while index < max_size && downstream_flag
-    % load element information
-    point_index_list=element.point_index_list;
-    surface_flow=element.surface_flow;
-    point_number=length(point_index_list);
-
-    % calculate next cross point
-    point_end=[];
-    for point_index=1:point_number
-        vertex_index=point_index_list(point_index);
-
-        % start edge donot need to check
-        if vertex_index == vertex_forbid_index
-            continue;
-        end
-
-        if point_index == point_number
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(point_index+1);
-        end
-        point=point_list(vertex_index,1:3);
-        point_ref=point_list(vertex_ref_index,1:3);
-
-        dr=point-point_start;
-        dr_ref=point_ref-point_start;
-
-        % check if edge was downstream 
-        if ((dr/norm(dr)+dr_ref/norm(dr_ref))*surface_flow') >= 1e-12 % float error
-            % check if edge was crossed by surface_flow
-            if cross(surface_flow,dr)*cross(surface_flow,dr_ref)' <= 0
-                point_end=calCrossPoint(point,point_ref,point_start,surface_flow);
-                break;
-            end
-        end
-    end
-
-    if isempty(point_end)
-        % means cannot downstream from face, search by edge
-        dedge_ref_list=(point_list(point_index_list,1:3)-point_start);
-        dedge_ref_list=dedge_ref_list./sqrt(sum(dedge_ref_list.^2,2));
-        proj_vec=dedge_ref_list*free_flow_vector;
-        [~,upstream_index]=max(proj_vec);
-        vertex_index=point_index_list(upstream_index);
-        if upstream_index == length(point_index_list)
-            vertex_ref_index=point_index_list(1);
-        else
-            vertex_ref_index=point_index_list(upstream_index+1);
-        end
-        point_end=point_list(vertex_index,1:3);
-        %     line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o')
-
-        % if search point is reverse flow, end search
-        if (point_end-point_start)*free_flow_vector <= geometry_torlance
-            break;
-        end
-
-        % record parameter
-        element.streamline_ref=[element.streamline_ref;...
-            streamline_index,index];
-        index=index+1;
-        streamline(index,:)=[point_end,streamline(index-1,4)+norm(point_start-point_end)];
-        edge_cross_list(index-1,:)=[vertex_index,vertex_ref_index];
-
-        % search next element
-        edge=edge_list(vertex_index);
-        
-        % search if exist element that surface flow is between two edge
-        element_search_flag=false(1);
-        for edge_index=1:edge.edge_number
-            element_ref=edge.element_ref_list(edge_index);
-            vertex_ref_index=edge.vertex_ref_list(edge_index);
-            [~,point_index]=judgeMatExistNum...
-                (element_ref.point_index_list,vertex_index);
-            if point_index == 1
-                vertex_prev_index=element_ref.point_index_list(end);
-            else
-                vertex_prev_index=element_ref.point_index_list(point_index-1);
-            end
-
-            dedge_ref=point_list(vertex_ref_index,1:3)-point_end;
-            dedge_prev=point_list(vertex_prev_index,1:3)-point_end;
-
-            % check if edge was downstream 
-            if ((dedge_ref/norm(dedge_ref)+dedge_prev/norm(dedge_prev))*element_ref.surface_flow') >= 1e-12 % float error
-                % check if edge was crossed by surface_flow
-                if cross(element_ref.surface_flow,dedge_ref)*cross(element_ref.surface_flow,dedge_prev)' <= 0
-                    element_search_flag=true(1);
-                    break; % goto edge search
-                end
-            end
-        end
-
-        % if cannot find element that surface flow is between two edge
-        % downstream search from edge
-        if ~element_search_flag
-            dedge_ref_list=point_list(edge.vertex_ref_list(1:edge.edge_number),1:3)-point_end;
-            dedge_ref_list=dedge_ref_list./sqrt(sum(dedge_ref_list.^2,2));
-            proj_edge=dedge_ref_list*free_flow_vector;
-            [~,point_index]=max(proj_edge);
-            element_ref=edge.element_ref_list(point_index);
-        end
-
-    else
-        %     line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o')
-
-        % record parameter
-        element.streamline_ref=[element.streamline_ref;...
-            streamline_index,index];
-        index=index+1;
-        streamline(index,:)=[point_end,streamline(index-1,4)+norm(point_start-point_end)];
-
-        % search element_ref of edge opposite
-        edge=edge_list(vertex_ref_index);
-        element_ref=edge.element_ref_list(edge.getRefIndex(vertex_index));
-    end
-
-    if isempty(element_ref) || sum(abs(element_ref.surface_flow)) < geometry_torlance
-        downstream_flag=false(1);
-    end
-
-    % next iteration
-    element=element_ref;
-    vertex_forbid_index=vertex_ref_index;
     point_start=point_end;
 end
 
-streamline=streamline(1:index,:);
+
+%% reverse and connect point
+
+if data_idx > 1
+    % reverse streamline
+    streamline(1:data_idx,:)=flipud(streamline(1:data_idx,:));
+    line_len(1:data_idx)=flipud(line_len(1:data_idx));
+    line_len(1:data_idx)=line_len(1)-line_len(1:data_idx);
+
+    % reverse cross_list
+    cross_idx(1:data_idx)=flipud(cross_idx(1:data_idx));
+    cross_idx(2:data_idx)=cross_idx(1:data_idx-1);
+
+    data_idx=data_idx-1;
+    point_start=streamline(data_idx,1:3);
+    elem_idx=cross_idx(data_idx+1);
 end
 
-function point_end=calCrossPoint(point,point_ref,point_start,surface_flow)
-% calculate cross point coordinate as surface_flow downstream point_end
-%
-surface_flow=surface_flow/norm(surface_flow);
-dr_edge=point_ref-point;
-dr_edge_length=norm(dr_edge);
-dr_edge_norm=dr_edge/dr_edge_length;
-point_proj_length=norm(cross(surface_flow,point-point_start));
-point_end=point+point_proj_length/norm(cross(surface_flow,dr_edge_norm))/norm(dr_edge)*dr_edge;
+%% downwind search begin
+
+while elem_idx ~= 0 && data_idx <= max_size
+    % load element information
+    elem=element_list(elem_idx);
+    Node_idx=elem.Node_idx;
+    node_num=elem.node_num;
+    elem_flow=elem_flow_list(elem_idx,:);
+    normal_vector=normal_vector_list(elem_idx,:);
+    norm_elem_flow=norm(elem_flow);
+    if norm_elem_flow <= geometry_torlance % end in no flow element
+        break;
+    end
+    elem_flow=elem_flow/norm_elem_flow;
+    node_list=point_list(Node_idx,:);
+
+    % calculate next cross point
+    [point_end,node_idx,d_len]=calElementCross...
+        (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
+
+    if d_len < geometry_torlance
+        % check whether point_start local near node point cause
+        Bool_overlap=vecnorm(point_start-node_list,2,2) < geometry_torlance;
+        if any(Bool_overlap)
+            % if yes, search element that can continue search
+            elem_idx_origin=elem_idx;
+            node_idx=find(Bool_overlap);
+            vertex_idx=Node_idx(node_idx);vertex_idx=vertex_idx(1); % overlap point
+
+            % base on half edge to search all around element
+            elem_idx=elem.Vertex_next(node_idx);
+            while elem_idx_origin ~= elem_idx
+                elem=element_list(elem_idx);
+                Node_idx=elem.Node_idx;
+                node_num=elem.node_num;
+                elem_flow=elem_flow_list(elem_idx,:);
+                normal_vector=normal_vector_list(elem_idx,:);
+                norm_elem_flow=norm(elem_flow);
+                if norm_elem_flow <= geometry_torlance % end in no flow element
+                    break;
+                end
+                elem_flow=elem_flow/norm_elem_flow;
+                node_list=point_list(Node_idx,:);
+
+                [point_end,node_idx,d_len]=calElementCross...
+                    (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
+
+                if d_len >= geometry_torlance
+                    % next element found, contiune searching
+                    break;
+                else
+                    % try next point
+                    node_idx=find(Node_idx == vertex_idx);
+                    elem_idx=elem.Vertex_next(node_idx);
+                    if elem_idx == 0
+                        break;
+                    end
+                end
+            end
+
+            if elem_idx_origin == elem_idx || elem_idx == 0
+                % if all around element searched but there is not element found
+                break;
+            end
+        else
+            % if no, means encounter the opposite flow, stop search
+            break;
+        end
+    end
+
+    % record parameter
+    data_idx=data_idx+1;
+    streamline(data_idx,:)=point_end;
+    line_len(data_idx)=line_len(data_idx-1)+d_len;
+    cross_idx(data_idx)=elem_idx;
+    %     line(point_end(:,1),point_end(:,2),point_end(:,3),'Marker','o','Color','g')
+
+    % search next element
+    elem_idx=elem.Vertex_next(node_idx);
+    point_start=point_end;
 end
+
+streamline=streamline(1:data_idx,:);
+line_len=line_len(1:data_idx,:);
+cross_idx=cross_idx(1:data_idx);
+end
+
+function [point_end,node_idx,d_len]=calElementCross...
+    (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance)
+% calculate next cross point
+%
+
+% elem_flow as x, normal_vector as z, project point
+y_flow=cross(normal_vector,elem_flow);
+rotation=[elem_flow;y_flow;normal_vector]';
+proj_node_list=(node_list-point_start)*rotation;
+
+% base on cross x axis to calculate projected point_end
+point_end=[min(proj_node_list(:,1)),0,0];
+node_idx=0;
+for node_base_idx=1:node_num
+    if node_base_idx == node_num
+        node_ref_idx=1;
+    else
+        node_ref_idx=node_base_idx+1;
+    end
+
+    vertex_base_x=proj_node_list(node_base_idx,1);
+    vertex_ref_x=proj_node_list(node_ref_idx,1);
+    vertex_base_y=proj_node_list(node_base_idx,2);
+    vertex_ref_y=proj_node_list(node_ref_idx,2);
+
+    if (vertex_base_y <= geometry_torlance && vertex_ref_y >= -geometry_torlance) ||...
+            (vertex_base_y >= -geometry_torlance && vertex_ref_y <= geometry_torlance)
+        if vertex_base_y == vertex_ref_y
+            if vertex_ref_x > point_end(1)
+                point_end=[vertex_ref_x,0,0];
+                node_idx=node_base_idx;
+            end
+        else
+            cross_point=vertex_base_x-vertex_base_y*(vertex_base_x-vertex_ref_x)/(vertex_base_y-vertex_ref_y);
+            if cross_point > point_end(1)
+                point_end=[cross_point,0,0];
+                node_idx=node_base_idx;
+            end
+        end
+    end
+end
+
+if node_idx
+    % re project to real coordinate
+    point_end=point_end*rotation'+point_start;
+    d_len=norm(point_start-point_end);
+else
+    d_len=0;
+    point_end=[];
+end
+
+end
+

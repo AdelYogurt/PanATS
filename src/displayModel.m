@@ -6,8 +6,17 @@ global user_model
 DRAW_FACE_FLAG=1;
 DRAW_SYM_FLAG=1;
 
-point_list=user_model.point_list;
-marker_list=user_model.marker_list;
+geometry=user_model.geometry;
+element_list=user_model.element_list;
+SYMMETRY=user_model.SYMMETRY;
+
+dimension=geometry.dimension;
+point_list=geometry.point_list;
+
+% load geometry
+center_point_list=geometry.center_point_list;
+area_list=geometry.area_list;
+normal_vector_list=geometry.normal_vector_list;
 
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
@@ -39,8 +48,11 @@ switch type
     case 'SL'
         SLL_list=output_streamline.streamline_len_list;
         drawData(SLL_list);
+%         HF_list=output_heat.HF_list;
+%         drawData(HF_list);
+%         figure_result.Children.set('ColorScale','log')
         SL_list=output_streamline.streamline_list;
-        for SL_index=1:length(SL_list)
+        for SL_index=[1,6:length(SL_list)]
             streamline=SL_list{SL_index};
             line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
             if DRAW_SYM_FLAG
@@ -54,12 +66,11 @@ switch type
                 end
             end
         end
-        attachment_list=output_streamline.attachment_list;
-        for attachment_index=1:length(attachment_list)
-            attachment_data=attachment_list(attachment_index,:);
-            element_attachment=marker_list(attachment_data(1)).element_list(attachment_data(2));
+        element_attach_list=output_streamline.element_attach_list;
+        for attach_index=1:length(element_attach_list)
+            elem=element_list(element_attach_list(attach_index));
 
-            draw_index_list=element_attachment.point_index_list;
+            draw_index_list=elem.Node_idx;
             draw_index_list=[draw_index_list,draw_index_list(1)];
 
             line(point_list(draw_index_list,1),point_list(draw_index_list,2),point_list(draw_index_list,3),'Color','r');
@@ -95,9 +106,9 @@ switch type
         Re_x_list=output_heat.Re_x_list;
         drawData(Re_x_list);
         title('Surface Reynolds Number');
-    case 'Q'
-        Q_list=output_heat.Q_list;
-        drawData(Q_list);
+    case 'HF'
+        HF_list=output_heat.HF_list;
+        drawData(HF_list);
         title('Heat Flux');
         figure_result.Children.set('ColorScale','log')
     case 'Cf'
@@ -136,57 +147,60 @@ switch type
             scale=0.1*max_distance/delta;
         end
 
-        element_number=size(g_Element,1);
+        elem_num=size(g_Element,1);
         draw_order=[1,2,3,1];
-        for element_index=1:element_number
-            xpt=point_list(g_Element(element_index,draw_order+1),1);
-            ypt=point_list(g_Element(element_index,draw_order+1),2);
-            zpt=point_list(g_Element(element_index,draw_order+1),3);
-            disx=U_list(DOF_node*g_Element(element_index,draw_order+1)-5);
-            disy=U_list(DOF_node*g_Element(element_index,draw_order+1)-4);
-            disz=U_list(DOF_node*g_Element(element_index,draw_order+1)-3);
-            surf_stress_vm=sum(surf_stress_list(draw_order,7,element_index))/4;
+        for elem_idx=1:elem_num
+            xpt=point_list(g_Element(elem_idx,draw_order+1),1);
+            ypt=point_list(g_Element(elem_idx,draw_order+1),2);
+            zpt=point_list(g_Element(elem_idx,draw_order+1),3);
+            disx=U_list(DOF_node*g_Element(elem_idx,draw_order+1)-5);
+            disy=U_list(DOF_node*g_Element(elem_idx,draw_order+1)-4);
+            disz=U_list(DOF_node*g_Element(elem_idx,draw_order+1)-3);
+            surf_stress_vm=sum(surf_stress_list(draw_order,7,elem_idx))/4;
             patch(xpt+scale*disx,ypt+scale*disy,zpt+scale*disz,surf_stress_vm,'LineStyle','none');
         end
         title('Deformed Shape and Surface Stress-von mises Distribution');
 end
 
-colorbar;
-view(3);
+% colorbar;
+x_range=xlim();
+y_range=ylim();
+z_range=zlim();
+
+center=[mean(x_range),mean(y_range),mean(z_range)];
+range=max([x_range(2)-x_range(1),y_range(2)-y_range(1),z_range(2)-z_range(1)])/2;
+
+axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-axis equal;
+view(3);
+
+xlim([center(1)-range,center(1)+range]);
+ylim([center(2)-range,center(2)+range]);
+zlim([center(3)-range,center(3)+range]);
+colorbar;
 drawnow;
 
     function drawData(data_list)
         if DRAW_FACE_FLAG
-            for marker_index=1:length(data_list)
-                if isempty(data_list{marker_index})
-                    continue;
-                end
+            elem_num=length(element_list);
+            for elem_idx=1:elem_num
+                Node_idx=element_list(elem_idx).Node_idx;
+                patch(point_list(Node_idx,1),point_list(Node_idx,2),point_list(Node_idx,3),...
+                    data_list(elem_idx),'LineStyle','none')
 
-                % only have data will be draw
-                data=data_list{marker_index};
-                marker_element=marker_list(marker_index).element_list;
-                element_number=marker_list(marker_index).element_number;
-                for element_index=1:element_number
-                    point_index_list=marker_element(element_index).point_index_list;
-                    patch(point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
-                        data(element_index),'LineStyle','none')
-
-                    if DRAW_SYM_FLAG
-                        switch user_model.SYMMETRY
-                            case 'XOY'
-                                patch(point_list(point_index_list,1),point_list(point_index_list,2),-point_list(point_index_list,3),...
-                                    data(element_index),'LineStyle','none')
-                            case 'YOZ'
-                                patch(-point_list(point_index_list,1),point_list(point_index_list,2),point_list(point_index_list,3),...
-                                    data(element_index),'LineStyle','none')
-                            case 'ZOX'
-                                patch(point_list(point_index_list,1),-point_list(point_index_list,2),point_list(point_index_list,3),...
-                                    data(element_index),'LineStyle','none')
-                        end
+                if DRAW_SYM_FLAG
+                    switch user_model.SYMMETRY
+                        case 'XOY'
+                            patch(point_list(Node_idx,1),point_list(Node_idx,2),-point_list(Node_idx,3),...
+                                data_list(elem_idx),'LineStyle','none')
+                        case 'YOZ'
+                            patch(-point_list(Node_idx,1),point_list(Node_idx,2),point_list(Node_idx,3),...
+                                data_list(elem_idx),'LineStyle','none')
+                        case 'ZOX'
+                            patch(point_list(Node_idx,1),-point_list(Node_idx,2),point_list(Node_idx,3),...
+                                data_list(elem_idx),'LineStyle','none')
                     end
                 end
             end
