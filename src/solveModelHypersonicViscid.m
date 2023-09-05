@@ -12,39 +12,26 @@ global user_model
 
 geometry_torlance=1e-9;
 
-dimension=user_model.geometry.dimension;
+geometry=user_model.geometry;
 
-point_list=user_model.point_list;
-edge_list=user_model.edge_list;
-marker_list=user_model.marker_list;
+dimension=geometry.dimension;
+point_list=geometry.point_list;
+element_list=user_model.element_list;
 
-MARKER_MONITORING=user_model.MARKER_MONITORING;
 SYMMETRY=user_model.SYMMETRY;
+
+% load geometry
+center_point_list=geometry.center_point_list;
+area_list=geometry.area_list;
+normal_vector_list=geometry.normal_vector_list;
 
 % heat calculate need inviscid and streamline result
 output_inviscid=user_model.output_inviscid;
+output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 
 % calculate inflow vector
-free_flow_vector=[1;0;0];
-
-AOA=user_model.AOA/180*pi;
-cos_AOA=cos(AOA);
-sin_AOA=sin(AOA);
-rotation_AOA=[
-    cos_AOA 0 -sin_AOA;
-    0 1 0;
-    sin_AOA 0 cos_AOA];
-
-AOS=user_model.SIDESLIP_ANGLE/180*pi;
-cos_AOS=cos(AOS);
-sin_AOS=sin(AOS);
-rotation_SIDESLIP_ANGLE=[
-    cos_AOS -sin_AOS 0;
-    sin_AOS cos_AOS 0;
-    0 0 1];
-
-free_flow_vector=rotation_AOA*rotation_SIDESLIP_ANGLE*free_flow_vector;
+free_flow_vector=calFreeFlowDirection(user_model.AOA,user_model.SIDESLIP_ANGLE);
 user_model.free_flow_vector=free_flow_vector;
 
 % reference value
@@ -61,6 +48,8 @@ Re=user_model.REYNOLDS_NUMBER;
 % load data from inviscid and boundary layer result
 force_inviscid=output_inviscid.force_inviscid;
 moment_inviscid=output_inviscid.moment_inviscid;
+
+surface_flow_list=output_streamline.surface_flow_list;
 
 rho_e_list=output_boulay.rho_e_list;
 rho_ref_list=output_boulay.rho_ref_list;
@@ -83,71 +72,57 @@ q_1=rho_1*V_1_sq/2;
 % solve prepare
 Re_x_tri=10^(5.37+0.2326*Ma_1-0.004015*Ma_1*Ma_1); % transition Reynolds number
 
+elem_num=length(element_list);
 % initialize result sort array
-Cf_list=cell(length(marker_list),1);
-S_list=cell(length(marker_list),1);
-dFs_list=cell(length(marker_list),1);
-dMs_list=cell(length(marker_list),1);
-force_viscid=zeros(1,3);
-moment_viscid=zeros(1,3);
+Cf_list=zeros(elem_num,1);
+S_list=zeros(elem_num,1);
+dFs_list=zeros(elem_num,3);
+dMs_list=zeros(elem_num,3);
 
-for monitor_index=1:length(MARKER_MONITORING)
-    [marker_element,marker_index]=getMarkerElement(MARKER_MONITORING(monitor_index),marker_list);
+elem_num=length(element_list);
+for elem_idx=1:elem_num
+    center_point=center_point_list(elem_idx,:);
+    area=area_list(elem_idx);
+    surface_flow=surface_flow_list(elem_idx,:);
 
-    Cf_list_marker=zeros(marker_list(marker_index).element_number,1);
-    S_list_marker=zeros(marker_list(marker_index).element_number,1);
-    dFs_list_marker=zeros(marker_list(marker_index).element_number,3);
-    dMs_list_marker=zeros(marker_list(marker_index).element_number,3);
+    % load data
+    rho_e=rho_e_list(elem_idx);
+    rho_ref=rho_ref_list(elem_idx);
 
-    for element_index=1:marker_list(marker_index).element_number
-        element=marker_element(element_index);
+    Re_x=Re_x_list(elem_idx);
+    Re_x_ref=Re_x_ref_list(elem_idx);
 
-        area=element.area;
-        surface_flow=element.surface_flow;
-
-        % load data
-        rho_e=rho_e_list{marker_index}(element_index);
-        rho_ref=rho_ref_list{marker_index}(element_index);
-
-        Re_x=Re_x_list{marker_index}(element_index);
-        Re_x_ref=Re_x_ref_list{marker_index}(element_index);
-
-        if Re_x <= Re_x_tri
-            % laminar flow
-            Cf_ref=0.6640*Re_x_ref^-0.5;
-        elseif Re_x < 1e7
-            % transition flow
-            Cf_ref=0.0296*Re_x_ref^-0.2;
-        else
-            % turbulent flow
-            Cf_ref=0.288*(log(Re_x_ref)/log(10))^2.584;
-        end
-        Cf=Cf_ref*rho_ref/rho_e;
-
-        % Shear stress
-        S=q_1*Cf;
-
-        if norm(surface_flow) < geometry_torlance
-            Cf_list_marker(element_index,:)=0;
-            S_list_marker(element_index,:)=0;
-            dFs_list_marker(element_index,:)=zeros(1,3);
-            dMs_list_marker(element_index,:)=zeros(1,3);
-        else
-            Cf_list_marker(element_index,:)=Cf;
-            S_list_marker(element_index,:)=S;
-            dFs_list_marker(element_index,:)=surface_flow/norm(surface_flow)*area*S;
-            dMs_list_marker(element_index,:)=cross(element.center_point-ref_point,dFs_list_marker(element_index,:));
-        end
-
-        force_viscid=force_viscid+dFs_list_marker(element_index,:);
-        moment_viscid=moment_viscid+dMs_list_marker(element_index,:);
+    if Re_x <= Re_x_tri
+        % laminar flow
+        Cf_ref=0.6640*Re_x_ref^-0.5;
+    elseif Re_x < 1e7
+        % transition flow
+        Cf_ref=0.0296*Re_x_ref^-0.2;
+    else
+        % turbulent flow
+        Cf_ref=0.288*(log(Re_x_ref)/log(10))^2.584;
     end
+    Cf=Cf_ref*rho_ref/rho_e;
 
-    Cf_list{marker_index}=Cf_list_marker;
-    S_list{marker_index}=S_list_marker;
-    dFs_list{marker_index}=dFs_list_marker;
-    dMs_list{marker_index}=dMs_list_marker;
+    % Shear stress
+    S=q_1*Cf;
+
+    norm_surface_flow=norm(surface_flow);
+
+    if norm_surface_flow < geometry_torlance
+        Cf_list(elem_idx,:)=0;
+        S_list(elem_idx,:)=0;
+        dFs_list(elem_idx,:)=zeros(1,3);
+        dMs_list(elem_idx,:)=zeros(1,3);
+    else
+        Cf_list(elem_idx,:)=Cf;
+        S_list(elem_idx,:)=S;
+        dFs_list(elem_idx,:)=surface_flow/norm_surface_flow*area*S;
+        dMs_list(elem_idx,:)=cross(center_point-ref_point,dFs_list(elem_idx,:));
+    end
 end
+force_viscid=sum(dFs_list,1);
+moment_viscid=sum(dMs_list,1);
 
 force=force_inviscid+force_viscid;
 moment=moment_inviscid+moment_viscid;

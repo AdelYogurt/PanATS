@@ -2,12 +2,12 @@ clc;
 % clear;
 close all hidden;
 
-addpath([pwd,'\src']);
-addpath([pwd,'\input']);
-addpath([pwd,'\mesh']);
-addpath([pwd,'\lib']);
-addpath([pwd,'\data']);
-addpath([pwd,'\assit']);
+% addpath([pwd,'\assit']);
+% addpath([pwd,'\cfg']);
+% addpath([pwd,'\data']);
+% addpath([pwd,'\src']);
+% addpath([pwd,'\input']);
+% addpath([pwd,'\mesh']);
 
 global user_model
 
@@ -81,11 +81,11 @@ ylabel('C_m');
 % [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicViscid();
 % [max_heat_flow]=solveModelHypersonicHeat();
 % toc;
-% 
-% % displayModel('Q')
-% 
+
+% displayModel('HF')
+
 % postModel();
-% [draw_coord,Q_blunt_cone_HATS]=getSYMdata(user_model.output_post.Q_list);
+% [draw_coord,HF_blunt_cone_HATS]=getSYMdata(user_model.output_post.HF_list);
 % [draw_coord,Cp_blunt_cone_HATS]=getSYMdata(user_model.output_post.Cp_list);
 % 
 % load('blunt_cone_exp.mat');
@@ -93,18 +93,18 @@ ylabel('C_m');
 % 
 % X_blunt_cone_HATS=draw_coord(:,2);
 % [X_blunt_cone_HATS,index]=sort(X_blunt_cone_HATS);
-% Q_blunt_cone_HATS=Q_blunt_cone_HATS(index);
+% HF_blunt_cone_HATS=HF_blunt_cone_HATS(index);
 % Cp_blunt_cone_HATS=Cp_blunt_cone_HATS(index);
 % 
-% line(X_blunt_cone_exp,Q_blunt_cone_exp,'Marker','o','Color','k','LineStyle','none')
-% line(X_blunt_cone_HATS/0.5687,Q_blunt_cone_HATS/Q_0,'Marker','.','Color','b')
-% line(X_blunt_cone_SU2/0.5687,Q_blunt_cone_SU2/Q_0,'Marker','.','Color','r')
+% line(X_blunt_cone_exp,HF_blunt_cone_exp,'Marker','o','Color','k','LineStyle','none')
+% line(X_blunt_cone_HATS/0.5687,HF_blunt_cone_HATS/HF_0,'Marker','.','Color','b')
+% line(X_blunt_cone_SU2/0.5687,HF_blunt_cone_SU2/HF_0,'Marker','.','Color','r','Marker','o','LineStyle','none')
 % set(gca,'YLim',[-0.5,2]);
 % xlabel('x/L');
-% ylabel('Q/Q_0');
+% ylabel('HF/HF_0');
 
 % line(X_blunt_cone_HATS/0.5687,log(Cp_blunt_cone_HATS)/log(10),'Marker','.','Color','b')
-% line(X_blunt_cone_SU2/0.5687,log(Cp_blunt_cone_SU2)/log(10),'Marker','.','Color','r')
+% line(X_blunt_cone_SU2/0.5687,log(Cp_blunt_cone_SU2)/log(10),'Marker','.','Color','r','Marker','o','LineStyle','none')
 
 
 %% geometry
