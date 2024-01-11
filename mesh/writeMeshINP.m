@@ -1,4 +1,4 @@
-function writeMeshINP(mesh_filestr,mesh_data,marker_name_list)
+function writeMeshINP(mesh_data,mesh_filestr,marker_name_list)
 % write mesh data into inp file(ABAQUS analysis format)
 %
 % input:
@@ -11,18 +11,17 @@ function writeMeshINP(mesh_filestr,mesh_data,marker_name_list)
 %
 if nargin < 3
     marker_name_list=[];
+    if nargin < 2
+        mesh_filestr=[];
+    end
 end
-if isempty(marker_name_list)
-    marker_name_list=fieldnames(mesh_data);
-end
+if isempty(mesh_filestr),mesh_filestr='mesh.inp';end
+if isempty(marker_name_list),marker_name_list=fieldnames(mesh_data);end
 marker_index=1;
 while marker_index <= length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'geometry')
-        marker_name_list(marker_index)=[];
-    else
-        marker_index=marker_index+1;
-    end
+    if strcmp(marker_name,'geometry'),marker_name_list(marker_index)=[];
+    else,marker_index=marker_index+1;end
 end
 
 file_mesh=fopen(mesh_filestr,'w');
@@ -79,42 +78,42 @@ for marker_index=1:length(marker_name_list)
 
         % sort element_list
         element_list_old=element_list;
-        node_index=0;
+        node_idx=0;
         for element_index=1:element_number
-            node_number=number_list(map_list(element_index));
+            node_num=number_list(map_list(element_index));
             if map_list(element_index) ~= element_index
-                element_list(node_index+(1:node_number))=element_list_old...
-                    (node_index_list(map_list(element_index))-(node_number:-1:1)+1);
+                element_list(node_idx+(1:node_num))=element_list_old...
+                    (node_index_list(map_list(element_index))-(node_num:-1:1)+1);
             end
-            node_index=node_index+node_number;
+            node_idx=node_idx+node_num;
         end
 
         id=ID_list(1);
-        [type,node_number]=convertIDToType(id);
+        [type,node_num]=convertIDToType(id);
         fprintf(file_mesh,'*Element, type=%s\n',type);
-        print_format=['%d',repmat(',%d',1,node_number),'\n'];
+        print_format=['%d',repmat(',%d',1,node_num),'\n'];
 
         % print element list
-        node_index=0;
+        node_idx=0;
         for element_index=1:element_number
             % if element type change, state new type
             if ID_list(element_index) ~= id
                 id=ID_list(element_index);
-                [type,node_number]=convertIDToType(id);
+                [type,node_num]=convertIDToType(id);
                 fprintf(file_mesh,'*Element, type=%s\n',type);
-                print_format=['%d',repmat(',%d',1,node_number),'\n'];
+                print_format=['%d',repmat(',%d',1,node_num),'\n'];
             end
 
-            fprintf(file_mesh,print_format,element_index,element_list(node_index+(1:node_number))-min_node_index+1);
-            node_index=node_index+node_number;
+            fprintf(file_mesh,print_format,element_index,element_list(node_idx+(1:node_num))-min_node_index+1);
+            node_idx=node_idx+node_num;
         end
     else
         fprintf(file_mesh,'*Element, type=%s\n',convertTypeToType(marker.type));
 
-        [element_number,node_number]=size(element_list);
-        print_format=['%d',repmat(',%d',1,node_number),'\n'];
+        [element_number,node_num]=size(element_list);
+        print_format=['%d',repmat(',%d',1,node_num),'\n'];
         for element_index=1:element_number
-            fprintf(file_mesh,print_format,element_index,element_list(element_index,1:node_number)-min_node_index+1);
+            fprintf(file_mesh,print_format,element_index,element_list(element_index,1:node_num)-min_node_index+1);
         end
     end
 
@@ -124,20 +123,20 @@ for marker_index=1:length(marker_name_list)
         Nset_name_list=fieldnames(Nset);
         for Nset_index=1:length(Nset_name_list)
             Nset_name=Nset_name_list{Nset_index};
-            node_index=Nset.(Nset_name);
+            node_idx=Nset.(Nset_name);
 
-            if length(node_index) == node_index(end)
+            if length(node_idx) == node_idx(end)
                 fprintf(file_mesh,'*Nset, nset=%s, generate\n',Nset_name);
-                fprintf(file_mesh,'%d,%d,%d\n',node_index(1),node_index(end),1);
+                fprintf(file_mesh,'%d,%d,%d\n',node_idx(1),node_idx(end),1);
             else
                 fprintf(file_mesh,'*Nset, nset=%s\n',Nset_name);
-                node_number=length(node_index);
-                if node_number > 10
-                    number=floor(node_number/10)*10;
-                    fprintf(file_mesh,'%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n',node_index(1:number));
-                    node_index=node_index(number+1:end);
+                node_num=length(node_idx);
+                if node_num > 10
+                    number=floor(node_num/10)*10;
+                    fprintf(file_mesh,'%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n',node_idx(1:number));
+                    node_idx=node_idx(number+1:end);
                 end
-                fprintf(file_mesh,'%d,',node_index(1:end-1));fprintf(file_mesh,'%d\n',node_index(end));
+                fprintf(file_mesh,'%d,',node_idx(1:end-1));fprintf(file_mesh,'%d\n',node_idx(end));
             end
         end
     end
@@ -148,20 +147,20 @@ for marker_index=1:length(marker_name_list)
         Elset_name_list=fieldnames(Elset);
         for Elset_index=1:length(Elset_name_list)
             Elset_name=Elset_name_list{Elset_index};
-            node_index=Elset.(Elset_name);
+            node_idx=Elset.(Elset_name);
 
-            if length(node_index) == node_index(end)
+            if length(node_idx) == node_idx(end)
                 fprintf(file_mesh,'*Elset, elset=%s, generate\n',Elset_name);
-                fprintf(file_mesh,'%d,%d,%d\n',node_index(1),node_index(end),1);
+                fprintf(file_mesh,'%d,%d,%d\n',node_idx(1),node_idx(end),1);
             else
                 fprintf(file_mesh,'*Elset, elset=%s\n',Elset_name);
-                node_number=length(node_index);
-                if node_number > 10
-                    number=floor(node_number/10)*10;
-                    fprintf(file_mesh,'%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n',node_index(1:number));
-                    node_index=node_index(number+1:end);
+                node_num=length(node_idx);
+                if node_num > 10
+                    number=floor(node_num/10)*10;
+                    fprintf(file_mesh,'%d,%d,%d,%d,%d,%d,%d,%d,%d,%d\n',node_idx(1:number));
+                    node_idx=node_idx(number+1:end);
                 end
-                fprintf(file_mesh,'%d,',node_index(1:end-1));fprintf(file_mesh,'%d\n',node_index(end));
+                fprintf(file_mesh,'%d,',node_idx(1:end-1));fprintf(file_mesh,'%d\n',node_idx(end));
             end
         end
     end
@@ -235,31 +234,31 @@ end
 element_list(index_list)=[];
 end
 
-function [type,node_number]=convertIDToType(id)
+function [type,node_num]=convertIDToType(id)
 % inp version of type and ID converter
 %
 switch id
     case 3
         type='B21';
-        node_number=2;
+        node_num=2;
     case 5
         type='S3';
-        node_number=3;
+        node_num=3;
     case 7
         type='S4R';
-        node_number=4;
+        node_num=4;
     case 8
         type='S8R';
-        node_number=8;
+        node_num=8;
     case 9
         type='S9R';
-        node_number=9;
+        node_num=9;
     case 10
         type='C3D4';
-        node_number=4;
+        node_num=4;
     case 17
         type='C3D8R';
-        node_number=8;
+        node_num=8;
     otherwise
         error('idType: unknown identifier')
 end

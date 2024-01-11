@@ -1,15 +1,20 @@
-function [x_list,fval_list,node_list]=meshAdapt2D(fcn,low_bou,up_bou,torl,max_level,fval_num)
+function [X,Fval,node_list]=meshAdapt2D(fcn,low_bou,up_bou,torl,max_level,fval_num,mode)
 % Quad-tree (or Omni-Tree)
 % adapt capture 2 dimemsion function value
 % ensure error of linear interplation will less than torl
 %
-if nargin < 6
-    fval_num=1;
+if nargin < 7
+    mode=[];
+    if nargin < 6
+        fval_num=[];
+    end
 end
+
+if isempty(fval_num),fval_num=1;end
 
 % node_list which is a matrix store all node
 % a node is a array, contain:
-% level, idx_c, idx_1-8(index of data_list), children_index_1-4
+% level, idx_1-8(index of data_list), idx_c, children_index_1-4
 % place:
 % 3-8-4 or 3-4 or 3-8-4
 % 1-5-2    6-7    6-c-7
@@ -36,12 +41,19 @@ data_list(4,:)=[bou_4,fcn(bou_4)];
 % create base root
 node_list(1,:)=[0,1,2,3,4,0,0,0,0,0,0,0,0,0];
 
-[node_num,data_num]=createNodeTreeOmni(1,4); % create node tree from root
+% create node tree from root
+if isempty(mode) mode='omni';end
+switch mode
+    case 'quad'
+        [node_num,data_num]=createNodeTreeQuad(1,4); % Quad tree
+    case 'omni'
+        [node_num,data_num]=createNodeTreeOmni(1,4); % Omni tree
+end
 node_list=node_list(1:node_num,:);
 data_list=data_list(1:data_num,:);
 
-x_list=data_list(:,1:2);
-fval_list=data_list(:,3:end);
+X=data_list(:,1:2);
+Fval=data_list(:,3:end);
 
     function [node_num,data_num]=createNodeTreeQuad(root_idx,data_num)
         % create quad tree
@@ -64,42 +76,40 @@ fval_list=data_list(:,3:end);
                 [fval_pred_c,fval_pred_5,fval_pred_6,...
                     fval_pred_7,fval_pred_8]=calCellPred(node(2),node(3),node(4),node(5));
 
+                % add 5 data into data_list
+                data_new_idx=data_num+(1:5);
+                if data_num+5 > size(data_list,1)
+                    data_list=[data_list;zeros(list_add_num,fval_num+2)];
+                end
+                data_list(data_new_idx,:)=[
+                    coord_5,fval_5;
+                    coord_6,fval_6;
+                    coord_7,fval_7;
+                    coord_8,fval_8;
+                    coord_c,fval_c;];
+                node(6:10)=data_new_idx;
+                data_num=data_num+5;
+
+                % add 4 new node to node_list
+                node_new_idx=node_num+(1:4);
+                if node_num+4 > size(node_list,1)
+                    node_list=[node_list;zeros(list_add_num,14)];
+                end
+                node_list(node_new_idx,:)=[...
+                    node(1)+1,node(2),node(6),node(7),node(10),0,0,0,0,0,0,0,0,0;
+                    node(1)+1,node(6),node(3),node(10),node(8),0,0,0,0,0,0,0,0,0;
+                    node(1)+1,node(7),node(10),node(4),node(9),0,0,0,0,0,0,0,0,0;
+                    node(1)+1,node(10),node(8),node(9),node(5),0,0,0,0,0,0,0,0,0;];
+                node(11:14)=node_new_idx;
+                node_num=node_num+4;
+
                 if any(abs(fval_c-fval_pred_c) > torl) ||...
                         any(abs(fval_5-fval_pred_5) > torl) || any(abs(fval_8-fval_pred_8) > torl) ||...
                         any(abs(fval_6-fval_pred_6) > torl) || any(abs(fval_7-fval_pred_7) > torl)
-                    % add 5 data into data_list
-                    data_new_idx=data_num+(1:5);
-                    if data_num+5 > size(data_list,1)
-                        data_list=[data_list;zeros(list_add_num,fval_num+2)];
-                    end
-                    data_list(data_new_idx,:)=[
-                        coord_5,fval_5;
-                        coord_6,fval_6;
-                        coord_7,fval_7;
-                        coord_8,fval_8;
-                        coord_c,fval_c;];
-                    node(6:10)=data_new_idx;
-                    data_num=data_num+5;
-
-                    % add 4 new node to node_list
-                    node_new_idx=node_num+(1:4);
-                    if node_num+4 > size(node_list,1)
-                        node_list=[node_list;zeros(list_add_num,14)];
-                    end
-                    node_list(node_new_idx,:)=[...
-                        node(1)+1,node(2),node(6),node(7),node(10),0,0,0,0,0,0,0,0,0;
-                        node(1)+1,node(6),node(3),node(10),node(8),0,0,0,0,0,0,0,0,0;
-                        node(1)+1,node(7),node(10),node(4),node(9),0,0,0,0,0,0,0,0,0;
-                        node(1)+1,node(10),node(8),node(9),node(5),0,0,0,0,0,0,0,0,0;];
-                    node(11:14)=node_new_idx;
-                    node_num=node_num+4;
-                else
-                    node_new_idx=[];
+                    % add to stack
+                    stack=[stack,node_new_idx];
+                    node_list(node_idx,:)=node;
                 end
-
-                % add to stack
-                stack=[stack,node_new_idx];
-                node_list(node_idx,:)=node;
             end
         end
     end
@@ -122,7 +132,7 @@ fval_list=data_list(:,3:end);
                 %
                 [coord_c,coord_5,coord_6,coord_7,coord_8,...
                     fval_c,fval_5,fval_6,fval_7,fval_8]=calCell(node(2),node(3),node(4),node(5));
-                [fval_pred_c,fval_pred_5,fval_pred_6,...
+                [~,fval_pred_5,fval_pred_6,...
                     fval_pred_7,fval_pred_8]=calCellPred(node(2),node(3),node(4),node(5));
 
                 % check u direction
@@ -139,7 +149,52 @@ fval_list=data_list(:,3:end);
                     add_v_flag=false(1);
                 end
 
-                if add_u_flag && add_v_flag
+                if add_u_flag && ~add_v_flag
+                    % add 2 data into data_list
+                    data_new_idx=data_num+(1:2);
+                    if data_num+2 > size(data_list,1)
+                        data_list=[data_list;zeros(list_add_num,fval_num+2)];
+                    end
+                    data_list(data_new_idx,:)=[
+                        coord_5,fval_5;
+                        coord_8,fval_8;];
+                    node([6,9])=data_new_idx;
+                    data_num=data_num+2;
+
+                    % add 2 new node to node_list
+                    node_new_idx=node_num+(1:2);
+                    if node_num+2 > size(node_list,1)
+                        node_list=[node_list;zeros(list_add_num,14)];
+                    end
+                    node_list(node_new_idx,:)=[...
+                        node(1)+1,node(2),node(6),node(4),node(9),0,0,0,0,0,0,0,0,0;
+                        node(1)+1,node(6),node(3),node(9),node(5),0,0,0,0,0,0,0,0,0;];
+                    node([11,12])=node_new_idx;
+                    node_num=node_num+2;
+
+                elseif add_v_flag && ~add_u_flag
+                    % add 2 data into data_list
+                    data_new_idx=data_num+(1:2);
+                    if data_num+2 > size(data_list,1)
+                        data_list=[data_list;zeros(list_add_num,fval_num+2)];
+                    end
+                    data_list(data_new_idx,:)=[
+                        coord_6,fval_6;
+                        coord_7,fval_7;];
+                    node([7,8])=data_new_idx;
+                    data_num=data_num+2;
+
+                    % add 2 new node to node_list
+                    node_new_idx=node_num+(1:2);
+                    if node_num+2 > size(node_list,1)
+                        node_list=[node_list;zeros(list_add_num,14)];
+                    end
+                    node_list(node_num+(1:2),:)=[...
+                        node(1)+1,node(2),node(3),node(7),node(8),0,0,0,0,0,0,0,0,0;
+                        node(1)+1,node(7),node(8),node(4),node(5),0,0,0,0,0,0,0,0,0;];
+                    node([11,13])=node_new_idx;
+                    node_num=node_num+2;
+                else
                     % add 5 data into data_list
                     data_new_idx=data_num+(1:5);
                     if data_num+5 > size(data_list,1)
@@ -167,54 +222,11 @@ fval_list=data_list(:,3:end);
                     node(11:14)=node_new_idx;
                     node_num=node_num+4;
 
-                elseif add_u_flag
-                    % add 2 data into data_list
-                    data_new_idx=data_num+(1:2);
-                    if data_num+2 > size(data_list,1)
-                        data_list=[data_list;zeros(list_add_num,fval_num+2)];
+                    if ~add_u_flag && ~add_v_flag
+                        node_new_idx=[];
                     end
-                    data_list(data_new_idx,:)=[
-                        coord_5,fval_5;
-                        coord_8,fval_8;];
-                    node([6,9])=data_new_idx;
-                    data_num=data_num+2;
-
-                    % add 2 new node to node_list
-                    node_new_idx=node_num+(1:2);
-                    if node_num+2 > size(node_list,1)
-                        node_list=[node_list;zeros(list_add_num,14)];
-                    end
-                    node_list(node_new_idx,:)=[...
-                        node(1)+1,node(2),node(6),node(4),node(9),0,0,0,0,0,0,0,0,0;
-                        node(1)+1,node(6),node(3),node(9),node(5),0,0,0,0,0,0,0,0,0;];
-                    node([11,12])=node_new_idx;
-                    node_num=node_num+2;
-
-                elseif add_v_flag
-                    % add 2 data into data_list
-                    data_new_idx=data_num+(1:2);
-                    if data_num+2 > size(data_list,1)
-                        data_list=[data_list;zeros(list_add_num,fval_num+2)];
-                    end
-                    data_list(data_new_idx,:)=[
-                        coord_6,fval_6;
-                        coord_7,fval_7;];
-                    node([7,8])=data_new_idx;
-                    data_num=data_num+2;
-
-                    % add 2 new node to node_list
-                    node_new_idx=node_num+(1:2);
-                    if node_num+2 > size(node_list,1)
-                        node_list=[node_list;zeros(list_add_num,14)];
-                    end
-                    node_list(node_num+(1:2),:)=[...
-                        node(1)+1,node(2),node(3),node(7),node(8),0,0,0,0,0,0,0,0,0;
-                        node(1)+1,node(7),node(8),node(4),node(5),0,0,0,0,0,0,0,0,0;];
-                    node([11,13])=node_new_idx;
-                    node_num=node_num+2;
-                else
-                    node_new_idx=[];
                 end
+
                 % add to stack
                 stack=[stack,node_new_idx];
                 node_list(node_idx,:)=node;

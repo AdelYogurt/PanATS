@@ -1,4 +1,4 @@
-function writeMeshWGS(mesh_filestr,mesh_data,marker_name_list)
+function writeMeshWGS(mesh_data,mesh_filestr,marker_name_list)
 % write LaWGS format mesh data into wgs file
 %
 % input:
@@ -11,18 +11,17 @@ function writeMeshWGS(mesh_filestr,mesh_data,marker_name_list)
 %
 if nargin < 3
     marker_name_list=[];
+    if nargin < 2
+        mesh_filestr=[];
+    end
 end
-if isempty(marker_name_list)
-    marker_name_list=fieldnames(mesh_data);
-end
+if isempty(mesh_filestr),mesh_filestr='mesh.wgs';end
+if isempty(marker_name_list),marker_name_list=fieldnames(mesh_data);end
 marker_index=1;
 while marker_index <= length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'geometry')
-        marker_name_list(marker_index)=[];
-    else
-        marker_index=marker_index+1;
-    end
+    if strcmp(marker_name,'geometry'),marker_name_list(marker_index)=[];
+    else,marker_index=marker_index+1;end
 end
 
 file_mesh=fopen(mesh_filestr,'w');

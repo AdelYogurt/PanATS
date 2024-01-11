@@ -143,13 +143,13 @@ mesh_data.geometry=geometry;
                 % name
                 temp_list=strsplit(str_list{2},'=');
                 set_name=regexprep(temp_list{2},{'[',']','"','-'},'');
-                node_index=textscan(mesh_file,'%d,');
-                node_index=node_index{1};
+                node_idx=textscan(mesh_file,'%d,');
+                node_idx=node_idx{1};
                 if length(str_list) > 2 && strcmp(str_list{end},'generate')
                     % mean generate from start to end
-                    node_index=(node_index(1):node_index(3):node_index(2))';
+                    node_idx=(node_idx(1):node_idx(3):node_idx(2))';
                 end
-                Nset.(set_name)=node_index;
+                Nset.(set_name)=node_idx;
             end
 
             % read element setting
@@ -182,28 +182,28 @@ mesh_data.geometry=geometry;
     end
 end
 
-function [ID,node_number]=convertTypeToID(type)
+function [ID,node_num]=convertTypeToID(type)
 % inp version of ID and type converter
 %
 switch type
     case 'S3'
         ID=uint8(5);
-        node_number=3;
+        node_num=3;
     case {'S4R','S4'}
         ID=uint8(7);
-        node_number=4;
+        node_num=4;
     case {'S8R','S8R5'}
         ID=uint8(8);
-        node_number=8;
+        node_num=8;
     case 'S9R'
         ID=uint8(9);
-        node_number=9;
+        node_num=9;
     case 'C3D4'
         ID=uint8(10);
-        node_number=4;
+        node_num=4;
     case {'C3D8','C3D8R'}
         ID=uint8(17);
-        node_number=8;
+        node_num=8;
     otherwise
         error('readMeshINP: unknown element type')
 end

@@ -1,4 +1,4 @@
-function writeMeshCGNS(mesh_filestr,mesh_data,marker_name_list)
+function writeMeshCGNS(mesh_data,mesh_filestr,marker_name_list)
 % write mesh data into cgns file
 % need cgns4m package
 %
@@ -12,18 +12,17 @@ function writeMeshCGNS(mesh_filestr,mesh_data,marker_name_list)
 %
 if nargin < 3
     marker_name_list=[];
+    if nargin < 2
+        mesh_filestr=[];
+    end
 end
-if isempty(marker_name_list)
-    marker_name_list=fieldnames(mesh_data);
-end
+if isempty(mesh_filestr),mesh_filestr='mesh.cgns';end
+if isempty(marker_name_list),marker_name_list=fieldnames(mesh_data);end
 marker_index=1;
 while marker_index <= length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'geometry')
-        marker_name_list(marker_index)=[];
-    else
-        marker_index=marker_index+1;
-    end
+    if strcmp(marker_name,'geometry'),marker_name_list(marker_index)=[];
+    else,marker_index=marker_index+1;end
 end
 
 [~,mesh_filename,~]=fileparts(mesh_filestr);
@@ -112,9 +111,9 @@ clear('mesh_file');
 
 end
 
-function element_dimension=getDimension(node_number, typestr)
+function element_dimension=getDimension(node_num, typestr)
 % Obtain the element-type ID and dimension of elements
-switch (node_number)
+switch (node_num)
     case 1
         if strcmpi(typestr, 'MIXED2')
             element_dimension=2;
@@ -154,7 +153,7 @@ switch (node_number)
     case {10,13,14,15,18,20,27}
         element_dimension=3;
     otherwise
-        error('ERROR: unknown element type with %d nodes.', node_number);
+        error('ERROR: unknown element type with %d nodes.', node_num);
 end
 end
 

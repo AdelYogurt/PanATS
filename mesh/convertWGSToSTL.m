@@ -50,27 +50,27 @@ for marker_index=1:length(marker_name_list)
             point4=[x_list(2),y_list(2),z_list(2)];
 
             d12=point2-point1;
-            d23=point3-point2;
+            d24=point4-point2;
 
-            if norm(d12) < eps || norm(d23) < eps
+            if norm(d12) < eps || norm(d24) < eps
                 % small element degeneration to line, discard it
             else
                 mesh_element_number=mesh_element_number+1;
                 element_list(3*mesh_element_number-2,:)=point1;
                 element_list(3*mesh_element_number-1,:)=point2;
-                element_list(3*mesh_element_number,:)=point3;
+                element_list(3*mesh_element_number,:)=point4;
             end
 
+            d23=point3-point2;
             d34=point4-point3;
-            d41=point1-point4;
 
-            if norm(d34) < eps || norm(d41) < eps
+            if norm(d23) < eps || norm(d34) < eps
                 % small element degeneration to line, discard it
             else
                 mesh_element_number=mesh_element_number+1;
-                element_list(3*mesh_element_number-2,:)=point3;
-                element_list(3*mesh_element_number-1,:)=point4;
-                element_list(3*mesh_element_number,:)=point1;
+                element_list(3*mesh_element_number-2,:)=point2;
+                element_list(3*mesh_element_number-1,:)=point3;
+                element_list(3*mesh_element_number,:)=point4;
             end
         end
     end

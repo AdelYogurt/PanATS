@@ -16,16 +16,15 @@ function mesh_data=readMeshCGNS(mesh_filestr,scale)
 if nargin < 2
     scale=[];
 end
+if isempty(scale)
+    scale=1;
+end
 
 % check file if exist
 if exist(mesh_filestr,'file') ~= 2
     error('readMeshCGNS: mesh file do not exist')
 end
 mesh_filestr=which(mesh_filestr);
-[~,mesh_filename,~]=fileparts(mesh_filestr);
-if isempty(scale)
-    scale=1;
-end
 
 % only support one base one zone now
 base_index=1;
@@ -63,13 +62,13 @@ for marker_index=1:marker_number
     [marker_name, ID, istart, iend, nbndry, pflag, ierr]=cg_section_read(mesh_file, ...
         base_index, zone_index, marker_index); chk_error(ierr);
 
-    [node_number, type]=convertIDToType(ID, cell_dimension);
+    [node_num, type]=convertIDToType(ID, cell_dimension);
 
     % Get element connectivity
     [node_number_total, ierr]=cg_ElementDataSize(mesh_file, base_index, zone_index, ...
         marker_index); chk_error(ierr);
-    num_elems=node_number_total / node_number; % number of elements (except for MIXED)
-    element_list=zeros(node_number, num_elems); % Element connectivity is permuted in CGNS
+    num_elems=node_number_total / node_num; % number of elements (except for MIXED)
+    element_list=zeros(node_num, num_elems); % Element connectivity is permuted in CGNS
     parent_data=[];
 
     [element_list, parent_data, ierr]=cg_elements_read(mesh_file, base_index, zone_index, ...
@@ -80,7 +79,7 @@ for marker_index=1:marker_number
         % for mixed elemenet, separate into number_list and ID_list
         [element_list,number_list]=getNumberElement(element_list);
     else
-        number_list=node_number;
+        number_list=node_num;
     end
 
     mesh_data.(marker_name).type=type;
@@ -99,66 +98,66 @@ mesh_data.geometry=geometry;
 
 end
 
-function [node_number, type]=convertIDToType(ID, cell_dimension)
+function [node_num, type]=convertIDToType(ID, cell_dimension)
 % Obtain a string of element type
 switch (ID)
     case NODE
         type='NODE';
-        node_number=1;
+        node_num=1;
     case BAR_2
         type='BAR_2';
-        node_number=2;
+        node_num=2;
     case BAR_3
         type='BAR_3';
-        node_number=3;
+        node_num=3;
     case TRI_3
         type='TRI_3';
-        node_number=3;
+        node_num=3;
     case TRI_6
         type='TRI_6';
-        node_number=6;
+        node_num=6;
     case QUAD_4
         type='QUAD_4';
-        node_number=4;
+        node_num=4;
     case QUAD_8
         type='QUAD_8';
-        node_number=8;
+        node_num=8;
     case QUAD_9
         type='QUAD_9';
-        node_number=9;
+        node_num=9;
     case TETRA_4
         type='TETRA_4';
-        node_number=4;
+        node_num=4;
     case TETRA_10
         type='TETRA_10';
-        node_number=10;
+        node_num=10;
     case PYRA_5
         type='PYRA_5';
-        node_number=5;
+        node_num=5;
     case PYRA_13
         type='PYRA_13';
-        node_number=13;
+        node_num=13;
     case PYRA_14
         type='PYRA_14';
-        node_number=14;
+        node_num=14;
     case PENTA_6
         type='PENTA_6';
-        node_number=6;
+        node_num=6;
     case PENTA_15
         type='PENTA_15';
-        node_number=15;
+        node_num=15;
     case PENTA_18
         type='PENTA_18';
-        node_number=18;
+        node_num=18;
     case HEXA_8
         type='HEXA_8';
-        node_number=8;
+        node_num=8;
     case HEXA_20
         type='HEXA_20';
-        node_number=20;
+        node_num=20;
     case HEXA_27
         type='HEXA_27';
-        node_number=27;
+        node_num=27;
     case MIXED
         if cell_dimension == 2
             type='MIXED2';
@@ -167,7 +166,7 @@ switch (ID)
         else
             error('For mixed meshes, dimension must be 2 or 3.');
         end
-        node_number=1;
+        node_num=1;
 
     otherwise
         error('Error: unknown element type');

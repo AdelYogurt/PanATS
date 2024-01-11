@@ -60,8 +60,8 @@ classdef ADTreePoint < handle
                 % add remain point
                 for point_index=2:size(ADT.point_list,1)
                     point=ADT.point_list(point_index,:);
-                    node_index=ADT.addExitPoint(point,point_index);
-                    index_list(point_index)=node_index;
+                    node_idx=ADT.addExitPoint(point,point_index);
+                    index_list(point_index)=node_idx;
                 end
             end
         end
@@ -69,12 +69,12 @@ classdef ADTreePoint < handle
         function add_node_index=addPoint(ADT,ref_point)
             % add octree node(notice have repeat protect)
             % input point will generate ADTreeNode and add into node_list
-            % node_index, dimension is current node
+            % node_idx, dimension is current node
             %
             node_low_bou=ADT.min_bou;
             node_up_bou=ADT.max_bou;
             
-            node_index=1;
+            node_idx=1;
             dimension=0;
             depth=0;
             
@@ -83,8 +83,8 @@ classdef ADTreePoint < handle
             % loop to add point
             while isempty(add_node_index)
                 % check current point if the same as added point
-                if sum(abs(ref_point-ADT.point_list(node_index,:))) < (ADT.torlance+ADT.torlance+ADT.torlance)
-                    add_node_index=node_index;
+                if sum(abs(ref_point-ADT.point_list(node_idx,:))) < (ADT.torlance+ADT.torlance+ADT.torlance)
+                    add_node_index=node_idx;
                 else
                     % children node dimension
                     dimension=dimension+1;
@@ -97,30 +97,30 @@ classdef ADTreePoint < handle
                     if ref_point(dimension) <= ...
                             (node_low_bou(dimension)+node_up_bou(dimension))/2
                         % left
-                        if isempty(ADT.point_list(node_index,:))
+                        if isempty(ADT.point_list(node_idx,:))
                             % left children is null, add node
                             add_node_index=uint32(point_index);
-                            ADT.left_index_list(node_index)=add_node_index;
+                            ADT.left_index_list(node_idx)=add_node_index;
                             ADT.depth_list(add_node_index).depth=depth;
                         else
                             % recursion
                             node_up_bou(dimension)=...
                                 (node_low_bou(dimension)+node_up_bou(dimension))/2;
-                            node_index=ADT.left_index_list(node_index);
+                            node_idx=ADT.left_index_list(node_idx);
                         end
                     else
                         % right
-                        if isempty(ADT.node_list(node_index).node2_index)
+                        if isempty(ADT.node_list(node_idx).node2_index)
                             % right children is null, add node
                             ADT.node_list=[ADT.node_list;ADTreeNode(ref_point)];
                             add_node_index=uint32(size(ADT.node_list,1));
-                            ADT.node_list(node_index).node2_index=add_node_index;
+                            ADT.node_list(node_idx).node2_index=add_node_index;
                             ADT.node_list(add_node_index).depth=depth;
                         else
                             % recursion
                             node_low_bou(dimension)=...
                                 (node_low_bou(dimension)+node_up_bou(dimension))/2;
-                            node_index=ADT.node_list(node_index).node2_index;
+                            node_idx=ADT.node_list(node_idx).node2_index;
                         end
                     end
                 end
@@ -130,10 +130,10 @@ classdef ADTreePoint < handle
         function node_index_list=searchPoint(ADT,...
                 low_bou,up_bou,...
                 node_low_bou,node_up_bou,...
-                node_index,dimension)
+                node_idx,dimension)
             % recursion to search node in range
             % search range is low_bou and up_bou
-            % node_index, dimension is current node parameter
+            % node_idx, dimension is current node parameter
             %
             
             % cheak whether search range overlap node_bou
@@ -141,11 +141,11 @@ classdef ADTreePoint < handle
                     up_bou(2) > node_low_bou(2) && low_bou(2) < node_up_bou(2) &&...
                     up_bou(3) > node_low_bou(3) && low_bou(3) < node_up_bou(3)
                 % cheak if point of node is in range
-                point=ADT.node_list(node_index).point;
+                point=ADT.node_list(node_idx).point;
                 if (point(1) >= low_bou(1)) && (point(1) <= up_bou(1)) &&...
                         (point(2) >= low_bou(2)) && (point(2) <= up_bou(2)) &&...
                         (point(3) >= low_bou(3)) && (point(3) <= up_bou(3))
-                    node_index_list=node_index;
+                    node_index_list=node_idx;
                 else
                     node_index_list=[];
                 end
@@ -157,7 +157,7 @@ classdef ADTreePoint < handle
                 end
                 
                 % check if exist node
-                if ~isempty(ADT.node_list(node_index).node1_index)
+                if ~isempty(ADT.node_list(node_idx).node1_index)
                     % check left node(change up to middle)
                     node_low_bou_left=node_low_bou;
                     node_up_bou_left=node_up_bou;
@@ -167,11 +167,11 @@ classdef ADTreePoint < handle
                     node_index_list=[node_index_list,searchNode(ADT,...
                         low_bou,up_bou,...
                         node_low_bou_left,node_up_bou_left,...
-                        ADT.node_list(node_index).node1_index,dimension)];
+                        ADT.node_list(node_idx).node1_index,dimension)];
                 end
                 
                 % check if exist node
-                if ~isempty(ADT.node_list(node_index).node2_index)
+                if ~isempty(ADT.node_list(node_idx).node2_index)
                     % check right node(change low to middle)
                     node_low_bou_right=node_low_bou;
                     node_low_bou_right(dimension)=...
@@ -181,7 +181,7 @@ classdef ADTreePoint < handle
                     node_index_list=[node_index_list,searchNode(ADT,...
                         low_bou,up_bou,...
                         node_low_bou_right,node_up_bou_right,...
-                        ADT.node_list(node_index).node2_index,dimension)];
+                        ADT.node_list(node_idx).node2_index,dimension)];
                 end
             else
                 node_index_list=[];
@@ -192,12 +192,12 @@ classdef ADTreePoint < handle
         function add_node_index=addExitPoint(ADT,ref_point,point_index)
             % add octree node(notice have repeat protect)
             % input point will generate ADTreeNode and add into node_list
-            % node_index, dimension is current node
+            % node_idx, dimension is current node
             %
             node_low_bou=ADT.min_bou;
             node_up_bou=ADT.max_bou;
             
-            node_index=1; % search start from root
+            node_idx=1; % search start from root
             dimension=0;
             depth=zeros(1,1,'uint16');
             
@@ -206,8 +206,8 @@ classdef ADTreePoint < handle
             % loop to add point
             while isempty(add_node_index)
                 % check current point if the same as added point
-                if sum(abs(ref_point-ADT.point_list(node_index,:))) < (ADT.torlance+ADT.torlance+ADT.torlance)
-                    add_node_index=node_index;
+                if sum(abs(ref_point-ADT.point_list(node_idx,:))) < (ADT.torlance+ADT.torlance+ADT.torlance)
+                    add_node_index=node_idx;
                 else
                     % search in leave node
                     % children node dimension
@@ -221,31 +221,31 @@ classdef ADTreePoint < handle
                     if ref_point(dimension) <= ...
                             (node_low_bou(dimension)+node_up_bou(dimension))/2
                         % left
-                        left_node_index=ADT.left_index_list(node_index);
+                        left_node_index=ADT.left_index_list(node_idx);
                         if left_node_index == 0
                             % left children is null, add node
                             add_node_index=uint32(point_index);
-                            ADT.left_index_list(node_index)=add_node_index;
+                            ADT.left_index_list(node_idx)=add_node_index;
                             ADT.depth_list(point_index)=depth;
                         else
                             % recursion
                             node_up_bou(dimension)=...
                                 (node_low_bou(dimension)+node_up_bou(dimension))/2;
-                            node_index=left_node_index;
+                            node_idx=left_node_index;
                         end
                     else
                         % right
-                        right_node_index=ADT.right_index_list(node_index);
+                        right_node_index=ADT.right_index_list(node_idx);
                         if right_node_index == 0
                             % right children is null, add node
                             add_node_index=uint32(point_index);
-                            ADT.right_index_list(node_index)=add_node_index;
+                            ADT.right_index_list(node_idx)=add_node_index;
                             ADT.depth_list(point_index)=depth;
                         else
                             % recursion
                             node_low_bou(dimension)=...
                                 (node_low_bou(dimension)+node_up_bou(dimension))/2;
-                            node_index=right_node_index;
+                            node_idx=right_node_index;
                         end
                     end
                 end
