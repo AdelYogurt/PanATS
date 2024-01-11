@@ -51,7 +51,7 @@ if remove_redundance
     [index_list,~,map_list]=unique(index_list);
     point_list=point_list(index_list,:);
 
-    node_index=uint32(0); % offset idx of point idx list
+    node_idx=uint32(0); % offset idx of point idx list
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
         if strcmp(marker_name,'geometry')
@@ -70,27 +70,27 @@ if remove_redundance
         for line_idx=1:line_number-1
             base_offset=point_number*(line_idx-1);
             for point_idx=1:point_number-1
-                point1_idx=map_list(base_offset+point_idx+node_index);
-                point2_idx=map_list(base_offset+point_idx+point_number+node_index);
-                point3_idx=map_list(base_offset+point_idx+point_number+node_index+1);
-                point4_idx=map_list(base_offset+point_idx+node_index+1);
+                point1_idx=map_list(base_offset+point_idx+node_idx);
+                point2_idx=map_list(base_offset+point_idx+point_number+node_idx);
+                point3_idx=map_list(base_offset+point_idx+point_number+node_idx+1);
+                point4_idx=map_list(base_offset+point_idx+node_idx+1);
 
-                if point1_idx == point2_idx || point2_idx == point3_idx || point1_idx == point3_idx
+                if point1_idx == point2_idx || point2_idx == point4_idx || point4_idx == point1_idx
                     % small element degeneration to line, discard it
                 else
                     element_indx=element_indx+1;
-                    element_list(element_indx,:)=[uint32(point1_idx),uint32(point2_idx),uint32(point3_idx)];
+                    element_list(element_indx,:)=[uint32(point1_idx),uint32(point2_idx),uint32(point4_idx)];
                 end
 
-                if point3_idx == point4_idx || point4_idx == point1_idx || point1_idx == point3_idx
+                if point2_idx == point3_idx || point3_idx == point4_idx || point4_idx == point2_idx
                     % small element degeneration to line, discard it
                 else
                     element_indx=element_indx+1;
-                    element_list(element_indx,:)=[uint32(point3_idx),uint32(point4_idx),uint32(point1_idx)];
+                    element_list(element_indx,:)=[uint32(point2_idx),uint32(point3_idx),uint32(point4_idx)];
                 end
             end
         end
-        node_index=node_index+uint32(point_number*line_number);
+        node_idx=node_idx+uint32(point_number*line_number);
 
         marker=rmfield(marker,'X');
         marker=rmfield(marker,'Y');
@@ -106,7 +106,7 @@ if remove_redundance
     end
 else
     % do not delete same coordination point
-    node_index=uint32(0); % offset idx of point idx list
+    node_idx=uint32(0); % offset idx of point idx list
 
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
@@ -126,33 +126,33 @@ else
         for line_idx=1:line_number-1
             base_offset=point_number*(line_idx-1);
             for point_idx=1:point_number-1
-                point1_idx=base_offset+point_idx+node_index;
-                point2_idx=base_offset+point_idx+point_number+node_index;
-                point3_idx=base_offset+point_idx+point_number+node_index+1;
-                point4_idx=base_offset+point_idx+node_index+1;
+                point1_idx=base_offset+point_idx+node_idx;
+                point2_idx=base_offset+point_idx+point_number+node_idx;
+                point3_idx=base_offset+point_idx+point_number+node_idx+1;
+                point4_idx=base_offset+point_idx+node_idx+1;
 
                 d12=point_list(point2_idx,:)-point_list(point1_idx,:);
-                d23=point_list(point3_idx,:)-point_list(point2_idx,:);
+                d24=point_list(point4_idx,:)-point_list(point2_idx,:);
 
-                if norm(d12) < eps || norm(d23) < eps
+                if norm(d12) < eps || norm(d24) < eps
                     % small element degeneration to line, discard it
                 else
                     element_indx=element_indx+1;
-                    element_list(element_indx,:)=[uint32(point1_idx),uint32(point2_idx),uint32(point3_idx)];
+                    element_list(element_indx,:)=[uint32(point1_idx),uint32(point2_idx),uint32(point4_idx)];
                 end
 
+                d23=point_list(point3_idx,:)-point_list(point2_idx,:);
                 d34=point_list(point4_idx,:)-point_list(point3_idx,:);
-                d41=point_list(point1_idx,:)-point_list(point4_idx,:);
 
-                if norm(d34) < eps || norm(d41) < eps
+                if norm(d23) < eps || norm(d34) < eps
                     % small element degeneration to line, discard it
                 else
                     element_indx=element_indx+1;
-                    element_list(element_indx,:)=[uint32(point3_idx),uint32(point4_idx),uint32(point1_idx)];
+                    element_list(element_indx,:)=[uint32(point2_idx),uint32(point3_idx),uint32(point4_idx)];
                 end
             end
         end
-        node_index=node_index+uint32(point_number*line_number);
+        node_idx=node_idx+uint32(point_number*line_number);
 
         marker=rmfield(marker,'X');
         marker=rmfield(marker,'Y');

@@ -1,4 +1,4 @@
-function [T,P,rho,a,mu,g]=getAtmosphereEnvironment(Z)
+function [T,P,rho,a,mu,g]=getAtmosEnv(Z)
 % base on altitude calculate atmosphere parameter
 % Z is altitude m
 % return temperature pressure density speed_of_sound acceleration_of_gravity
@@ -65,7 +65,7 @@ elseif Z <= 91.0000
     rho=3.6411*1e-6*W*rou_SL;
     
 elseif Z <= 150.0000
-    T=-0.0040*Z^3+1.5054*Z^2-177.5620*Z+6.8929*1e-3;
+    T=-0.0040*Z^3+1.5054*Z^2-177.5620*Z+6.8929*1e3;
     P=2.532*1e6*exp(-0.1829*Z)+0.1403*exp(-0.03698*Z);
     rho=70.22*1e6*exp(-0.1874*Z)+1.734*1e-5*exp(-0.05828*Z);
     
@@ -77,6 +77,6 @@ end
 a=20.0468*sqrt(T);
 g=g_SL/(1+Z/R_earth)^2;
 
-mu=1.716*1e-5*(T/273.15).^1.5*(273.15+110.4)./(T+110.4);
+mu=1.716*1e-5*(T/273.15)^1.5*(273.15+110.4)/(T+110.4);
 
 end

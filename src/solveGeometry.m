@@ -1,6 +1,8 @@
 function [area,volume]=solveGeometry()
 % calclulate element volume and surface area
 %
+% copyright Adel 2023.03
+%
 global user_model
 
 geometry=user_model.geometry;

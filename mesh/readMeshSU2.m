@@ -41,13 +41,11 @@ if isempty(scale)
 end
 
 while ~feof(mesh_file)
+    string=strsplit(fgetl(mesh_file),{char(9),char(32),'='});
 
-    % string=strsplit(fgetl(mesh_file),{char(9),char(32)});
-    string=strsplit(fgetl(mesh_file));
-
-    if strcmp(string{1},'NDIME=')
+    if strcmp(string{1},'NDIME')
         dimension=str2double(string{2});
-    elseif strcmp(string{1},'NPOIN=')
+    elseif strcmp(string{1},'NPOIN')
         % read node data
         point_number=str2double(string{2});
 
@@ -58,7 +56,7 @@ while ~feof(mesh_file)
         if scale ~= 1
             point_list=point_list*scale;
         end
-    elseif strcmp(string{1},'NELEM=')
+    elseif strcmp(string{1},'NELEM')
         % read volume element number
         element_number=str2double(string{2});
         if READ_VOLUME && ~ONLY_MARKER
@@ -71,7 +69,7 @@ while ~feof(mesh_file)
         else
             textscan(mesh_file,'%d');
         end
-    elseif strcmp(string{1},'NMARK=')
+    elseif strcmp(string{1},'NMARK')
         % read marker data
         marker_number=str2double(string{2});
         marker_name_list=cell(marker_number,1);
@@ -82,7 +80,7 @@ while ~feof(mesh_file)
             marker_name_list{marker_index}=marker_name;
 
             % read marker element number
-            marker_element_number_string=strsplit(fgetl(mesh_file));
+            marker_element_number_string=strsplit(fgetl(mesh_file),{char(9),char(32),'='});
             marker_element_number=str2double(marker_element_number_string{2});
 
             % read marker element
@@ -145,23 +143,23 @@ mesh_data.geometry=geometry;
         % judge if have element index in each line
         switch element_list(1)-1
             case 3
-                node_number=2;
+                node_num=2;
             case 5
-                node_number=3;
+                node_num=3;
             case 9
-                node_number=4;
+                node_num=4;
             case 10
-                node_number=4;
+                node_num=4;
             case 12
-                node_number=8;
+                node_num=8;
             case 13
-                node_number=6;
+                node_num=6;
             case 14
-                node_number=5;
+                node_num=5;
             otherwise
                 error('idSU2Number: unknown SU2 identifier')
         end
-        if element_list(node_number+2) == 1
+        if element_list(node_num+2) == 1
             offset=1;
         else
             offset=0;
@@ -176,33 +174,33 @@ mesh_data.geometry=geometry;
         while data_index < data_number
             switch element_list(data_index)-1
                 case 3
-                    node_number=2;
+                    node_num=2;
                     id=3;
                 case 5
-                    node_number=3;
+                    node_num=3;
                     id=5;
                 case 9
-                    node_number=4;
+                    node_num=4;
                     id=7;
                 case 10
-                    node_number=4;
+                    node_num=4;
                     id=10;
                 case 12
-                    node_number=8;
+                    node_num=8;
                     id=17;
                 case 13
-                    node_number=6;
+                    node_num=6;
                     id=14;
                 case 14
-                    node_number=5;
+                    node_num=5;
                     id=12;
                 otherwise
                     error('idSU2Number: unknown SU2 identifier')
             end
             element_list(data_index)=id;
-            number_list(element_index)=node_number;
+            number_list(element_index)=node_num;
 
-            data_index=data_index+1+node_number;
+            data_index=data_index+1+node_num;
             if offset
                 index_list(element_index)=data_index;
                 data_index=data_index+1;
@@ -216,9 +214,9 @@ mesh_data.geometry=geometry;
         end
 
         % check if have same type
-        node_number=number_list(1);
+        node_num=number_list(1);
         for element_index=1:element_number
-            if number_list(element_index) ~= node_number
+            if number_list(element_index) ~= node_num
                 SAME_TYPE=false(1);
                 break;
             end
@@ -227,8 +225,8 @@ mesh_data.geometry=geometry;
         % if same type, reshape element
         if SAME_TYPE
             ID=element_list(1);
-            element_list=reshape(element_list,node_number+1,[])';
-            element_list=element_list(:,2:node_number+1);
+            element_list=reshape(element_list,node_num+1,[])';
+            element_list=element_list(:,2:node_num+1);
             number_list=number_list(1);
         else
             ID=20;

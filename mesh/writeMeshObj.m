@@ -1,4 +1,4 @@
-function writeMeshObj(mesh_filestr,mesh_data,marker_name_list)
+function writeMeshObj(mesh_data,mesh_filestr,marker_name_list)
 % write Binary STL mesh file
 %
 % input:
@@ -10,18 +10,17 @@ function writeMeshObj(mesh_filestr,mesh_data,marker_name_list)
 %
 if nargin < 3
     marker_name_list=[];
+    if nargin < 2
+        mesh_filestr=[];
+    end
 end
-if isempty(marker_name_list)
-    marker_name_list=fieldnames(mesh_data);
-end
+if isempty(mesh_filestr),mesh_filestr='mesh.obj';end
+if isempty(marker_name_list),marker_name_list=fieldnames(mesh_data);end
 marker_index=1;
 while marker_index <= length(marker_name_list)
     marker_name=marker_name_list{marker_index};
-    if strcmp(marker_name,'geometry')
-        marker_name_list(marker_index)=[];
-    else
-        marker_index=marker_index+1;
-    end
+    if strcmp(marker_name,'geometry'),marker_name_list(marker_index)=[];
+    else,marker_index=marker_index+1;end
 end
 
 mesh_file=fopen(mesh_filestr,'w');
@@ -47,11 +46,11 @@ for marker_index=1:length(marker_name_list)
     if ID == 20 % mixed element
         data_index=1;
         for element_index=1:length(number_list)
-            node_number=number_list(element_index);
+            node_num=number_list(element_index);
             fprintf(mesh_file,'f');
-            fprintf(mesh_file,' %d',element_list((data_index+1):(data_index+node_number)));
+            fprintf(mesh_file,' %d',element_list((data_index+1):(data_index+node_num)));
             fprintf(mesh_file,'\n');
-            data_index=data_index+node_number+1;
+            data_index=data_index+node_num+1;
         end
     else
         for element_index=1:size(element_list,1)

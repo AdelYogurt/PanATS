@@ -1,5 +1,5 @@
 function [Y_pred,X_pred_idx]=interpLinear(X,Y,X_pred)
-% a simple linear interpolation to calculate data
+% a simple 1D linear interpolation
 % Y can be m x n matrix, n is variable
 %
 [X,idx]=sort(X);

@@ -1,4 +1,4 @@
-function [U,V,Fval,node_list]=meshAdapt2DM(fcn,low_bou,up_bou,torl,max_level,fval_num)
+function [U,V,Fval,node_list]=meshAdapt2DUV(fcn,low_bou,up_bou,torl,max_level,fval_num)
 % 2D Omni-Tree
 % adapt capture 2 dimemsion function value
 % ensure error of linear interplation will less than torl
@@ -36,31 +36,24 @@ data_list(4,:)=[bou_4,fcn(bou_4)];
 % create base root
 node_list(1,:)=[0,1,2,3,4,0,0,0,0,0,0,0,0,0];
 
-[node_num,data_num]=createNodeTree(1,4); % create node tree from root
+% create node tree from root
+[node_num,data_num]=createNodeTree(1,4);
 node_list=node_list(1:node_num,:);
 data_list=data_list(1:data_num,:);
 
-% % inorder traversal to obtain u and v axis coordinate
-% idx_list=zeros(data_num,2); % data idx in u_list
-% u_list=traversalInorder(1,1,[11,13],[12,14],[6,9,10]);
-% v_list=traversalInorder(1,2,[11,12],[13,14],[7,8,10]);
-% 
-% % add boundary
-% u_list=[low_bou(1),u_list,up_bou(1)];
-% v_list=[low_bou(2),v_list,up_bou(2)];
-
+% generate U and V
 [u_list,~,u_idx]=unique(data_list(:,1));
 [v_list,~,v_idx]=unique(data_list(:,2));
 idx_list=[u_idx,v_idx];
 
-[U,V]=meshmesh_data(u_list,v_list);
+[U,V]=meshgrid(u_list,v_list);
 
 % local data to Fval
 Fval=nan(length(v_list),length(u_list),fval_num);
 
-for data_idx=1:data_num
-    if all([idx_list(data_idx,2),idx_list(data_idx,1)] ~= 0)
-        Fval(idx_list(data_idx,2),idx_list(data_idx,1),:)=data_list(data_idx,3:end);
+for data_index=1:data_num
+    if all([idx_list(data_index,2),idx_list(data_index,1)] ~= 0)
+        Fval(idx_list(data_index,2),idx_list(data_index,1),:)=data_list(data_index,3:end);
     end
 end
 
@@ -72,7 +65,6 @@ for rank_idx=1:length(v_list)
         end
     end
 end
-
 
     function [node_num,data_num]=createNodeTree(root_idx,data_num)
         % create quad tree
@@ -229,45 +221,4 @@ end
         fval_pred_8=(data_list(vidx_3,3:end)+data_list(vidx_4,3:end))/2;
     end
 
-    function [x_list]=traversalInorder(root_idx,coord_idx,idx_1,idx_2,place_c)
-        % inorder traversal node tree to get u_list or v_list
-        % if input coord_idx=1, idx_1=[cell_1,cell_3], idx_2=[cell_2,cell_4], traversal is u_list
-        % if input coord_idx=2, idx_1=[cell_1,cell_2], idx_2=[cell_3,cell_4], traversal is v_list
-        %
-        stack={};
-        x_list=[];
-        node_idx=root_idx;
-
-        while length(stack)~=0 || ~isempty(node_idx)
-            while ~isempty(node_idx)
-                % only add one node_idx is enough
-                % because we only need center coordinate of one cell
-                stack=[stack,{node_idx}];
-
-                % left node
-                node_idx=node_list(node_idx,idx_1);
-                node_idx=node_idx(node_idx~=0);
-            end
-
-            node_idx=stack{end};
-            stack=stack(1:end-1);
-            % obtain center place coordinate of node
-            data_idx=node_list(node_idx,place_c);
-            data_idx=data_idx(data_idx~=0);
-            if ~isempty(data_idx)
-                x_list=[x_list,data_list(data_idx(1),coord_idx)];
-                idx_list(data_idx,coord_idx)=length(x_list)+1;
-            end
-
-            % right node
-            node_idx=node_list(node_idx,idx_2);
-            node_idx=node_idx(node_idx~=0);
-        end
-    end
-
-    function drawLevel(level,color,vertex_idx)
-        data_idx=node_list(node_list(:,1)==level,vertex_idx);
-        data_idx=data_idx(data_idx~=0);
-        line(data_list(data_idx,1),data_list(data_idx,2),data_list(data_idx,3),'LineStyle','none','Marker','o','Color',color);
-    end
 end

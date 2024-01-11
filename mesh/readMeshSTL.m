@@ -144,8 +144,8 @@ mesh_data.(marker_name).type='stl';
         %
         point_string=strsplit(fgetl(mesh_file));
         point=zeros(3,1);
-        for node_index=1:3
-            point(node_index)=str2double(point_string{2+node_index});
+        for node_idx=1:3
+            point(node_idx)=str2double(point_string{2+node_idx});
         end
     end
 end

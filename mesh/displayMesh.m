@@ -1,9 +1,17 @@
-function displayMesh(mesh_data,marker_name_list)
+function displayMesh(mesh_data,marker_name_list,fig_hdl,draw_option)
 % draw mesh in mesh_data
 %
-if nargin < 2
-    marker_name_list=[];
+if nargin < 4
+    draw_option=struct();
+    if nargin < 3
+        fig_hdl=[];
+        if nargin < 2
+            marker_name_list=[];
+        end
+    end
+
 end
+
 if isempty(marker_name_list)
     marker_name_list=fieldnames(mesh_data);
 end
@@ -77,12 +85,12 @@ for marker_index=1:length(marker_name_list)
         number_list=marker.number_list;
         element_number=length(number_list);
 
-        node_index=0;
+        node_idx=0;
         for element_index=1:element_number
-            node_number=number_list(element_index);
+            node_num=number_list(element_index);
 
             % element point index
-            point_index_list=[element_list(node_index+(1:node_number)+1);element_list(node_index+2)];
+            point_index_list=[element_list(node_idx+(1:node_num)+1);element_list(node_idx+2)];
 
             if dimension == 2
                 line(point_list(point_index_list,1), ...
@@ -93,7 +101,7 @@ for marker_index=1:length(marker_name_list)
                     point_list(point_index_list,3));
             end
 
-            node_index=node_index+node_number+1;
+            node_idx=node_idx+node_num+1;
         end
     else
         element_list=marker.element_list;
@@ -119,9 +127,22 @@ axis equal;
 xlabel('x');
 ylabel('y');
 
+x_range=xlim();
+y_range=ylim();
 if dimension ~= 2
     zlabel('z');
     view(3);
+    z_range=zlim();
+    center=[mean(x_range),mean(y_range),mean(z_range)];
+    range=max([x_range(2)-x_range(1),y_range(2)-y_range(1),z_range(2)-z_range(1)])/2;
+    xlim([center(1)-range,center(1)+range]);
+    ylim([center(2)-range,center(2)+range]);
+    zlim([center(3)-range,center(3)+range]);
+else
+    center=[mean(x_range),mean(y_range)];
+    range=max([x_range(2)-x_range(1),y_range(2)-y_range(1)])/2;
+    xlim([center(1)-range,center(1)+range]);
+    ylim([center(2)-range,center(2)+range]);
 end
 
 end

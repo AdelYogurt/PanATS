@@ -43,7 +43,7 @@ if remove_redundance
     [index_list,~,map_list]=unique(index_list);
     point_list=point_list(index_list,:);
 
-    node_index=uint32(0); % offset index of point index list
+    node_idx=uint32(0); % offset index of point index list
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
         if strcmp(marker_name,'geometry')
@@ -59,10 +59,10 @@ if remove_redundance
         marker_element_number=marker_point_number/3;
 
         % convert element_list
-        element_list=map_list(node_index+1:node_index+marker_point_number);
+        element_list=map_list(node_idx+1:node_idx+marker_point_number);
         element_list=reshape(uint32(element_list),3,marker_element_number)';
 
-        node_index=node_index+uint32(marker_point_number);
+        node_idx=node_idx+uint32(marker_point_number);
 
         % sort element
         marker.type='TRI_3';
@@ -75,7 +75,7 @@ if remove_redundance
 
 else
     % do not delete same coordination point
-    node_index=uint32(0); % offset idx of point idx list
+    node_idx=uint32(0); % offset idx of point idx list
 
     for marker_index=1:length(marker_name_list)
         marker_name=marker_name_list{marker_index};
@@ -90,8 +90,8 @@ else
         marker_point_number=uint32(marker_point_number);
         marker_element_number=marker_point_number/3;
 
-        element_list=reshape(uint32(1:marker_point_number),3,marker_element_number)'+node_index;
-        node_index=node_index+marker_point_number;
+        element_list=reshape(uint32(1:marker_point_number),3,marker_element_number)'+node_idx;
+        node_idx=node_idx+marker_point_number;
 
         % sort element
         marker.type='TRI_3';

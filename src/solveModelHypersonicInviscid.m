@@ -1,11 +1,6 @@
 function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid()
 % base on Newton method and etc to calculate pressure of surface element
 %
-% point_list is coordinate of all node
-% element_list contain []
-% marker_list contain make{marker_name,marker_element_number,marker_element}
-% marker_element contain HATSElement
-%
 % copyright Adel 2023.03
 %
 global user_model
@@ -73,6 +68,7 @@ Cp_stag=2/gamma/Ma_1_sq*(...
 
 if Ma_1 < 5
     warning('solveModelHypersonicAerodynamic: Mach number less than 5');
+    HIGH_HYPERSONIC_FLAG=false(1);
 elseif Ma_1 < 8.5
     HIGH_HYPERSONIC_FLAG=false(1);
 else

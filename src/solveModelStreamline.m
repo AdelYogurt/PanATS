@@ -30,21 +30,23 @@ normal_vector_list=geometry.normal_vector_list;
 free_flow_vector=calFreeFlowDirection(user_model.AOA,user_model.SIDESLIP_ANGLE);
 user_model.free_flow_vector=free_flow_vector;
 
-switch SYMMETRY
-    case 'XOY'
-        flip_operate=[1,1,-1];
-        identify_dimension=3;
-    case 'YOZ'
-        flip_operate=[-1,1,1];
-        identify_dimension=1;
-    case 'ZOX'
-        flip_operate=[1,-1,1];
-        identify_dimension=2;
-    otherwise
-        error('solveModelStreamline: nuknown SYMMETRY type');
+if ~isempty(SYMMETRY)
+    switch SYMMETRY
+        case 'XOY'
+            flip_operate=[1,1,-1];
+            identify_dimension=3;
+        case 'YOZ'
+            flip_operate=[-1,1,1];
+            identify_dimension=1;
+        case 'ZOX'
+            flip_operate=[1,-1,1];
+            identify_dimension=2;
+        otherwise
+            error('solveModelStreamline: nuknown SYMMETRY type');
+    end
 end
 
-if DRAW_FIGURE_FLAG,displayMarker();end
+if DRAW_FIGURE_FLAG,displayModel();end
 
 % elem_num=length(element_list);
 % point_num=size(point_list,1);
@@ -100,8 +102,10 @@ end
 % identify which point of element on symmetry face
 % add symmetry velocity to point
 % (velocity identify_dimension set to zero)
-Bool_sym=abs(point_list(:,identify_dimension)) <= geometry_torlance;
-point_flow_list(Bool_sym,identify_dimension)=0;
+if ~isempty(SYMMETRY)
+    Bool_sym=abs(point_list(:,identify_dimension)) <= geometry_torlance;
+    point_flow_list(Bool_sym,identify_dimension)=0;
+end
 area_sum_list(area_sum_list == 0)=1;
 point_flow_list=point_flow_list./area_sum_list;
 
@@ -117,19 +121,19 @@ for elem_idx=1:elem_num
     Node_idx=elem.Node_idx;
     normal_vector=normal_vector_list(elem_idx,:);
 
-%     node_list=point_list(Node_idx,:);
-%     node_flow_list=point_flow_list(Node_idx,:);
-%     node_list=[node_list;center_point_list(elem_idx,:)];
-%     node_flow_list=[node_flow_list;elem_flow_list(elem_idx,:)];
+    node_list=point_list(Node_idx,:);
+    node_flow_list=point_flow_list(Node_idx,:);
+    node_list=[node_list;center_point_list(elem_idx,:)];
+    node_flow_list=[node_flow_list;elem_flow_list(elem_idx,:)];
 
-    Vertex_next=elem.Vertex_next;
-    elem_idx_list=[elem_idx,Vertex_next];
-    elem_idx_list(elem_idx_list==0)=[];
-    node_list=center_point_list(elem_idx_list,:);
-    node_flow_list=elem_flow_list(elem_idx_list,:);
-    Bool=vecnorm(node_flow_list,2,2) < geometry_torlance;
-    node_list(Bool,:)=[];
-    node_flow_list(Bool,:)=[];
+%     Vertex_next=elem.Vertex_next;
+%     elem_idx_list=[elem_idx,Vertex_next];
+%     elem_idx_list(elem_idx_list==0)=[];
+%     node_list=center_point_list(elem_idx_list,:);
+%     node_flow_list=elem_flow_list(elem_idx_list,:);
+%     Bool=vecnorm(node_flow_list,2,2) < geometry_torlance;
+%     node_list(Bool,:)=[];
+%     node_flow_list(Bool,:)=[];
 
     if dot(normal_vector,free_flow_vector) < 0 % only upwind element
         [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,node_list,node_flow_list);
