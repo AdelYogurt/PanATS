@@ -14,20 +14,20 @@ global user_model
 % user_model=preModelCFG('INP_plate.cfg');
 % user_model=preModelCFG('WWD.cfg');
 % user_model=preModelCFG('hermes.cfg'); 
-user_model=preModelCFG('waverider.cfg'); 
+% user_model=preModelCFG('waverider.cfg'); 
 % user_model=preModelCFG('sanger.cfg'); 
 
-preModelPanel();
-[Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
-[max_streamline_len]=solveModelStreamline();
-solveModelBoundaryLayer();
-[Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicViscid();
-[max_heat_flux]=solveModelHypersonicHeat();
-[area,volume]=solveGeometry();
+% preModelPanel();
+% [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
+% [max_streamline_len]=solveModelStreamline();
+% solveModelBoundaryLayer();
+% [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicViscid();
+% [max_heat_flux]=solveModelHypersonicHeat();
+% [area,volume]=solveGeometry();
 
-displayModel('Cp')
-displayModel('SL')
-displayModel('HF')
-displayModel('Cf')
+% displayModel('Cp')
+% displayModel('SL')
+% displayModel('HF')
+% displayModel('Cf')
 
 
