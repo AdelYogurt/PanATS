@@ -16,7 +16,7 @@ Vertex_arou=vertex_idx;
 
 % anti-clock order search loop
 elem_idx=elem.Vertex_next(node_idx);
-while elem_idx_origin ~= elem_idx && elem_idx ~= 0
+while elem_idx_origin ~= elem_idx && elem_idx ~= 0 && length(Elem_arou) < 16
     elem=element_list(elem_idx);
     Node_idx=elem.Node_idx;
     node_idx=find(Node_idx == vertex_idx_orign);
@@ -48,7 +48,7 @@ if elem_idx == 0
         elem_idx=elem.Vertex_next(node_idx-1);
     end
 end
-while elem_idx_origin ~= elem_idx && elem_idx ~= 0
+while elem_idx_origin ~= elem_idx && elem_idx ~= 0 && length(Elem_arou) < 16
     elem=element_list(elem_idx);
     Node_idx=elem.Node_idx;
     node_idx=find(Node_idx == vertex_idx_orign);

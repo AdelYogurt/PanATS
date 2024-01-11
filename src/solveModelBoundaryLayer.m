@@ -1,11 +1,6 @@
 function solveModelBoundaryLayer()
 % solve boundary layer parameter
 %
-% point_list is coordinate of all node
-% element_list contain []
-% marker_list contain make{marker_name,marker_element_number,marker_element}
-% marker_element contain HATSElement
-%
 % note P_e == P_w because of
 % pressure of outer boundary of boundary layer is equal to pressure of surface
 %
@@ -198,12 +193,9 @@ if H_0 < H_e
     V_e=0;
 end
 
-if ~isreal(V_e)
-    disp('?');
-end
-
 % base on sutherland to calculate viscosity coefficient
 mu_e=airViscosity(H_e);
+
     function [T_2__T_1,P_2__P_1,rho_2__rho_1]=aerodynamicShockWaveSimple...
             (gamma,Ma_1,theta,...
             gamma_sub,gamma_plus)

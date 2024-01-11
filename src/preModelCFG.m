@@ -25,13 +25,10 @@ while (~feof(cfg_file))
     if ~isempty(string_read) && string_read(1) ~= '%'
         string_list=strsplit(string_read,{',','='});
         parameter=string_list{1};
-        value=string_list(2:end);
-        if isempty(value{end})
-            value=value(1:end-1);
-        end
-
-        if isempty(value)
-            error('readModelCFG: definition lack value');
+        if length(string_list) < 2
+            value=[];
+        else
+            value=string_list(2:end);
         end
 
         % add parameter, if is number, convert char to number

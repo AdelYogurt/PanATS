@@ -1,11 +1,6 @@
 function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicViscid()
 % plate reference enthalpy method to calculate viscid
 %
-% point_list is coordinate of all node
-% element_list contain []
-% marker_list contain make{marker_name,marker_element_number,marker_element}
-% marker_element contain HATSElement
-%
 % copyright Adel 2023.03
 %
 global user_model
