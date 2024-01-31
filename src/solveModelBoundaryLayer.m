@@ -99,8 +99,6 @@ for elem_idx=1:elem_num
         (Ma_1,T_1,P_1,rho_1,V_1,gamma,P_e,H_0,theta,...
         gamma_sub,gamma_plus);
 
-    % V_e=sqrt(sum((V_1*element.surface_flow).^2));
-
     % local Reynolds number
     Re_x=rho_e*V_e*streamline_len/mu_e;
 
@@ -209,8 +207,8 @@ mu_e=airViscosity(H_e);
             beta=asin(sqrt(functionBetaTheta(gamma,Ma_1,theta)));
             beta=beta(2);
             if ~isreal(beta)
-                %                 beta=real(beta);
-                beta=pi/2;
+                beta=real(beta);
+                % beta=pi/2;
             end
         end
 

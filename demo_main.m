@@ -2,10 +2,10 @@ clc;
 clear;
 close all hidden;
 
-% addpath([pwd,'\cfg']);
-% addpath([pwd,'\input']);
-% addpath([pwd,'\mesh']);
-% addpath([pwd,'\src']);
+addpath([pwd,'\cfg']);
+addpath([pwd,'\input']);
+addpath([pwd,'\mesh']);
+addpath([pwd,'\src']);
 
 global user_model
 

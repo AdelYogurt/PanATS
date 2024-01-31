@@ -34,11 +34,11 @@ ref_point=[user_model.REF_ORIGIN_MOMENT_X,user_model.REF_ORIGIN_MOMENT_Y,user_mo
 ref_area=user_model.REF_AREA;
 ref_length=user_model.REF_LENGTH;
 
-T_1=user_model.FREESTREAM_TEMPERATURE;
-P_1=user_model.FREESTREAM_PRESSURE;
-Ma_1=user_model.MACH_NUMBER;
+T_inf=user_model.FREESTREAM_TEMPERATURE;
+P_inf=user_model.FREESTREAM_PRESSURE;
+Ma_inf=user_model.MACH_NUMBER;
 gamma=user_model.GAMMA_VALUE;
-Re=user_model.REYNOLDS_NUMBER;
+Re_inf=user_model.REYNOLDS_NUMBER;
 
 % load data from inviscid and boundary layer result
 force_inviscid=output_inviscid.force_inviscid;
@@ -58,64 +58,44 @@ rho_sl=1.225;
 R=287.0955;
 
 % free flow parameter
-rho_1=P_1/R/T_1;
-a_1=sqrt(gamma*R*T_1);
-V_1=a_1*Ma_1;
-V_1_sq=V_1*V_1;
-q_1=rho_1*V_1_sq/2;
+rho_inf=P_inf/R/T_inf;
+a_inf=sqrt(gamma*R*T_inf);
+V_inf=a_inf*Ma_inf;
+V_inf_sq=V_inf*V_inf;
+q_inf=rho_inf*V_inf_sq/2;
 
 % solve prepare
-Re_x_tri=10^(5.37+0.2326*Ma_1-0.004015*Ma_1*Ma_1); % transition Reynolds number
+Re_x_tri=10^(5.37+0.2326*Ma_inf-0.004015*Ma_inf*Ma_inf); % transition Reynolds number
 
-elem_num=length(element_list);
-% initialize result sort array
-Cf_list=zeros(elem_num,1);
-S_list=zeros(elem_num,1);
-dFs_list=zeros(elem_num,3);
-dMs_list=zeros(elem_num,3);
+% calculate frictional drag coefficient
+Cf_ref_list=zeros(size(Re_x_ref_list));
 
-elem_num=length(element_list);
-for elem_idx=1:elem_num
-    center_point=center_point_list(elem_idx,:);
-    area=area_list(elem_idx);
-    surface_flow=surface_flow_list(elem_idx,:);
+% laminar flow
+idx=find(Re_x_list < Re_x_tri);
+Cf_ref_list(idx)=0.6640*Re_x_ref_list(idx).^-0.5;
 
-    % load data
-    rho_e=rho_e_list(elem_idx);
-    rho_ref=rho_ref_list(elem_idx);
+% transition flow
+idx=find(Re_x_tri <= Re_x_list & Re_x_list < 1e7);
+Cf_ref_list(idx)=0.0592*Re_x_ref_list(idx).^-0.2;
 
-    Re_x=Re_x_list(elem_idx);
-    Re_x_ref=Re_x_ref_list(elem_idx);
+% turbulent flow
+idx=find(1e7 <= Re_x_list);
+Cf_ref_list(idx)=0.37*(log(Re_x_ref_list(idx))./log(10)).^-2.584;
 
-    if Re_x <= Re_x_tri
-        % laminar flow
-        Cf_ref=0.6640*Re_x_ref^-0.5;
-    elseif Re_x < 1e7
-        % transition flow
-        Cf_ref=0.0296*Re_x_ref^-0.2;
-    else
-        % turbulent flow
-        Cf_ref=0.288*(log(Re_x_ref)/log(10))^2.584;
-    end
-    Cf=Cf_ref*rho_ref/rho_e;
+Cf_list=Cf_ref_list.*rho_ref_list./rho_e_list;
 
-    % Shear stress
-    S=q_1*Cf;
+% shear stress (Pa)
+S_list=q_inf*Cf_list;
 
-    norm_surface_flow=norm(surface_flow);
+% flow vector
+tangent_vector_list=surface_flow_list./vecnorm(surface_flow_list,2,2);
+tangent_vector_list(isnan(tangent_vector_list))=0;
 
-    if norm_surface_flow < geometry_torlance
-        Cf_list(elem_idx,:)=0;
-        S_list(elem_idx,:)=0;
-        dFs_list(elem_idx,:)=zeros(1,3);
-        dMs_list(elem_idx,:)=zeros(1,3);
-    else
-        Cf_list(elem_idx,:)=Cf;
-        S_list(elem_idx,:)=S;
-        dFs_list(elem_idx,:)=surface_flow/norm_surface_flow*area*S;
-        dMs_list(elem_idx,:)=cross(center_point-ref_point,dFs_list(elem_idx,:));
-    end
-end
+% shear stress vector (N)
+dFs_list=tangent_vector_list.*area_list.*S_list;
+dMs_list=cross(center_point_list-ref_point,dFs_list);
+
+% total force
 force_viscid=sum(dFs_list,1);
 moment_viscid=sum(dMs_list,1);
 
@@ -128,19 +108,19 @@ rotation_matrix=[0,0,1;
     0,1,0;
     -1,0,0]';
 lift=force*(rotation_matrix*free_flow_vector);
-Cl=lift/ref_area/q_1;
-Cd=drag/ref_area/q_1;
+Cl=lift/ref_area/q_inf;
+Cd=drag/ref_area/q_inf;
 LDratio=Cl/Cd;
 
 % calculate force coefficient
-Cx=force(1)/ref_area/q_1;
-Cy=force(2)/ref_area/q_1;
-Cz=force(3)/ref_area/q_1;
+Cx=force(1)/ref_area/q_inf;
+Cy=force(2)/ref_area/q_inf;
+Cz=force(3)/ref_area/q_inf;
 
 % calculate moment
-Cmx=moment(1)/ref_area/ref_length/q_1;
-Cmy=moment(2)/ref_area/ref_length/q_1;
-Cmz=moment(3)/ref_area/ref_length/q_1;
+Cmx=moment(1)/ref_area/ref_length/q_inf;
+Cmy=moment(2)/ref_area/ref_length/q_inf;
+Cmz=moment(3)/ref_area/ref_length/q_inf;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)

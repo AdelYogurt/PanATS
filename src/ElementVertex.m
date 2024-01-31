@@ -10,7 +10,6 @@ classdef ElementVertex < handle
     % edge_list the same size as vertex_list(point_list)
     % so the vertex of self edge is implicit storage by edge_list
     %
-    %
     properties
         % element id of type
         id=[]; % uint8
@@ -19,6 +18,7 @@ classdef ElementVertex < handle
         % number of node
         node_num=[]; % double
     end
+
     properties
         % index to next edge of a halfedge
         Vertex_next=uint32.empty(); % uint32
@@ -27,6 +27,7 @@ classdef ElementVertex < handle
         % index to opposite edge of a halfedge
         Vertex_oppo=uint32.empty(); % uint32
     end
+    
     methods
         function self=ElementVertex(id,Node_idx)
             self.id=id;

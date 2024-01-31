@@ -27,34 +27,34 @@ ref_point=[user_model.REF_ORIGIN_MOMENT_X,user_model.REF_ORIGIN_MOMENT_Y,user_mo
 ref_area=user_model.REF_AREA;
 ref_length=user_model.REF_LENGTH;
 
-T_1=user_model.FREESTREAM_TEMPERATURE;
-P_1=user_model.FREESTREAM_PRESSURE;
-Ma_1=user_model.MACH_NUMBER;
+T_inf=user_model.FREESTREAM_TEMPERATURE;
+P_inf=user_model.FREESTREAM_PRESSURE;
+Ma_inf=user_model.MACH_NUMBER;
 gamma=user_model.GAMMA_VALUE;
-Re=user_model.REYNOLDS_NUMBER;
+Re_inf=user_model.REYNOLDS_NUMBER;
 
 R=287.0955;
-rho_1=P_1/R/T_1;
-a_1=sqrt(gamma*R*T_1);
-V_1=a_1*Ma_1;
-q_1=rho_1*V_1*V_1/2;
+rho_inf=P_inf/R/T_inf;
+a_inf=sqrt(gamma*R*T_inf);
+V_inf=a_inf*Ma_inf;
+V_inf_sq=V_inf*V_inf;
+q_inf=rho_inf*V_inf_sq/2;
+
+H_inf=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
 
 % solve prepare
-Ma_1_sq=Ma_1*Ma_1;
+Ma_1_sq=Ma_inf*Ma_inf;
 gamma_plus=gamma+1;
 gamma_sub=gamma-1;
 
-V_1_sq=V_1*V_1;
-H_0=(airEnthalpy(T_1)+V_1_sq/2); % Free-stream enthalpy J/kg equal to H_s
-
 % modified Dahlem Buck parameter
-a=(6.0-0.3*Ma_1)+sin((log(Ma_1)-0.588)/1.2*pi);
-n=-1.15-0.5*sin((log(Ma_1)-0.916)/3.29*pi);
+a=(6.0-0.3*Ma_inf)+sin((log(Ma_inf)-0.588)/1.2*pi);
+n=-1.15-0.5*sin((log(Ma_inf)-0.916)/3.29*pi);
 
 % Dejarnetle parameter
-G=2.6054749-0.465998*Ma_1+0.09309305*Ma_1*Ma_1+...
-    -0.00817329*Ma_1*Ma_1*Ma_1+0.00026447*Ma_1*Ma_1*Ma_1*Ma_1;
-D=1.0081057-0.0132323*Ma_1+0.00164956*Ma_1*Ma_1-0.00006797*Ma_1*Ma_1*Ma_1;
+G=2.6054749-0.465998*Ma_inf+0.09309305*Ma_inf*Ma_inf+...
+    -0.00817329*Ma_inf*Ma_inf*Ma_inf+0.00026447*Ma_inf*Ma_inf*Ma_inf*Ma_inf;
+D=1.0081057-0.0132323*Ma_inf+0.00164956*Ma_inf*Ma_inf-0.00006797*Ma_inf*Ma_inf*Ma_inf;
 
 % Prandtl Mayer parameter
 theta_max=(sqrt(gamma_plus/gamma_sub)-1)*pi/2-...
@@ -66,10 +66,10 @@ Cp_stag=2/gamma/Ma_1_sq*(...
     (gamma_plus^2*Ma_1_sq/(4*gamma*Ma_1_sq-2*gamma_sub))^(gamma/gamma_sub)*((1-gamma+2*gamma*Ma_1_sq)/gamma_plus)...
     -1);
 
-if Ma_1 < 5
+if Ma_inf < 5
     warning('solveModelHypersonicAerodynamic: Mach number less than 5');
     HIGH_HYPERSONIC_FLAG=false(1);
-elseif Ma_1 < 8.5
+elseif Ma_inf < 8.5
     HIGH_HYPERSONIC_FLAG=false(1);
 else
     HIGH_HYPERSONIC_FLAG=true(1);
@@ -78,38 +78,27 @@ end
 % normal shock parameter
 P_2__P_1=2*gamma/gamma_plus*Ma_1_sq-gamma_sub/gamma_plus;
 rho_2__rho_1=gamma_plus*Ma_1_sq/(gamma_sub*Ma_1_sq+2);
-P_2=P_2__P_1*P_1;
-rho_2=rho_2__rho_1*rho_1;
+P_2=P_2__P_1*P_inf;
+rho_2=rho_2__rho_1*rho_inf;
 
 % base on enthalpy calculate max pressure
-P_max__rho_max=H_0/(gamma/gamma_sub);
+P_max__rho_max=H_inf/(gamma/gamma_sub);
 P_max__rho_max_p_gamma=P_2/rho_2^gamma;
 P_max=(P_max__rho_max^gamma/P_max__rho_max_p_gamma)^(1/gamma_sub);
 
 % calculate enthalpy correct factor
 if HIGH_HYPERSONIC_FLAG
     Cp_normal=calDahlemDuck(pi/2,1);
-    P_normal=Cp_normal*q_1+P_1;
+    P_normal=Cp_normal*q_inf+P_inf;
 else
     Cp_normal=calModifyNewton(1);
-    P_normal=Cp_normal*q_1+P_1;
+    P_normal=Cp_normal*q_inf+P_inf;
 end
 if P_normal > P_max
     P_correct=P_max/P_normal;
 else
     P_correct=1;
 end
-
-elem_num=length(element_list);
-% initialize result sort array
-% delta, Cp, P, dFn, dMn
-theta_list=zeros(elem_num,1);
-Cp_list=zeros(elem_num,1);
-P_list=zeros(elem_num,1);
-dFn_list=zeros(elem_num,3);
-dMn_list=zeros(elem_num,3);
-force_inviscid=zeros(1,3);
-moment_inviscid=zeros(1,3);
 
 % fail is angle of normal vector and free flow vector
 cos_fail_list=normal_vector_list*free_flow_vector;
@@ -122,14 +111,18 @@ theta_list=fail_list-pi/2;
 % notice cos(theta)^2 == 1-cos_fail.^2
 sin_theta_sq_list=cos_fail_list.*cos_fail_list;
 
-% Cp
+% calculate surface Cp
+Cp_list=zeros(size(theta_list));
 if HIGH_HYPERSONIC_FLAG
     Bool=theta_list < 0;
     Cp_list(Bool)=calDahlemDuck(theta_list(Bool),sin_theta_sq_list(Bool));
+
     Bool=theta_list >= 0 & theta_list < pi/6;
     Cp_list(Bool)=calTangentWedge(theta_list(Bool),sin_theta_sq_list(Bool));
-    Bool=theta_list >= pi & theta_list < pi/3;
+
+    Bool=theta_list >= pi/6 & theta_list < pi/3;
     Cp_list(Bool)=calTangentCone(theta_list(Bool));
+    
     Bool=theta_list >= pi/3;
     Cp_list(Bool)=calDahlemDuck(theta_list(Bool),sin_theta_sq_list(Bool));
 else
@@ -139,17 +132,18 @@ else
 end
 
 % Pressure
-P_list=q_1*Cp_list+P_1;
+P_list=q_inf*Cp_list+P_inf;
 
 % enthalpy correct
 Bool_enthalpy_correct=theta_list > 0;
 P_list(Bool_enthalpy_correct)=P_list(Bool_enthalpy_correct).*...
     (1-(1-P_correct)*sin(theta_list(Bool_enthalpy_correct)));
-Cp_list=(P_list-P_1)/q_1;
+Cp_list=(P_list-P_inf)/q_inf;
 
 dFn_list=-normal_vector_list.*area_list.*P_list;
 dMn_list=cross(center_point_list-ref_point,dFn_list);
 
+% total force
 force_inviscid=sum(dFn_list,1);
 moment_inviscid=sum(dMn_list,1);
 
@@ -159,19 +153,19 @@ rotation_matrix=[0,0,1;
     0,1,0;
     -1,0,0]';
 lift=force_inviscid*(rotation_matrix*free_flow_vector);
-Cl=lift/ref_area/q_1;
-Cd=drag/ref_area/q_1;
+Cl=lift/ref_area/q_inf;
+Cd=drag/ref_area/q_inf;
 LDratio=Cl/Cd;
 
 % calculate force coefficient
-Cx=force_inviscid(1)/ref_area/q_1;
-Cy=force_inviscid(2)/ref_area/q_1;
-Cz=force_inviscid(3)/ref_area/q_1;
+Cx=force_inviscid(1)/ref_area/q_inf;
+Cy=force_inviscid(2)/ref_area/q_inf;
+Cz=force_inviscid(3)/ref_area/q_inf;
 
 % calculate moment
-Cmx=moment_inviscid(1)/ref_area/ref_length/q_1;
-Cmy=moment_inviscid(2)/ref_area/ref_length/q_1;
-Cmz=moment_inviscid(3)/ref_area/ref_length/q_1;
+Cmx=moment_inviscid(1)/ref_area/ref_length/q_inf;
+Cmy=moment_inviscid(2)/ref_area/ref_length/q_inf;
+Cmz=moment_inviscid(3)/ref_area/ref_length/q_inf;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)
@@ -238,15 +232,15 @@ end
         % reference: NASA TP 1539 (Appendix)
         %
         sin_theta=sin(theta);
-        Ma_n=(0.87.*Ma_1-0.544).*sin_theta + 0.53;
+        Ma_n=(0.87.*Ma_inf-0.544).*sin_theta + 0.53;
         Ma_n_sq=Ma_n.^2;
         Cp=48.*Ma_n_sq.*sin_theta.^2./(23.*Ma_n_sq-5);
     end
 
     function Cp=calTangentWedgeEmpirical(theta)
         % empirical tangent wedge method
-        xx=Ma_1.*sin(theta);
-        Cp=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_1.^2);
+        xx=Ma_inf.*sin(theta);
+        Cp=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_inf.^2);
     end
 
     function Cp=calTangentWedge(theta,sin_theta_sq)
@@ -291,8 +285,8 @@ end
         % PURPOSE - Calculate pressure using tangent wedge
         % infinite Mach method add theory
         %
-        emns = 0.5.*gamma_plus.*Ma_1.*sin(theta)+exp(-0.25.*gamma_plus.*Ma_1.*sin(theta));
-        Cp =(4./gamma_plus).*(emns.^2-1)./Ma_1.^2;
+        emns = 0.5.*gamma_plus.*Ma_inf.*sin(theta)+exp(-0.25.*gamma_plus.*Ma_inf.*sin(theta));
+        Cp =(4./gamma_plus).*(emns.^2-1)./Ma_inf.^2;
     end
 
     function Cp=calDahlemDuck(theta,sin_theta_sq)
@@ -317,7 +311,7 @@ end
 
     function Cp=calPrandtlMayerFit(theta)
         theta(theta < theta_max) = theta_max;
-        Cp=-gamma_plus*theta*theta/2*(sqrt(1+(4/gamma_plus/Ma_1/theta)^2)-1);
+        Cp=-gamma_plus*theta*theta/2*(sqrt(1+(4/gamma_plus/Ma_inf/theta)^2)-1);
         Cp(theta == 0)=0;
     end
 

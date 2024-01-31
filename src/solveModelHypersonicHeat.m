@@ -185,12 +185,10 @@ for attach_idx=1:length(element_attach_list)
     % HF=0.763*Pr^-0.6*((rho_w*mu_w)/(rho_e*mu_e))^0.1*sqrt(rho_e*mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
     HF=0.763*Pr^-0.6*((rho_w*mu_w)/rho_e_mu_e)^0.1*sqrt(rho_e_mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
 
-    HF_list(elem_idx)=HF;
-    if max_heat_flux < HF
-        max_heat_flux=HF;
-    end
+    HF_list(elem_idx)=max(HF_list(elem_idx),HF);
 end
 
+max_heat_flux=max(HF_list);
 output_heat.HF_list=HF_list;
 
 user_model.output_heat=output_heat;

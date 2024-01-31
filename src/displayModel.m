@@ -3,7 +3,7 @@ function displayModel(type)
 %
 global user_model
 if nargin < 1
-    type='model';
+    type='';
 end
 
 DRAW_FACE_FLAG=1;
@@ -23,8 +23,9 @@ normal_vector_list=geometry.normal_vector_list;
 
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
-output_heat=user_model.output_heat;
+output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
+output_heat=user_model.output_heat;
 output_FEM=user_model.output_FEM;
 output_post=user_model.output_post;
 
@@ -82,20 +83,20 @@ switch type
             end
         end
         title('Streamline Length');
-    case 'rou_e'
-        data_list=output_heat.rou_e_list;
+    case 'rho_e'
+        data_list=output_boulay.rho_e_list;
         title('Edge of Boundary Layer Density');
     case 'V_e'
-        data_list=output_heat.V_e_list;
+        data_list=output_boulay.V_e_list;
         title('Edge of Boundary Layer Velocity');
     case 'miu_e'
-        data_list=output_heat.miu_e_list;
+        data_list=output_boulay.miu_e_list;
         title('Edge of Boundary Layer Viscosity');
     case 'H_e'
-        data_list=output_heat.H_e_list;
+        data_list=output_boulay.H_e_list;
         title('Edge of Boundary Layer Enthalpy ');
     case 'Re_x'
-        data_list=output_heat.Re_x_list;
+        data_list=output_boulay.Re_x_list;
         title('Surface Reynolds Number');
     case 'HF'
         data_list=output_heat.HF_list;
@@ -107,7 +108,7 @@ switch type
         figure_result.Children.set('ColorScale','log')
     case 'FEM'
         title('Deformed Shape and Surface Stress-von mises Distribution');
-    case 'model'
+    case ''
         data_list=[];
 end
 

@@ -48,55 +48,54 @@ end
 
 if DRAW_FIGURE_FLAG,displayModel();end
 
-% elem_num=length(element_list);
-% point_num=size(point_list,1);
-% % calculate normal vector of point
-% point_normal_vector_list=zeros(point_num,3); % surface_flow
-% vertex_repeat_times=zeros(point_num,1); % repeat times of vertex
-% for elem_idx=1:elem_num
-%     elem=element_list(elem_idx);
-%     Node_idx=elem.Node_idx;
-%     area=area_list(elem_idx);
-%     normal_vector=normal_vector_list(elem_idx,:);
-% 
-%     % add data to each point
-%     point_normal_vector_list(Node_idx,:)=...
-%         point_normal_vector_list(Node_idx,:)+normal_vector*area;
-%     vertex_repeat_times(Node_idx)=...
-%         vertex_repeat_times(Node_idx)+1;
-% end
-% % identify which point of element on symmetry face
-% % add symmetry velocity to point
-% % (velocity identify_dimension set to zero)
-% Bool_sym=abs(point_list(:,identify_dimension)) <= geometry_torlance;
-% point_normal_vector_list(Bool_sym,identify_dimension)=0;
-% point_normal_vector_list=point_normal_vector_list./vecnorm(point_normal_vector_list,2,2);
-
-% calculate surface velocity of each element
-dot_nor_vec=normal_vector_list*free_flow_vector;
-elem_flow_list=(free_flow_vector'-normal_vector_list.*dot_nor_vec);
-
-% % calculate surface velocity of each point
-% point_dot_nor_vec=point_normal_vector_list*free_flow_vector;
-% point_flow_list=(free_flow_vector'-point_normal_vector_list.*point_dot_nor_vec);
-
 elem_num=length(element_list);
 point_num=size(point_list,1);
+
 % calculate normal vector of point
-point_flow_list=zeros(point_num,3); % surface_flow
-area_sum_list=zeros(point_num,1); % repeat times of vertex
+% using angle contribute method
+angle_list=cell(elem_num,1);
 for elem_idx=1:elem_num
     elem=element_list(elem_idx);
     Node_idx=elem.Node_idx;
-    area=area_list(elem_idx);
-    elem_flow=elem_flow_list(elem_idx,:);
+    node_num=elem.node_num;
 
-    if norm(elem_flow) > geometry_torlance
-        % add data to each point
-        point_flow_list(Node_idx,:)=...
-            point_flow_list(Node_idx,:)+elem_flow*area;
-        area_sum_list(Node_idx)=...
-            area_sum_list(Node_idx)+area;
+    edge_list=zeros(node_num,3);
+    for node_idx=1:node_num
+        point_base=point_list(Node_idx(node_idx),:);
+        if node_idx == node_num
+            point_ref=point_list(Node_idx(1),:);
+        else
+            point_ref=point_list(Node_idx(node_idx+1),:);
+        end
+        edge_list(node_idx,:)=point_ref-point_base;
+    end
+    edge_list=edge_list./vecnorm(edge_list,2,2);
+
+    angle=zeros(1,node_num);
+    for node_idx=1:node_num
+        edge_base=edge_list(node_idx,:);
+        if node_idx == 1
+            edge_ref=edge_list(node_num,:);
+        else
+            edge_ref=edge_list(node_idx-1,:);
+        end
+
+        angle(node_idx)=acos(-edge_base*edge_ref');
+    end
+
+    angle_list{elem_idx}=angle;
+end
+
+point_normal_vector_list=zeros(point_num,3); % surface_flow
+for elem_idx=1:elem_num
+    elem=element_list(elem_idx);
+    Node_idx=elem.Node_idx;
+    node_num=elem.node_num;
+    angle=angle_list{elem_idx};
+
+    for node_idx=1:node_num
+        point_idx=Node_idx(node_idx);
+        point_normal_vector_list(point_idx,:)=point_normal_vector_list(point_idx,:)+normal_vector_list(elem_idx,:).*angle(node_idx);
     end
 end
 % identify which point of element on symmetry face
@@ -104,10 +103,45 @@ end
 % (velocity identify_dimension set to zero)
 if ~isempty(SYMMETRY)
     Bool_sym=abs(point_list(:,identify_dimension)) <= geometry_torlance;
-    point_flow_list(Bool_sym,identify_dimension)=0;
+    point_normal_vector_list(Bool_sym,identify_dimension)=0;
 end
-area_sum_list(area_sum_list == 0)=1;
-point_flow_list=point_flow_list./area_sum_list;
+point_normal_vector_list=point_normal_vector_list./vecnorm(point_normal_vector_list,2,2);
+
+% calculate surface velocity of each element
+dot_nor_vec=normal_vector_list*free_flow_vector;
+elem_flow_list=(free_flow_vector'-normal_vector_list.*dot_nor_vec);
+
+% calculate surface velocity of each point
+point_dot_nor_vec=point_normal_vector_list*free_flow_vector;
+point_flow_list=(free_flow_vector'-point_normal_vector_list.*point_dot_nor_vec);
+
+% % calculate surface flow of point
+% % using angle contribute method
+% point_flow_list=zeros(point_num,3); % surface_flow
+% area_sum_list=zeros(point_num,1); % repeat times of vertex
+% for elem_idx=1:elem_num
+%     elem=element_list(elem_idx);
+%     Node_idx=elem.Node_idx;
+%     area=area_list(elem_idx);
+%     elem_flow=elem_flow_list(elem_idx,:);
+% 
+%     if norm(elem_flow) > geometry_torlance
+%         % add data to each point
+%         point_flow_list(Node_idx,:)=...
+%             point_flow_list(Node_idx,:)+elem_flow*area;
+%         area_sum_list(Node_idx)=...
+%             area_sum_list(Node_idx)+area;
+%     end
+% end
+% % identify which point of element on symmetry face
+% % add symmetry velocity to point
+% % (velocity identify_dimension set to zero)
+% if ~isempty(SYMMETRY)
+%     Bool_sym=abs(point_list(:,identify_dimension)) <= geometry_torlance;
+%     point_flow_list(Bool_sym,identify_dimension)=0;
+% end
+% area_sum_list(area_sum_list == 0)=1;
+% point_flow_list=point_flow_list./area_sum_list;
 
 % record
 user_model.output_post.surface_flow_list=point_flow_list;
@@ -138,10 +172,9 @@ for elem_idx=1:elem_num
     if dot(normal_vector,free_flow_vector) < 0 % only upwind element
         [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,node_list,node_flow_list);
         if cross_flag
+            if DRAW_FIGURE_FLAG,hold on;patch('Faces',[1,2,3],'Vertices',point_list(Node_idx,:),'FaceColor','green','FaceAlpha',0.5);end
             elem_attach_list=[elem_attach_list,elem_idx];
             bool_attach_list(elem_idx)=true(1);
-
-            if DRAW_FIGURE_FLAG,hold on;patch('Faces',[1,2,3],'Vertices',point_list(Node_idx,:),'FaceColor','green','FaceAlpha',0.5);end
         end
     end
 end
