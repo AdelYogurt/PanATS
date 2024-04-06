@@ -5,29 +5,34 @@ close all hidden;
 addpath([pwd,'\cfg']);
 addpath([pwd,'\input']);
 addpath([pwd,'\mesh']);
-addpath([pwd,'\src']);
+addpath([pwd,'\src_base']);
+addpath([pwd,'\src_geo']);
+addpath([pwd,'\src_solver']);
 
 global user_model
 
-% user_model=preModelCFG('slender.cfg');
-% user_model=preModelCFG('blunt_cone.cfg');
-% user_model=preModelCFG('INP_plate.cfg');
-% user_model=preModelCFG('WWD.cfg');
-% user_model=preModelCFG('hermes.cfg'); 
-% user_model=preModelCFG('waverider.cfg'); 
-% user_model=preModelCFG('sanger.cfg'); 
+config=PanATSConfig('slender.cfg');
+% config=PanATSConfig('blunt_cone.cfg');
+% config=PanATSConfig('INP_plate.cfg');
+% config=PanATSConfig('WWD.cfg');
+% config=PanATSConfig('hermes.cfg'); 
+% config=PanATSConfig('waverider.cfg'); 
+% config=PanATSConfig('sanger.cfg')
+% config=PanATSConfig('HL20.cfg');
+preModelPanel(config);
 
-% preModelPanel();
-% [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid();
-% [max_streamline_len]=solveModelStreamline();
-% solveModelBoundaryLayer();
-% [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicViscid();
-% [max_heat_flux]=solveModelHypersonicHeat();
-% [area,volume]=solveGeometry();
+[area,area_x,area_y,area_z,volume]=solveGeometry();
 
-% displayModel('Cp')
+% inviscid
+[CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz]=solveModelHypersonicInviscid();
+
+% viscid
+[max_streamline_len]=solveModelStreamline();
+solveModelBoundaryLayer();
+[CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz]=solveModelHypersonicViscid();
+[max_heat_flux]=solveModelHypersonicHeat();
+
+displayModel('Cp')
 % displayModel('SL')
 % displayModel('HF')
 % displayModel('Cf')
-
-

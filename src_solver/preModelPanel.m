@@ -1,4 +1,4 @@
-function preModelPanel()
+function preModelPanel(config)
 % prepare model for panel method
 % calculate geometry properties of element
 %
@@ -7,72 +7,102 @@ function preModelPanel()
 %
 % copyright Adel 2023.03
 %
+
 global user_model
 
+config=config.data_dict;
+user_model.config=config;
+
+% initialize model
+user_model.geometry=[];
+user_model.vertex_list=[];
+user_model.element_list=[];
+user_model.marker_list=[];
+
+user_model.output_inviscid=[];
+user_model.output_streamline=[];
+user_model.output_boulay=[];
+user_model.output_viscid=[];
+user_model.output_heat=[];
+user_model.output_FEM=[];
+user_model.output_post=[];
+
 % load mesh data
-switch user_model.MESH_FORMAT
-    case 'SU2'
-        % only need marker infomation
-        mesh_data=readMeshSU2(user_model.MESH_FILENAME,user_model.MESH_SCALE,false(1),true(1));
-    case 'STL'
-        mesh_filestr_list=user_model.MESH_FILENAME;
-        if ischar(mesh_filestr_list)
-            mesh_filestr_list={mesh_filestr_list};
-        end
-        mesh_data=struct();
-        marker_moniter=cell(length(mesh_filestr_list),1);
+if ~isfield(user_model,'mesh_data') || isempty(user_model.mesh_data)
+    switch config.MESH_FORMAT
+        case 'SU2'
+            % only need marker infomation
+            mesh_data=readMeshSU2(config.MESH_FILENAME,config.MESH_SCALE,false(1),true(1));
+        case 'STL'
+            mesh_filestr_list=config.MESH_FILENAME;
+            if ischar(mesh_filestr_list)
+                mesh_filestr_list={mesh_filestr_list};
+            end
+            mesh_data=struct();
+            marker_moniter=cell(length(mesh_filestr_list),1);
 
-        for file_index=1:length(mesh_filestr_list)
-            mesh_filestr=mesh_filestr_list{file_index};
-            mesh_data_new=readMeshSTL(mesh_filestr,user_model.MESH_SCALE,user_model.MESH_ENCODE);
-            marker_name=fieldnames(mesh_data_new);marker_name=marker_name{1};
-            marker_moniter{file_index}=marker_name;
-            mesh_data.(marker_name)=mesh_data_new.(marker_name);
-        end
-        
-        % convert STL format into mesh format
-        mesh_data=convertSTLToMesh(mesh_data);
+            for file_index=1:length(mesh_filestr_list)
+                mesh_filestr=mesh_filestr_list{file_index};
+                mesh_data_new=readMeshSTL(mesh_filestr,config.MESH_SCALE,config.MESH_ENCODE);
+                mkr_name=fieldnames(mesh_data_new);mkr_name=mkr_name{1};
+                marker_moniter{file_index}=mkr_name;
+                mesh_data.(mkr_name)=mesh_data_new.(mkr_name);
+            end
 
-        % for STL file, if MARKER_MONITORING than will analysis all file
-        if ~isfield(user_model,'MARKER_MONITORING')
-            user_model.MARKER_MONITORING=marker_moniter;
-        end
-    case 'INP'
-        % read SU2 format mesh data into mesh format
-        mesh_data=readMeshINP(user_model.MESH_FILENAME,user_model.MESH_SCALE);
-    case 'WGS'
-        mesh_data=readMeshWGS(user_model.MESH_FILENAME,user_model.MESH_SCALE);
+            % convert STL format into mesh format
+            mesh_data=convertSTLToMesh(mesh_data);
 
-        % convert LaWGS format into mesh format
-        mesh_data=convertWGSToMesh(mesh_data);
-    case 'CGNS'
-        mesh_data=readMeshCGNS(user_model.MESH_FILENAME,user_model.MESH_SCALE);
+            % for STL file, if MARKER_MONITORING than will analysis all file
+            if ~isfield(config,'MARKER_MONITORING')
+                config.MARKER_MONITORING=marker_moniter;
+            end
+        case 'INP'
+            % read SU2 format mesh data into mesh format
+            mesh_data=readMeshINP(config.MESH_FILENAME,config.MESH_SCALE);
+        case 'WGS'
+            mesh_data=readMeshWGS(config.MESH_FILENAME,config.MESH_SCALE);
+
+            % convert LaWGS format into mesh format
+            mesh_data=convertWGSToMesh(mesh_data);
+        case 'CGNS'
+            mesh_data=readMeshCGNS(config.MESH_FILENAME,config.MESH_SCALE);
+    end
+else
+    mesh_data=user_model.mesh_data;
+    switch config.MESH_FORMAT
+        case 'WGS'
+            % convert LaWGS format into mesh format
+            mesh_data=convertWGSToMesh(mesh_data);
+        case 'STL'
+            % convert STL format into mesh format
+            mesh_data=convertSTLToMesh(mesh_data);
+    end
 end
 
 % process marker monitoring
-if ~isfield(user_model,'MARKER_MONITORING')
-    user_model.MARKER_MONITORING=[];
+if ~isfield(config,'MARKER_MONITORING')
+    config.MARKER_MONITORING=[];
 else
-    if isnumeric(user_model.MARKER_MONITORING)
-        if user_model.MARKER_MONITORING == 0
-            user_model.MARKER_MONITORING=[];
-        else
-            error('preModelPanel: marker moniter can not be number other than 0');
+    if isnumeric(config.MARKER_MONITORING)
+        if config.MARKER_MONITORING == 0
+            config.MARKER_MONITORING=[];
+%         else
+%             error('preModelPanel: marker moniter can not be number other than 0');
         end
     end
     
-    if ischar(user_model.MARKER_MONITORING)
-        user_model.MARKER_MONITORING={user_model.MARKER_MONITORING};
+    if ischar(config.MARKER_MONITORING)
+        config.MARKER_MONITORING={config.MARKER_MONITORING};
     end
 
     % check MARKER_MONITORING if exist in mesh data
-    for marker_moniter_idx=1:length(user_model.MARKER_MONITORING)
-        marker_moniter=user_model.MARKER_MONITORING{marker_moniter_idx};
+    for marker_moniter_idx=1:length(config.MARKER_MONITORING)
+        marker_moniter=config.MARKER_MONITORING{marker_moniter_idx};
         exist_flag=0;
         mesh_marker=fieldnames(mesh_data);
-        for marker_idx=1:length(mesh_marker)
-            if strcmp(mesh_marker{marker_idx},marker_moniter) &&...
-                    ~strcmp(mesh_marker{marker_idx},'geometry')
+        for mkr_idx=1:length(mesh_marker)
+            if strcmp(mesh_marker{mkr_idx},marker_moniter) &&...
+                    ~strcmp(mesh_marker{mkr_idx},'geometry')
                 exist_flag=1;
                 break;
             end
@@ -85,7 +115,7 @@ else
 end
 
 % convert mesh_data to vertex_list
-[element_list,marker_list]=preModelMesh(mesh_data,user_model.MARKER_MONITORING);
+[element_list,marker_list]=preModelMesh(mesh_data,config.MARKER_MONITORING);
 geometry=mesh_data.geometry;
 
 point_list=geometry.point_list;

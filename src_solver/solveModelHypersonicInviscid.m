@@ -1,37 +1,36 @@
-function [Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz]=solveModelHypersonicInviscid()
+function [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz]=solveModelHypersonicInviscid()
 % base on Newton method and etc to calculate pressure of surface element
 %
 % copyright Adel 2023.03
 %
 global user_model
 
+config=user_model.config;
 geometry=user_model.geometry;
-
-dimension=geometry.dimension;
-point_list=geometry.point_list;
 element_list=user_model.element_list;
-
-SYMMETRY=user_model.SYMMETRY;
+SYMMETRY=config.SYMMETRY;
 
 % load geometry
+dimension=geometry.dimension;
+point_list=geometry.point_list;
 center_point_list=geometry.center_point_list;
 area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
 % calculate inflow vector
-free_flow_vector=calFreeFlowDirection(user_model.AOA,user_model.SIDESLIP_ANGLE);
-user_model.free_flow_vector=free_flow_vector;
+free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
 
 % reference value
-ref_point=[user_model.REF_ORIGIN_MOMENT_X,user_model.REF_ORIGIN_MOMENT_Y,user_model.REF_ORIGIN_MOMENT_Z];
-ref_area=user_model.REF_AREA;
-ref_length=user_model.REF_LENGTH;
+ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
+ref_area=config.REF_AREA;
+ref_length=config.REF_LENGTH;
 
-T_inf=user_model.FREESTREAM_TEMPERATURE;
-P_inf=user_model.FREESTREAM_PRESSURE;
-Ma_inf=user_model.MACH_NUMBER;
-gamma=user_model.GAMMA_VALUE;
-Re_inf=user_model.REYNOLDS_NUMBER;
+% inflow condition
+T_inf=config.FREESTREAM_TEMPERATURE;
+P_inf=config.FREESTREAM_PRESSURE;
+Ma_inf=config.MACH_NUMBER;
+gamma=config.GAMMA_VALUE;
+% Re_inf=config.REYNOLDS_NUMBER;
 
 R=287.0955;
 rho_inf=P_inf/R/T_inf;
@@ -153,35 +152,35 @@ rotation_matrix=[0,0,1;
     0,1,0;
     -1,0,0]';
 lift=force_inviscid*(rotation_matrix*free_flow_vector);
-Cl=lift/ref_area/q_inf;
-Cd=drag/ref_area/q_inf;
-LDratio=Cl/Cd;
+CL=lift/ref_area/q_inf;
+CD=drag/ref_area/q_inf;
+CEff=CL/CD;
 
 % calculate force coefficient
-Cx=force_inviscid(1)/ref_area/q_inf;
-Cy=force_inviscid(2)/ref_area/q_inf;
-Cz=force_inviscid(3)/ref_area/q_inf;
+CFx=force_inviscid(1)/ref_area/q_inf;
+CFy=force_inviscid(2)/ref_area/q_inf;
+CFz=force_inviscid(3)/ref_area/q_inf;
 
 % calculate moment
-Cmx=moment_inviscid(1)/ref_area/ref_length/q_inf;
-Cmy=moment_inviscid(2)/ref_area/ref_length/q_inf;
-Cmz=moment_inviscid(3)/ref_area/ref_length/q_inf;
+CMx=moment_inviscid(1)/ref_area/ref_length/q_inf;
+CMy=moment_inviscid(2)/ref_area/ref_length/q_inf;
+CMz=moment_inviscid(3)/ref_area/ref_length/q_inf;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)
-    switch user_model.SYMMETRY
+    switch config.SYMMETRY
         case 'XOY'
-            Cz=0;
-            Cmx=0;
-            Cmy=0;
+            CFz=0;
+            CMx=0;
+            CMy=0;
         case 'YOZ'
-            Cx=0;
-            Cmy=0;
-            Cmz=0;
+            CFx=0;
+            CMy=0;
+            CMz=0;
         case 'ZOX'
-            Cy=0;
-            Cmz=0;
-            Cmx=0;
+            CFy=0;
+            CMz=0;
+            CMx=0;
         otherwise
             error('solveModelHypersonicInviscid: nuknown SYMMETRY type');
     end
@@ -197,11 +196,11 @@ output_inviscid.moment_inviscid=moment_inviscid;
 
 user_model.output_inviscid=output_inviscid;
 
-if user_model.INFORMATION
+if config.INFORMATION
     fprintf('solveModelHypersonicInviscid: hypersonic inviscid solve done!\n');
     fprintf('solveModelHypersonicInviscid: result\n');
-    fprintf('Cl:  %14f, Cd:  %14f, L/D: %14f\nCx:  %14f, Cy:  %14f, Cz:  %14f\nCmx: %14f, Cmy: %14f, Cmz: %14f\n',...
-        Cl,Cd,LDratio,Cx,Cy,Cz,Cmx,Cmy,Cmz)
+    fprintf('CL:  %14f, CD:  %14f, CEff: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\n',...
+        [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz])
 end
 
     function Cp=calDejarnetle(theta)

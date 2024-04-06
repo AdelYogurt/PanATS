@@ -3,7 +3,7 @@ function [draw_coord,draw_data]=getSYMdata(data_list)
 %
 global user_model
 
-geometry_torlance=1e-6;
+geom_torl=1e-6;
 
 geometry=user_model.geometry;
 
@@ -26,24 +26,24 @@ switch user_model.SYMMETRY
 end
 
 % load marker point
-marker_idx=zeros(size(point_list,1));
+mkr_idx=zeros(size(point_list,1));
 marker_point_num=0;
 for elem_idx=1:length(element_list)
     Node_idx=element_list(elem_idx).Node_idx;
     node_num=element_list(elem_idx).node_num;
-    marker_idx(marker_point_num+(1:node_num))=Node_idx;
+    mkr_idx(marker_point_num+(1:node_num))=Node_idx;
     marker_point_num=marker_point_num+node_num;
 end
-marker_idx=unique(marker_idx(1:marker_point_num));
+mkr_idx=unique(mkr_idx(1:marker_point_num));
 
-point_list=point_list(marker_idx,:);
-data_list=data_list(marker_idx,:);
+point_list=point_list(mkr_idx,:);
+data_list=data_list(mkr_idx,:);
 
 draw_coord=zeros(size(point_list,1),2);
 draw_data=zeros(size(point_list,1),1);
 sym_index=1;
 for point_index=1:size(point_list,1)
-   if abs(point_list(point_index,identify_dimension)) < geometry_torlance
+   if abs(point_list(point_index,identify_dimension)) < geom_torl
        draw_coord(sym_index,:)=point_list(point_index,record_dimension);
        draw_data(sym_index)=data_list(point_index);
        sym_index=sym_index+1;

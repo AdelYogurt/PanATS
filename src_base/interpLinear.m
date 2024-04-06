@@ -15,14 +15,15 @@ for x_idx=1:length(X_pred)
     end
 
     if (idx == num)
-        % out interp
+        % outer interpolation
         Y_pred(x_idx,:)=(Y(num,:)-Y(num-1,:))/(X(num)-X(num-1))*(x_pred-X(num))+Y(num,:);
         X_pred_idx(x_idx)=idx;
     elseif (idx == 0)
+        % outer interpolation
         Y_pred(x_idx,:)=(Y(2,:)-Y(1,:))/(X(2)-X(1))*(x_pred-X(1))+Y(1,:);
         X_pred_idx(x_idx)=idx;
     else
-        % linear interpolation
+        % inner interpolation
         Y_pred(x_idx,:)=Y(idx,:)+...
             (Y(idx+1,:)-Y(idx,:))*...
             (x_pred-X(idx,:))/...

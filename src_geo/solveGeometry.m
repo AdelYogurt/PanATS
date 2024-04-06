@@ -5,15 +5,14 @@ function [area,area_x,area_y,area_z,volume]=solveGeometry()
 %
 global user_model
 
+config=user_model.config;
 geometry=user_model.geometry;
-
-dimension=geometry.dimension;
-point_list=geometry.point_list;
 element_list=user_model.element_list;
-
-SYMMETRY=user_model.SYMMETRY;
+SYMMETRY=config.SYMMETRY;
 
 % load geometry
+dimension=geometry.dimension;
+point_list=geometry.point_list;
 area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
