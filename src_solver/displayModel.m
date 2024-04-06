@@ -1,30 +1,34 @@
-function displayModel(type)
+function displayModel(type,full_salce)
 % display model
 %
 global user_model
-if nargin < 1
-    type='model';
+if nargin < 2
+    full_salce=[];
+    if nargin < 1
+        type='';
+    end
 end
 
-DRAW_FACE_FLAG=1;
-DRAW_SYM_FLAG=1;
+if isempty(full_salce), full_salce=false();end
 
+config=user_model.config;
 geometry=user_model.geometry;
 element_list=user_model.element_list;
-SYMMETRY=user_model.SYMMETRY;
-
-dimension=geometry.dimension;
-point_list=geometry.point_list;
+SYMMETRY=config.SYMMETRY;
 
 % load geometry
+dimension=geometry.dimension;
+point_list=geometry.point_list;
 center_point_list=geometry.center_point_list;
 area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
+% load calculate result
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
-output_heat=user_model.output_heat;
+output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
+output_heat=user_model.output_heat;
 output_FEM=user_model.output_FEM;
 output_post=user_model.output_post;
 
@@ -51,8 +55,8 @@ switch type
         for SL_index=[1,6:length(SL_list)]
             streamline=SL_list{SL_index};
             line(streamline(:,1),streamline(:,2),streamline(:,3),'Color','r');
-            if DRAW_SYM_FLAG
-                switch user_model.SYMMETRY
+            if full_salce
+                switch config.SYMMETRY
                     case 'XOY'
                         line(streamline(:,1),streamline(:,2),-streamline(:,3),'Color','r');
                     case 'YOZ'
@@ -70,8 +74,8 @@ switch type
             draw_index_list=[draw_index_list,draw_index_list(1)];
 
             line(point_list(draw_index_list,1),point_list(draw_index_list,2),point_list(draw_index_list,3),'Color','r');
-            if DRAW_SYM_FLAG
-                switch user_model.SYMMETRY
+            if full_salce
+                switch config.SYMMETRY
                     case 'XOY'
                         line(point_list(draw_index_list,1),point_list(draw_index_list,2),-point_list(draw_index_list,3),'Color','r');
                     case 'YOZ'
@@ -82,20 +86,20 @@ switch type
             end
         end
         title('Streamline Length');
-    case 'rou_e'
-        data_list=output_heat.rou_e_list;
+    case 'rho_e'
+        data_list=output_boulay.rho_e_list;
         title('Edge of Boundary Layer Density');
     case 'V_e'
-        data_list=output_heat.V_e_list;
+        data_list=output_boulay.V_e_list;
         title('Edge of Boundary Layer Velocity');
     case 'miu_e'
-        data_list=output_heat.miu_e_list;
+        data_list=output_boulay.miu_e_list;
         title('Edge of Boundary Layer Viscosity');
     case 'H_e'
-        data_list=output_heat.H_e_list;
+        data_list=output_boulay.H_e_list;
         title('Edge of Boundary Layer Enthalpy ');
     case 'Re_x'
-        data_list=output_heat.Re_x_list;
+        data_list=output_boulay.Re_x_list;
         title('Surface Reynolds Number');
     case 'HF'
         data_list=output_heat.HF_list;
@@ -107,49 +111,48 @@ switch type
         figure_result.Children.set('ColorScale','log')
     case 'FEM'
         title('Deformed Shape and Surface Stress-von mises Distribution');
-    case 'model'
+    case ''
+        data_list=[];
+    otherwise
         data_list=[];
 end
 
-if DRAW_FACE_FLAG
-    elem_num=length(element_list);
-    Elem_idx=zeros(elem_num,3);
-    for elem_idx=1:elem_num
-        elem=element_list(elem_idx);
-        Node_idx=elem.Node_idx;
-        if size(Elem_idx,2) < elem.node_num
-            Elem_idx=[Elem_idx,nan(elem_num,elem.node_num-size(Elem_idx,2))];
-        end
-        Elem_idx(elem_idx,:)=Node_idx;
+% convert CGNS mesh data structure to matlab mesh data struct
+elem_num=length(element_list);
+Elem_idx=zeros(elem_num,3);
+for elem_idx=1:elem_num
+    elem=element_list(elem_idx);
+    Node_idx=elem.Node_idx;
+    if size(Elem_idx,2) < elem.node_num
+        Elem_idx=[Elem_idx,nan(elem_num,elem.node_num-size(Elem_idx,2))];
     end
+    Elem_idx(elem_idx,:)=Node_idx;
+end
 
-    if isempty(data_list)
-        patch('Faces',Elem_idx,'Vertices',point_list,'FaceColor','none')
-    else
-        patch('CData',data_list,'FaceColor','flat','Faces',Elem_idx,'Vertices',point_list,'EdgeColor','none')
-        colorbar;
-    end
-
-    if DRAW_SYM_FLAG
-        if ~isempty(SYMMETRY)
-            point_list_sym=point_list;
-            switch SYMMETRY
-                case 'XOY'
-                    point_list_sym(:,3)=-point_list_sym(:,3);
-                case 'YOZ'
-                    point_list_sym(:,1)=-point_list_sym(:,1);
-                case 'ZOX'
-                    point_list_sym(:,2)=-point_list_sym(:,2);
-            end
-            if isempty(data_list)
-                patch('Faces',Elem_idx,'Vertices',point_list_sym,'FaceColor','none')
-            else
-                patch('CData',data_list,'FaceColor','flat','Faces',Elem_idx,'Vertices',point_list_sym,'EdgeColor','none')
-            end
-        end
-    end
+if isempty(data_list)
+    patch('Faces',Elem_idx,'Vertices',point_list,'FaceColor','none')
 else
+    patch('CData',data_list,'FaceColor','flat','Faces',Elem_idx,'Vertices',point_list,'EdgeColor','none')
+    colorbar;
+end
 
+if full_salce
+    if ~isempty(SYMMETRY)
+        point_list_sym=point_list;
+        switch SYMMETRY
+            case 'XOY'
+                point_list_sym(:,3)=-point_list_sym(:,3);
+            case 'YOZ'
+                point_list_sym(:,1)=-point_list_sym(:,1);
+            case 'ZOX'
+                point_list_sym(:,2)=-point_list_sym(:,2);
+        end
+        if isempty(data_list)
+            patch('Faces',Elem_idx,'Vertices',point_list_sym,'FaceColor','none')
+        else
+            patch('CData',data_list,'FaceColor','flat','Faces',Elem_idx,'Vertices',point_list_sym,'EdgeColor','none')
+        end
+    end
 end
 
 axis equal;

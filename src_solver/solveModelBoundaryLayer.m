@@ -8,28 +8,25 @@ function solveModelBoundaryLayer()
 %
 global user_model
 
+config=user_model.config;
 geometry=user_model.geometry;
+element_list=user_model.element_list;
+SYMMETRY=config.SYMMETRY;
 
+% load geometry
 dimension=geometry.dimension;
 point_list=geometry.point_list;
-element_list=user_model.element_list;
-
-SYMMETRY=user_model.SYMMETRY;
 
 % heat calculate need inviscid and streamline result
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
 
-% calculate inflow vector
-free_flow_vector=calFreeFlowDirection(user_model.AOA,user_model.SIDESLIP_ANGLE);
-user_model.free_flow_vector=free_flow_vector;
-
-T_1=user_model.FREESTREAM_TEMPERATURE;
-P_1=user_model.FREESTREAM_PRESSURE;
-Ma_1=user_model.MACH_NUMBER;
-gamma=user_model.GAMMA_VALUE;
-Re=user_model.REYNOLDS_NUMBER;
-T_w=user_model.MARKER_ISOTHERMAL;
+T_1=config.FREESTREAM_TEMPERATURE;
+P_1=config.FREESTREAM_PRESSURE;
+Ma_1=config.MACH_NUMBER;
+gamma=config.GAMMA_VALUE;
+% Re=config.REYNOLDS_NUMBER;
+T_w=config.MARKER_ISOTHERMAL;
 
 % load data from inviscid and streamline result
 theta_list=output_inviscid.theta_list;
@@ -99,8 +96,6 @@ for elem_idx=1:elem_num
         (Ma_1,T_1,P_1,rho_1,V_1,gamma,P_e,H_0,theta,...
         gamma_sub,gamma_plus);
 
-    % V_e=sqrt(sum((V_1*element.surface_flow).^2));
-
     % local Reynolds number
     Re_x=rho_e*V_e*streamline_len/mu_e;
 
@@ -152,7 +147,7 @@ output_boulay.Re_x_ref_list=Re_x_ref_list;
 
 user_model.output_boulay=output_boulay;
 
-if user_model.INFORMATION
+if config.INFORMATION
     fprintf('solveModelBoundaryLayer: boundary layer parameter solve done!\n');
 end
 
@@ -209,8 +204,8 @@ mu_e=airViscosity(H_e);
             beta=asin(sqrt(functionBetaTheta(gamma,Ma_1,theta)));
             beta=beta(2);
             if ~isreal(beta)
-                %                 beta=real(beta);
-                beta=pi/2;
+                beta=real(beta);
+                % beta=pi/2;
             end
         end
 

@@ -2,7 +2,7 @@ function [streamline,line_len,cross_idx]=calStreamline(elem_idx,...
     point_list,element_list,boolean_attach_list,elem_flow_list,normal_vector_list)
 % calculate streamline from point_start and element
 %
-geometry_torlance=1e-9;
+geom_torl=1e-9;
 
 elem_num=length(element_list);
 max_size=elem_num;
@@ -26,7 +26,7 @@ while elem_idx ~= 0 && data_idx <= max_size/2
     elem_flow=-elem_flow_list(elem_idx,:);
     normal_vector=normal_vector_list(elem_idx,:);
     norm_elem_flow=norm(elem_flow);
-    if norm_elem_flow <= geometry_torlance % end in no flow element
+    if norm_elem_flow <= geom_torl % end in no flow element
         break;
     end
     elem_flow=elem_flow/norm_elem_flow;
@@ -34,8 +34,8 @@ while elem_idx ~= 0 && data_idx <= max_size/2
 
     % serach flow upwind end point
     [point_end,node_idx,d_len]=calElementCross...
-        (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
-    if d_len < geometry_torlance % try upwind by node point
+        (point_start,node_list,node_num,normal_vector,elem_flow,geom_torl);
+    if d_len < geom_torl % try upwind by node point
         proj_direct=(node_list-point_start)*elem_flow';
         [proj_direct_max,node_max_idx]=max(proj_direct);node_max_idx=node_max_idx(1);
         if proj_direct_max > 0
@@ -44,7 +44,7 @@ while elem_idx ~= 0 && data_idx <= max_size/2
         end
     end
 
-    if d_len < geometry_torlance
+    if d_len < geom_torl
         % cannot find upwind end point, stop
         break;
     end
@@ -63,7 +63,7 @@ while elem_idx ~= 0 && data_idx <= max_size/2
    
     % search next element
     % check if is point_start overlap node list
-    node_overlap_idx=find(vecnorm(node_list-point_end,2,2) < geometry_torlance,1);
+    node_overlap_idx=find(vecnorm(node_list-point_end,2,2) < geom_torl,1);
     if ~isempty(node_overlap_idx)
         % if overlap, we need to find next element that can upwind
         [Elem_arou,Vertex_arou]=getAroundElement(element_list,elem_idx,node_overlap_idx);
@@ -108,7 +108,7 @@ while elem_idx ~= 0 && data_idx <= max_size
     elem_flow=elem_flow_list(elem_idx,:);
     normal_vector=normal_vector_list(elem_idx,:);
     norm_elem_flow=norm(elem_flow);
-    if norm_elem_flow <= geometry_torlance % end in no flow element
+    if norm_elem_flow <= geom_torl % end in no flow element
         break;
     end
     elem_flow=elem_flow/norm_elem_flow;
@@ -116,11 +116,11 @@ while elem_idx ~= 0 && data_idx <= max_size
 
     % calculate next cross point
     [point_end,node_idx,d_len]=calElementCross...
-        (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
+        (point_start,node_list,node_num,normal_vector,elem_flow,geom_torl);
 
-    if d_len < geometry_torlance
+    if d_len < geom_torl
         % check whether point_start local near node point cause
-        Bool_overlap=vecnorm(point_start-node_list,2,2) < geometry_torlance;
+        Bool_overlap=vecnorm(point_start-node_list,2,2) < geom_torl;
         if any(Bool_overlap)
             % if yes, search element that can continue search
             elem_idx_origin=elem_idx;
@@ -136,16 +136,16 @@ while elem_idx ~= 0 && data_idx <= max_size
                 elem_flow=elem_flow_list(elem_idx,:);
                 normal_vector=normal_vector_list(elem_idx,:);
                 norm_elem_flow=norm(elem_flow);
-                if norm_elem_flow <= geometry_torlance % end in no flow element
+                if norm_elem_flow <= geom_torl % end in no flow element
                     break;
                 end
                 elem_flow=elem_flow/norm_elem_flow;
                 node_list=point_list(Node_idx,:);
 
                 [point_end,node_idx,d_len]=calElementCross...
-                    (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance);
+                    (point_start,node_list,node_num,normal_vector,elem_flow,geom_torl);
 
-                if d_len >= geometry_torlance
+                if d_len >= geom_torl
                     % next element found, contiune searching
                     break;
                 else
@@ -186,7 +186,7 @@ cross_idx=cross_idx(1:data_idx);
 end
 
 function [point_end,node_idx,d_len]=calElementCross...
-    (point_start,node_list,node_num,normal_vector,elem_flow,geometry_torlance)
+    (point_start,node_list,node_num,normal_vector,elem_flow,geom_torl)
 % calculate next cross point
 %
 
@@ -210,8 +210,8 @@ for node_base_idx=1:node_num
     vertex_base_y=proj_node_list(node_base_idx,2);
     vertex_ref_y=proj_node_list(node_ref_idx,2);
 
-    if (vertex_base_y <= geometry_torlance && vertex_ref_y >= -geometry_torlance) ||...
-            (vertex_base_y >= -geometry_torlance && vertex_ref_y <= geometry_torlance)
+    if (vertex_base_y <= geom_torl && vertex_ref_y >= -geom_torl) ||...
+            (vertex_base_y >= -geom_torl && vertex_ref_y <= geom_torl)
         if vertex_base_y == vertex_ref_y
             if vertex_ref_x > point_end(1)
                 point_end=[vertex_ref_x,0,0];

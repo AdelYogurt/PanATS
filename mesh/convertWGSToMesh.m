@@ -14,7 +14,7 @@ if nargin < 2 || isempty(remove_redundance)
     remove_redundance=true(1);
 end
 if nargin < 3 || isempty(geometry_torlance)
-    geometry_torlance=1e-12;
+    geometry_torlance=1e-6;
 end
 
 marker_name_list=fieldnames(mesh_data);

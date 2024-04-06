@@ -5,7 +5,7 @@ function [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,node_list,no
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].
 %
-precision_torlance=100*eps;
+precision_torlance=eps;
 topology_torlance=1e-2;
 
 cross_flag=false(1);
@@ -19,8 +19,11 @@ e1=e1/norm(e1);
 e2=cross(e3,e1);
 
 % transform local cooridinate to 2D cooridinate
-% all vector just simply project to element panel
+% project flow to plane, and scale norm of flow to initial flow
+Len_flow_init=vecnorm(node_flow_list,2,2);
 node_flow_list=node_flow_list*[e1;e2;e3]';
+Len_flow_proj=vecnorm(node_flow_list,2,2);Len_flow_proj(Len_flow_proj == 0)=1;
+node_flow_list=node_flow_list./Len_flow_proj.*Len_flow_init;
 node_list=node_list*[e1;e2;e3]';
 node_list(:,end)=1;
 
@@ -30,6 +33,20 @@ coefficient=(node_list\node_flow_list(:,[1,2]))';
 jacobian=coefficient(:,1:2); % [b1,c1;b2,c2]
 % jacobian(abs(jacobian) < precision_torlance)=0; % solve precision, avoid negtive
 bias=coefficient(:,3); % [a1;a2]
+
+% % velocity do not too close
+% low_bou=min(node_list(:,1:2),[],1);
+% up_bou=max(node_list(:,1:2),[],1);
+% center_bou=(low_bou+up_bou)/2;
+% aver_bou=sum(up_bou-low_bou)/2;
+% point_1=center_bou+[aver_bou,aver_bou];
+% point_2=center_bou+[-aver_bou,aver_bou];
+% Ve_1=point_1*jacobian'+bias';
+% Ve_2=point_2*jacobian'+bias';
+% cos_angle=Ve_1*Ve_2'/norm(Ve_1)/norm(Ve_2);
+% if cos_angle > 0.8
+%     return;
+% end
 
 % jacobian matrix is negative, phase is spiral
 det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
@@ -96,18 +113,19 @@ elseif abs(eig_value(1)) < precision_torlance
     stagnation_point=[x_c;y_c];
     return;
 else
-    stagnation_point=-jacobian\bias;
+    if rcond(jacobian) < eps
+        stagnation_point=lsqminnorm(jacobian,-bias);
+    else
+        stagnation_point=-jacobian\bias;
+    end
 end
 
 % normalize point_2D
 node_proj_list=(node_list(:,1:2)-stagnation_point')/eig_vector';
-if det(eig_vector) < 0 % if det(eig_vector) less than 0, rotation
-    node_proj_list=flipud(node_proj_list);
-end
 
 % velocity do not too close
-max_bou=max((node_proj_list));
-min_bou=min((node_proj_list));
+max_bou=max(node_proj_list,[],1);
+min_bou=min(node_proj_list,[],1);
 center_bou=(min_bou+max_bou)/2;
 aver_bou=sum(max_bou-min_bou)/2;
 point_1=center_bou+[aver_bou,aver_bou];
@@ -123,8 +141,12 @@ end
 % node_proj_list(:,1)=node_proj_list(:,1)/max(abs(node_proj_list(:,1)));
 % node_proj_list(:,2)=node_proj_list(:,2)/max(abs(node_proj_list(:,2)));
 
-offset=norm(max(node_proj_list)-min(node_proj_list))*topology_torlance;
-node_proj_list=geoCurveOffset(node_proj_list,offset);
+bou_node=node_proj_list(1:end-1,:);
+if det(eig_vector) < 0 % if det(eig_vector) less than 0, rotation
+    bou_node=flipud(bou_node);
+end
+offset=norm(max(bou_node)-min(bou_node))*topology_torlance;
+bou_node=geoCurveOffset(bou_node,offset);
 
 % judge phase portrait
 % eigenvalue less than zero is concentrate
@@ -134,14 +156,14 @@ if ((eig_value(1) > 0) && (eig_value(2) >= 0))
     if abs(eig_value(1)-eig_value(2)) < topology_torlance
         % proper node
         % if (0,0) inside element
-        if judgeOriginSurround(node_proj_list)
+        if judgeOriginSurround(bou_node)
             cross_flag=true(1);
             stagnation_flag=true(1);
         end
     else
         % repelling node, check small eigenvalue corresponded axis
         % if cross Y
-        if judgeCrossY(node_proj_list(1:end,[1,2]))
+        if judgeCrossY(bou_node(1:end,[1,2]))
             cross_flag=true(1);
         end
     end
@@ -153,7 +175,7 @@ elseif ((eig_value(1) > 0) && (eig_value(2) < -0))
     % saddle, judge axis X and axis Y which is separation line
     % means which eigenvalue is large than zero
     % repelling node, check small eigenvalue corresponded axis
-    if judgeCrossY(node_proj_list(1:end,[1,2]))
+    if judgeCrossY(bou_node(1:end,[1,2]))
         cross_flag=true(1);
     end
 end

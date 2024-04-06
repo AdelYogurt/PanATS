@@ -8,17 +8,16 @@ function [max_heat_flux]=solveModelHypersonicHeat()
 %
 % copyright Adel 2023.03
 %
-global user_model
+global config user_model
 
+config=user_model.config;
 geometry=user_model.geometry;
-
-dimension=geometry.dimension;
-point_list=geometry.point_list;
 element_list=user_model.element_list;
-
-SYMMETRY=user_model.SYMMETRY;
+SYMMETRY=config.SYMMETRY;
 
 % load geometry
+dimension=geometry.dimension;
+point_list=geometry.point_list;
 center_point_list=geometry.center_point_list;
 
 % heat calculate need inviscid and streamline result
@@ -28,16 +27,15 @@ output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
 
 % calculate inflow vector
-free_flow_vector=calFreeFlowDirection(user_model.AOA,user_model.SIDESLIP_ANGLE);
-user_model.free_flow_vector=free_flow_vector;
+free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
 
-% reference value
-T_1=user_model.FREESTREAM_TEMPERATURE;
-P_1=user_model.FREESTREAM_PRESSURE;
-Ma_1=user_model.MACH_NUMBER;
-gamma=user_model.GAMMA_VALUE;
-Re=user_model.REYNOLDS_NUMBER;
-T_w=user_model.MARKER_ISOTHERMAL;
+% inflow condition
+T_inf=config.FREESTREAM_TEMPERATURE;
+P_inf=config.FREESTREAM_PRESSURE;
+Ma_inf=config.MACH_NUMBER;
+gamma=config.GAMMA_VALUE;
+% Re_inf=config.REYNOLDS_NUMBER;
+T_w=config.MARKER_ISOTHERMAL;
 
 % load data from inviscid, streamline, boundary layer and viscid result
 theta_list=output_inviscid.theta_list;
@@ -79,25 +77,24 @@ gamma_plus=gamma+1;
 gamma_sub=gamma-1;
 
 % free flow parameter
-rho_1=P_1/R/T_1;
-a_1=sqrt(gamma*R*T_1);
-V_1=a_1*Ma_1;
-V_1_sq=V_1*V_1;
-q_1=rho_1*V_1_sq/2;
+rho_inf=P_inf/R/T_inf;
+a_inf=sqrt(gamma*R*T_inf);
+V_inf=a_inf*Ma_inf;
+V_inf_sq=V_inf*V_inf;
+q_inf=rho_inf*V_inf_sq/2;
 
 % Sutherland method
-mu_1=airViscosity(airEnthalpy(T_1));
+mu_inf=airViscosity(airEnthalpy(T_inf));
 mu_w=airViscosity(airEnthalpy(T_w));
 
 % solve prepare
 H_w=airEnthalpy(T_w); % wall air enthalpy J/kg
 % H_D=(33867*0.78+15320*0.22)*1e3; % Mean dissociation enthalpy of air J/kg
-H_D=airEnthalpy(T_1); % base on calculate result, H_D should be enthalpy of air
+H_D=airEnthalpy(T_inf); % base on calculate result, H_D should be enthalpy of air
 
 elem_num=length(element_list);
 % initialize result sort array
 HF_list=zeros(elem_num,1);
-max_heat_flux=0;
 
 % calculate heat flow by plate reference enthalpy method
 elem_num=length(element_list);
@@ -185,17 +182,15 @@ for attach_idx=1:length(element_attach_list)
     % HF=0.763*Pr^-0.6*((rho_w*mu_w)/(rho_e*mu_e))^0.1*sqrt(rho_e*mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
     HF=0.763*Pr^-0.6*((rho_w*mu_w)/rho_e_mu_e)^0.1*sqrt(rho_e_mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
 
-    HF_list(elem_idx)=HF;
-    if max_heat_flux < HF
-        max_heat_flux=HF;
-    end
+    HF_list(elem_idx)=max(HF_list(elem_idx),HF);
 end
 
+max_heat_flux=max(HF_list);
 output_heat.HF_list=HF_list;
 
 user_model.output_heat=output_heat;
 
-if user_model.INFORMATION
+if config.INFORMATION
     fprintf('solveModelHypersonicHeat: hypersonic heat solve done!\n');
     fprintf('solveModelHypersonicHeat: result\n');
     fprintf('max heat flux: %14f\n',max_heat_flux)
@@ -203,7 +198,7 @@ end
 
     function HF_s=calTauber(radius_s)
         % Tauber method
-        HF_s=1.83e-4/sqrt(radius_s)*sqrt(rho_1)*V_1^3*(1-H_w/H_e);
+        HF_s=1.83e-4/sqrt(radius_s)*sqrt(rho_inf)*V_inf^3*(1-H_w/H_e);
     end
 
     function HF_s=calKempRiddell(radius_s)
@@ -212,13 +207,13 @@ end
         %     (rho_1/rho_sl)^0.5*(V_1/7925)^3.15*(H_es-H_w)/(H_es-3.0145e5);
         % modify
         HF_s=1.103317e8/sqrt(radius_s)*sqrt(2)*...
-            (rho_1/rho_sl)^0.5*(V_1/7925)^3.5*(H_e-H_w)/(H_e-3.0145e5);
+            (rho_inf/rho_sl)^0.5*(V_inf/7925)^3.5*(H_e-H_w)/(H_e-3.0145e5);
     end
 
     function HF_s=calDetraKempRiddell(radius_s_min,radius_s_max)
         % Detra-Kemp-Riddell method
         HF_s=1.1037e8/sqrt(radius_s_min)*sqrt(1.1+0.9*sqrt(radius_s_min/radius_s_max))*...
-            (rho_1/rho_sl)^0.5*(V_1/7925)^3.5*(H_e-H_w)/(H_e-3.0145e5);
+            (rho_inf/rho_sl)^0.5*(V_inf/7925)^3.5*(H_e-H_w)/(H_e-3.0145e5);
     end
 end
 
