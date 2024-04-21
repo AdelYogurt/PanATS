@@ -27,7 +27,8 @@ output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
 
 % calculate inflow vector
-free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
+rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=rot_mat(:,1);
 
 % inflow condition
 T_inf=config.FREESTREAM_TEMPERATURE;

@@ -1,4 +1,4 @@
-function displayModel(type,full_salce)
+function fig_res=displayModel(type,full_salce)
 % display model
 %
 global user_model
@@ -32,23 +32,28 @@ output_heat=user_model.output_heat;
 output_FEM=user_model.output_FEM;
 output_post=user_model.output_post;
 
-figure_result=figure();
+fig_res=figure();
+
 % colormap('jet');
 
 switch type
     case 'P'
         data_list=output_inviscid.P_list;
         title('Pressure');
-        figure_result.Children.set('ColorScale','log')
+        fig_res.Children.set('ColorScale','log')
+    case 'CMz'
+        data_list=output_inviscid.dMn_list(:,3);
+        title('CMz');
+        fig_res.Children.set('ColorScale','linear')
     case 'log_P'
         P_1=g_geometry.P_1;
         data_list={log(output_inviscid.P_list/P_1)/log(10)+1};
         title('log Pressure');
-        figure_result.Children.set('ColorScale','linear')
+        fig_res.Children.set('ColorScale','linear')
     case 'Cp'
         data_list=output_inviscid.Cp_list;
         title('Surface Pressure Coefficient');
-        figure_result.Children.set('ColorScale','log')
+        fig_res.Children.set('ColorScale','log')
     case 'SL'
         data_list=output_streamline.streamline_len_list;
         SL_list=output_streamline.streamline_list;
@@ -104,11 +109,11 @@ switch type
     case 'HF'
         data_list=output_heat.HF_list;
         title('Heat Flux');
-        figure_result.Children.set('ColorScale','log')
+        fig_res.Children.set('ColorScale','log')
     case 'Cf'
         data_list=output_viscid.Cf_list;
         title('Surface Friction Coefficient');
-        figure_result.Children.set('ColorScale','log')
+        fig_res.Children.set('ColorScale','log')
     case 'FEM'
         title('Deformed Shape and Surface Stress-von mises Distribution');
     case ''

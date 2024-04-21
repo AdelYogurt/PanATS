@@ -28,7 +28,8 @@ area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
 % calculate free flow vector
-free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
+rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=rot_mat(:,1);
 
 if ~isempty(SYMMETRY)
     switch SYMMETRY
@@ -258,6 +259,9 @@ for elem_idx=1:elem_num
         end
     end
 end
+
+% dead water zone set to max streamline len
+streamline_len_list(streamline_len_list == 0)=max_streamline_len;
 
 output_streamline.surface_flow_list=elem_flow_list;
 output_streamline.element_attach_list=elem_attach_list;

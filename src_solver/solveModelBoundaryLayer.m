@@ -96,6 +96,8 @@ for elem_idx=1:elem_num
         (Ma_1,T_1,P_1,rho_1,V_1,gamma,P_e,H_0,theta,...
         gamma_sub,gamma_plus);
 
+    if V_e == 0, V_e=V_1;end
+
     % local Reynolds number
     Re_x=rho_e*V_e*streamline_len/mu_e;
 

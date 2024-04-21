@@ -1,4 +1,4 @@
-function [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz]=solveModelHypersonicInviscid()
+function [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicInviscid()
 % base on Newton method and etc to calculate pressure of surface element
 %
 % copyright Adel 2023.03
@@ -18,7 +18,8 @@ area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
 % calculate inflow vector
-free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
+rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=rot_mat(:,1);
 
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
@@ -112,7 +113,7 @@ sin_theta_sq_list=cos_fail_list.*cos_fail_list;
 
 % calculate surface Cp
 Cp_list=zeros(size(theta_list));
-if HIGH_HYPERSONIC_FLAG
+if ~HIGH_HYPERSONIC_FLAG
     Bool=theta_list < 0;
     Cp_list(Bool)=calDahlemDuck(theta_list(Bool),sin_theta_sq_list(Bool));
 
@@ -147,24 +148,27 @@ force_inviscid=sum(dFn_list,1);
 moment_inviscid=sum(dMn_list,1);
 
 % calculate lift and drag coefficient
-drag=force_inviscid*free_flow_vector;
-rotation_matrix=[0,0,1;
-    0,1,0;
-    -1,0,0]';
-lift=force_inviscid*(rotation_matrix*free_flow_vector);
+drag=force_inviscid*rot_mat(:,1);
+slip=force_inviscid*rot_mat(:,2);
+lift=force_inviscid*rot_mat(:,3);
+
+% calculate velocity coefficient
 CL=lift/ref_area/q_inf;
 CD=drag/ref_area/q_inf;
-CEff=CL/CD;
+CSF=slip/ref_area/q_inf;
 
 % calculate force coefficient
 CFx=force_inviscid(1)/ref_area/q_inf;
 CFy=force_inviscid(2)/ref_area/q_inf;
 CFz=force_inviscid(3)/ref_area/q_inf;
 
-% calculate moment
+% calculate moment coefficient
 CMx=moment_inviscid(1)/ref_area/ref_length/q_inf;
 CMy=moment_inviscid(2)/ref_area/ref_length/q_inf;
 CMz=moment_inviscid(3)/ref_area/ref_length/q_inf;
+
+% calculate efficient coefficient
+CEff=CL/CD;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)
@@ -199,8 +203,8 @@ user_model.output_inviscid=output_inviscid;
 if config.INFORMATION
     fprintf('solveModelHypersonicInviscid: hypersonic inviscid solve done!\n');
     fprintf('solveModelHypersonicInviscid: result\n');
-    fprintf('CL:  %14f, CD:  %14f, CEff: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\n',...
-        [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz])
+    fprintf('CL:  %14f, CD:  %14f, CSF: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\nCEff: %14f\n',...
+        [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
 end
 
     function Cp=calDejarnetle(theta)
@@ -256,18 +260,18 @@ end
         r=(b.*(2.*b.^2-9.*c)+27.*d)./54;
         disc=q.*q.*q - r.*r;
 
-        Bool_disc=disc < 0; % 45.585 deg
-        Cp(Bool_disc)=calTangentWedgeEmpirical(theta(Bool_disc));
+        Bool_disc=disc > 0;
+        Cp(~Bool_disc)=calTangentWedgeEmpirical(theta(~Bool_disc));
 
         if any(Bool_disc)
             costh=r(Bool_disc)./sqrt(q(Bool_disc).^3);
-            theta=acos(costh);
+            acos_theta=acos(costh);
             c=-2.*sqrt(q(Bool_disc));
             d=b(Bool_disc)./3;
-            root3=c.*cos((theta+4.*pi)./3)-d;
+            root3=c.*cos((acos_theta+4.*pi)./3)-d;
             % root3 is supposed to be the middle root, but check it anyway
             % wave angle
-            Cp(~Bool_disc)=4.0.*(Ma_1_sq.*root3-1.0)./(Ma_1_sq.*(gamma+1.0));
+            Cp(Bool_disc)=4.0.*(Ma_1_sq.*root3-1.0)./(Ma_1_sq.*(gamma+1.0));
         end
 
         Bool_theta=theta > 0.7956; % 45.585 deg

@@ -1,4 +1,4 @@
-function [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz]=solveModelHypersonicViscid()
+function [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid()
 % plate reference enthalpy method to calculate viscid
 %
 % copyright Adel 2023.03
@@ -23,7 +23,8 @@ output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 
 % calculate inflow vector
-free_flow_vector=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE);
+rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=rot_mat(:,1);
 
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
@@ -84,8 +85,9 @@ Cf_list=Cf_ref_list.*rho_ref_list./rho_e_list;
 S_list=q_inf*Cf_list;
 
 % flow vector
-tangent_vector_list=surface_flow_list./vecnorm(surface_flow_list,2,2);
-tangent_vector_list(isnan(tangent_vector_list))=0;
+srf_flow_norm=vecnorm(surface_flow_list,2,2);
+srf_flow_norm(srf_flow_norm == 0)=1;
+tangent_vector_list=surface_flow_list./srf_flow_norm;
 
 % shear stress vector (N)
 dFs_list=tangent_vector_list.*area_list.*S_list;
@@ -99,24 +101,27 @@ force=force_inviscid+force_viscid;
 moment=moment_inviscid+moment_viscid;
 
 % calculate lift and drag coefficient
-drag=force*free_flow_vector;
-rotation_matrix=[0,0,1;
-    0,1,0;
-    -1,0,0]';
-lift=force*(rotation_matrix*free_flow_vector);
+drag=force*rot_mat(:,1);
+slip=force*rot_mat(:,2);
+lift=force*rot_mat(:,3);
+
+% calculate velocity coefficient
 CL=lift/ref_area/q_inf;
 CD=drag/ref_area/q_inf;
-CEff=CL/CD;
+CSF=slip/ref_area/q_inf;
 
 % calculate force coefficient
 CFx=force(1)/ref_area/q_inf;
 CFy=force(2)/ref_area/q_inf;
 CFz=force(3)/ref_area/q_inf;
 
-% calculate moment
+% calculate moment coefficient
 CMx=moment(1)/ref_area/ref_length/q_inf;
 CMy=moment(2)/ref_area/ref_length/q_inf;
 CMz=moment(3)/ref_area/ref_length/q_inf;
+
+% calculate efficient coefficient
+CEff=CL/CD;
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)
@@ -149,8 +154,8 @@ user_model.output_viscid=output_viscid;
 if config.INFORMATION
     fprintf('solveModelHypersonicViscid: hypersonic viscid solve done!\n');
     fprintf('solveModelHypersonicViscid: result\n');
-    fprintf('CL:  %14f, CD:  %14f, CEff: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\n',...
-        [CL,CD,CEff,CFx,CFy,CFz,CMx,CMy,CMz])
+    fprintf('CL:  %14f, CD:  %14f, CSF: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\nCEff: %14f\n',...
+        [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
 end
 
 end

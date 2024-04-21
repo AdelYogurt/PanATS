@@ -28,7 +28,7 @@ user_model.output_FEM=[];
 user_model.output_post=[];
 
 % load mesh data
-if ~isfield(user_model,'mesh_data') || isempty(user_model.mesh_data)
+if ~isfield(config,'mesh_data') || isempty(config.mesh_data)
     switch config.MESH_FORMAT
         case 'SU2'
             % only need marker infomation
@@ -68,7 +68,7 @@ if ~isfield(user_model,'mesh_data') || isempty(user_model.mesh_data)
             mesh_data=readMeshCGNS(config.MESH_FILENAME,config.MESH_SCALE);
     end
 else
-    mesh_data=user_model.mesh_data;
+    mesh_data=config.mesh_data;
     switch config.MESH_FORMAT
         case 'WGS'
             % convert LaWGS format into mesh format
@@ -228,7 +228,7 @@ for elem_base_idx=1:elem_num
             length_cross_vector=norm(cross_vector,2);
             area_list(elem_base_idx,:)=length_cross_vector/2;
             normal_vector_list(elem_base_idx,:)=cross_vector/length_cross_vector;
-        case 6 % QUAD_4
+        case 7 % QUAD_4
             dr13=point_list(Node_idx(3),1:3)-point_list(Node_idx(1),1:3);
             dr24=point_list(Node_idx(4),1:3)-point_list(Node_idx(2),1:3);
 
