@@ -23,8 +23,8 @@ output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 
 % calculate inflow vector
-rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=rot_mat(:,1);
+coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=coord_vec(:,1);
 
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
@@ -101,9 +101,9 @@ force=force_inviscid+force_viscid;
 moment=moment_inviscid+moment_viscid;
 
 % calculate lift and drag coefficient
-drag=force*rot_mat(:,1);
-slip=force*rot_mat(:,2);
-lift=force*rot_mat(:,3);
+drag=force*coord_vec(:,1);
+slip=force*coord_vec(:,2);
+lift=force*coord_vec(:,3);
 
 % calculate velocity coefficient
 CL=lift/ref_area/q_inf;
@@ -121,7 +121,7 @@ CMy=moment(2)/ref_area/ref_length/q_inf;
 CMz=moment(3)/ref_area/ref_length/q_inf;
 
 % calculate efficient coefficient
-CEff=CL/CD;
+CEff=CL/(CD+eps);
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)

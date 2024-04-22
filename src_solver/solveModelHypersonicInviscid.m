@@ -18,8 +18,8 @@ area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
 % calculate inflow vector
-rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=rot_mat(:,1);
+coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
+free_flow_vector=coord_vec(:,1);
 
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
@@ -148,9 +148,9 @@ force_inviscid=sum(dFn_list,1);
 moment_inviscid=sum(dMn_list,1);
 
 % calculate lift and drag coefficient
-drag=force_inviscid*rot_mat(:,1);
-slip=force_inviscid*rot_mat(:,2);
-lift=force_inviscid*rot_mat(:,3);
+drag=force_inviscid*coord_vec(:,1);
+slip=force_inviscid*coord_vec(:,2);
+lift=force_inviscid*coord_vec(:,3);
 
 % calculate velocity coefficient
 CL=lift/ref_area/q_inf;
@@ -168,7 +168,7 @@ CMy=moment_inviscid(2)/ref_area/ref_length/q_inf;
 CMz=moment_inviscid(3)/ref_area/ref_length/q_inf;
 
 % calculate efficient coefficient
-CEff=CL/CD;
+CEff=CL/(CD+eps);
 
 % process SYMMETRY
 if ~isempty(SYMMETRY)

@@ -2,12 +2,16 @@ clc;
 clear;
 close all hidden;
 
+%% PATH
+
 addpath([pwd,'\cfg']);
 addpath([pwd,'\input']);
 addpath([pwd,'\mesh']);
 addpath([pwd,'\src_base']);
 addpath([pwd,'\src_geo']);
 addpath([pwd,'\src_solver']);
+
+%% pre-model
 
 global user_model
 
@@ -21,6 +25,8 @@ global user_model
 % config=PanATSConfig('HL20.cfg');
 % config=PanATSConfig('sym.cfg');
 preModelPanel(config);
+
+%% calculate
 
 % [area,area_x,area_y,area_z,volume]=solveGeometry();
 

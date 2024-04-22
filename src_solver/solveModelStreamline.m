@@ -28,7 +28,7 @@ area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
 % calculate free flow vector
-rot_mat=calFreeFlowDirection(config.AOA,config.SIDESLIP_ANGLE,dimension);
+rot_mat=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
 free_flow_vector=rot_mat(:,1);
 
 if ~isempty(SYMMETRY)
