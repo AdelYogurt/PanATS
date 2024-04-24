@@ -54,6 +54,16 @@ classdef PanATSConfig < handle
             if ~isfield(self.data_dict,'INFORMATION')
                 self.data_dict.INFORMATION=1;
             end
+
+            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_X')
+                self.data_dict.ANGULAR_VELOCITY_X=0.0;
+            end
+            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_Y')
+                self.data_dict.ANGULAR_VELOCITY_Y=0.0;
+            end
+            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_Z')
+                self.data_dict.ANGULAR_VELOCITY_Z=0.0;
+            end
         end
 
         function dump(self,cfg_filestr)

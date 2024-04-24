@@ -27,9 +27,14 @@ center_point_list=geometry.center_point_list;
 area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
+% reference point
+ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
+
 % calculate free flow vector
-rot_mat=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=rot_mat(:,1);
+coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
+omega=[config.ANGULAR_VELOCITY_X,config.ANGULAR_VELOCITY_Y,config.ANGULAR_VELOCITY_Z]/180*pi;
+free_flow_vector_list=coord_vec(:,1)'-cross(center_point_list-ref_point,repmat(omega,length(element_list),1),2);
+free_flow_vector_list_point=coord_vec(:,1)'-cross(point_list-ref_point,repmat(omega,size(point_list,1),1),2);
 
 if ~isempty(SYMMETRY)
     switch SYMMETRY
@@ -109,12 +114,12 @@ end
 point_normal_vector_list=point_normal_vector_list./vecnorm(point_normal_vector_list,2,2);
 
 % calculate surface velocity of each element
-dot_nor_vec=normal_vector_list*free_flow_vector;
-elem_flow_list=(free_flow_vector'-normal_vector_list.*dot_nor_vec);
+dot_nor_vec=sum(normal_vector_list.*free_flow_vector_list,2);
+elem_flow_list=(free_flow_vector_list-normal_vector_list.*dot_nor_vec);
 
 % calculate surface velocity of each point
-point_dot_nor_vec=point_normal_vector_list*free_flow_vector;
-point_flow_list=(free_flow_vector'-point_normal_vector_list.*point_dot_nor_vec);
+point_dot_nor_vec=sum(point_normal_vector_list.*free_flow_vector_list_point,2);
+point_flow_list=(free_flow_vector_list_point-point_normal_vector_list.*point_dot_nor_vec);
 
 % % calculate surface flow of point
 % % using angle contribute method
@@ -170,7 +175,7 @@ for elem_idx=1:elem_num
 %     node_list(Bool,:)=[];
 %     node_flow_list(Bool,:)=[];
 
-    if dot(normal_vector,free_flow_vector) < 0 % only upwind element
+    if dot(normal_vector,free_flow_vector_list(elem_idx,:)) < 0 % only upwind element
         [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,node_list,node_flow_list);
         if cross_flag
             if DRAW_FIGURE_FLAG,hold on;patch('Faces',[1,2,3],'Vertices',point_list(Node_idx,:),'FaceColor','green','FaceAlpha',0.5);end

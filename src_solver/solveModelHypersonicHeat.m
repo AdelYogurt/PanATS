@@ -26,10 +26,6 @@ output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
 
-% calculate inflow vector
-rot_mat=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=rot_mat(:,1);
-
 % inflow condition
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;

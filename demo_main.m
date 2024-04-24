@@ -19,7 +19,7 @@ global user_model
 % config=PanATSConfig('blunt_cone.cfg');
 % config=PanATSConfig('INP_plate.cfg');
 % config=PanATSConfig('WWD.cfg');
-% config=PanATSConfig('hermes.cfg'); 
+config=PanATSConfig('hermes.cfg'); 
 % config=PanATSConfig('waverider.cfg'); 
 % config=PanATSConfig('sanger.cfg');
 % config=PanATSConfig('HL20.cfg');

@@ -17,14 +17,15 @@ center_point_list=geometry.center_point_list;
 area_list=geometry.area_list;
 normal_vector_list=geometry.normal_vector_list;
 
-% calculate inflow vector
-coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=coord_vec(:,1);
-
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
 ref_area=config.REF_AREA;
 ref_length=config.REF_LENGTH;
+coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
+
+% calculate inflow vector
+omega=[config.ANGULAR_VELOCITY_X,config.ANGULAR_VELOCITY_Y,config.ANGULAR_VELOCITY_Z]/180*pi;
+free_flow_vector_list=coord_vec(:,1)'-cross(center_point_list-ref_point,repmat(omega,length(element_list),1),2);
 
 % inflow condition
 T_inf=config.FREESTREAM_TEMPERATURE;
@@ -101,7 +102,7 @@ else
 end
 
 % fail is angle of normal vector and free flow vector
-cos_fail_list=normal_vector_list*free_flow_vector;
+cos_fail_list=sum(normal_vector_list.*free_flow_vector_list,2);
 fail_list=acos(cos_fail_list);
 fail_list(cos_fail_list < -1)=pi;
 fail_list(cos_fail_list > 1)=0;

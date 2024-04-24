@@ -22,14 +22,11 @@ output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 
-% calculate inflow vector
-coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-free_flow_vector=coord_vec(:,1);
-
 % reference value
 ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
 ref_area=config.REF_AREA;
 ref_length=config.REF_LENGTH;
+coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
 
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;
