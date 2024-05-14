@@ -1,11 +1,8 @@
-function [x_list,fval_list,node_list]=meshAdapt1D(fcn,low_bou,up_bou,torl,max_level,fval_num)
+function [x_list,fval_list,node_list]=meshAdapt1D(fcn,low_bou,up_bou,torl,min_level,max_level)
 % Binary-tree
-% adapt capture function value
+% adapt capture 1 dimemsion function value
 % ensure error of linear interplation will less than torl
 %
-if nargin < 6
-    fval_num=1;
-end
 
 % node_list which is a matrix store all node
 % a node is a array, contain level, index_1, index_2, index_c, node_index_1, node_index_2
@@ -14,11 +11,12 @@ end
 % cell:
 % 1-2
 % if children node is empty, left_index or right_index will be zero
-list_add_num=50; % node_list will be extend only when node_list is not enough
+list_add_num=32; % node_list will be extend only when node_list is not enough
 node_list=zeros(list_add_num,6,'int64');
 
 % data_list use to sort all float data include coodinate, function value
-data_list=zeros(list_add_num,fval_num+1);
+fval_num=numel(fcn((low_bou+up_bou)/2));
+data_list=zeros(list_add_num+1,fval_num+1);
 
 % add vertex of cell into data_list first
 data_list(1,:)=[low_bou,fcn(low_bou)];
@@ -27,15 +25,19 @@ data_list(2,:)=[up_bou,fcn(up_bou)];
 % create base root
 node_list(1,:)=[0,1,2,0,0,0];
 
-node_num=createNodeTree(1,2); % create node tree from root
+[node_num,data_num]=createNodeTree(1,2); % create node tree from root
 node_list=node_list(1:node_num,:);
-[x_list,fval_list]=traversalInorder(1); % from small to large get list
+data_list=data_list(1:data_num,:);
 
-% add boundary info
-x_list=[data_list(1,1);x_list;data_list(2,1)];
-fval_list=[data_list(1,2:end);fval_list;data_list(2,2:end)];
+% [x_list,fval_list]=traversalInorder(1); % from small to large get list
+% % add boundary info
+% x_list=[data_list(1,1);x_list;data_list(2,1)];
+% fval_list=[data_list(1,2:end);fval_list;data_list(2,2:end)];
 
-    function node_num=createNodeTree(root_idx,data_num)
+x_list=data_list(:,1);
+fval_list=data_list(:,2:end);
+
+    function [node_num,data_num]=createNodeTree(root_idx,data_num)
         % create node tree from root
         %
         stack=root_idx;
@@ -75,8 +77,8 @@ fval_list=[data_list(1,2:end);fval_list;data_list(2,2:end)];
                 node([5,6])=node_new_idx;
                 node_num=node_num+2;
 
-                if any(abs(fval_c-fval_c_pred) > torl)
-                    % add to stack
+                if any(abs(fval_c-fval_c_pred) > torl) || node(1) < min_level-1
+                    % add to stack for refine gird
                     stack=[stack,node_new_idx];
                     node_list(node_idx,:)=node;
                 end

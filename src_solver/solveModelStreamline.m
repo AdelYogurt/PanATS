@@ -11,7 +11,7 @@ function [max_streamline_len]=solveModelStreamline()
 %
 global user_model
 
-DRAW_FIGURE_FLAG=0; % debug, whether draw data
+DRAW_FIGURE_FLAG=0; % debug mode, whether draw data
 
 geom_torl=1e-6;
 
@@ -33,22 +33,19 @@ ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIG
 % calculate free flow vector
 coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
 omega=[config.ANGULAR_VELOCITY_X,config.ANGULAR_VELOCITY_Y,config.ANGULAR_VELOCITY_Z]/180*pi;
-free_flow_vector_list=coord_vec(:,1)'-cross(center_point_list-ref_point,repmat(omega,length(element_list),1),2);
-free_flow_vector_list_point=coord_vec(:,1)'-cross(point_list-ref_point,repmat(omega,size(point_list,1),1),2);
+free_flow_vector_list=coord_vec(:,1)'-cross(repmat(omega,length(element_list),1),center_point_list-ref_point,2);
+free_flow_vector_list_point=coord_vec(:,1)'-cross(repmat(omega,size(point_list,1),1),point_list-ref_point,2);
 
 if ~isempty(SYMMETRY)
     switch SYMMETRY
         case 'XOY'
-            flip_operate=[1,1,-1];
             identify_dimension=3;
         case 'YOZ'
-            flip_operate=[-1,1,1];
             identify_dimension=1;
         case 'ZOX'
-            flip_operate=[1,-1,1];
             identify_dimension=2;
         otherwise
-            error('solveModelStreamline: nuknown SYMMETRY type');
+            identify_dimension=0;
     end
 end
 
@@ -235,6 +232,7 @@ end
 for elem_idx=1:elem_num
     if ~streamline_idx_list(elem_idx) && ...
             abs(1-dot_nor_vec(elem_idx,:)) >= geom_torl
+
         % if donot have streamline cross, add new streamline
         streamline_idx=length(streamline_list)+1;
         [streamline,line_len,cross_idx]=calStreamline(elem_idx,...

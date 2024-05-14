@@ -194,6 +194,8 @@ classdef ADTreePoint < handle
             % input point will generate ADTreeNode and add into node_list
             % node_idx, dimension is current node
             %
+            torl=ADT.torlance;
+            pnt_list=ADT.point_list;
             node_low_bou=ADT.min_bou;
             node_up_bou=ADT.max_bou;
             
@@ -206,7 +208,7 @@ classdef ADTreePoint < handle
             % loop to add point
             while isempty(add_node_index)
                 % check current point if the same as added point
-                if sum(abs(ref_point-ADT.point_list(node_idx,:))) < (ADT.torlance+ADT.torlance+ADT.torlance)
+                if norm(ref_point-pnt_list(node_idx,:),1) < torl
                     add_node_index=node_idx;
                 else
                     % search in leave node

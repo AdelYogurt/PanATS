@@ -14,7 +14,7 @@ if nargin < 2 || isempty(remove_redundance)
     remove_redundance=true(1);
 end
 if nargin < 3 || isempty(geometry_torlance)
-    geometry_torlance=1e-6;
+    geometry_torlance=1e-12;
 end
 
 marker_name_list=fieldnames(mesh_data);
@@ -29,7 +29,7 @@ for marker_index=1:length(marker_name_list)
 
     marker=mesh_data.(marker_name);
     if ~strcmp(marker.type,'wgs')
-        error('convertWGSToSTL: type of mesh is not LaWGS format');
+        error('convertWGSToMesh: type of mesh is not LaWGS format');
     end
 
     X=marker.X;
@@ -37,7 +37,7 @@ for marker_index=1:length(marker_name_list)
     Z=marker.Z;
 
     if any(size(X) ~= size(Y)) || any(size(X) ~= size(Z))
-        error('convertWGSToSTL: size of X,Y,Z in mesh are not equal');
+        error('convertWGSToMesh: size of X,Y,Z in mesh are not equal');
     end
 
     % add this mesh point into point list
@@ -133,22 +133,24 @@ else
 
                 d12=point_list(point2_idx,:)-point_list(point1_idx,:);
                 d24=point_list(point4_idx,:)-point_list(point2_idx,:);
+                d41=point_list(point4_idx,:)-point_list(point1_idx,:);
 
-                if norm(d12) < eps || norm(d24) < eps
-                    % small element degeneration to line, discard it
-                else
+                if norm(d12) > eps && norm(d24) > eps && norm(d41) > eps
                     element_indx=element_indx+1;
                     element_list(element_indx,:)=[uint32(point1_idx),uint32(point2_idx),uint32(point4_idx)];
+                else
+                    % small element degeneration to line, discard it
                 end
 
                 d23=point_list(point3_idx,:)-point_list(point2_idx,:);
                 d34=point_list(point4_idx,:)-point_list(point3_idx,:);
+                d42=point_list(point2_idx,:)-point_list(point4_idx,:);
 
-                if norm(d23) < eps || norm(d34) < eps
-                    % small element degeneration to line, discard it
-                else
+                if norm(d23) > eps && norm(d34) > eps && norm(d42) > eps
                     element_indx=element_indx+1;
                     element_list(element_indx,:)=[uint32(point2_idx),uint32(point3_idx),uint32(point4_idx)];
+                else
+                    % small element degeneration to line, discard it
                 end
             end
         end

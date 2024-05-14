@@ -1,16 +1,9 @@
-function [X,Fval,node_list]=meshAdapt2D(fcn,low_bou,up_bou,torl,max_level,fval_num,mode)
+function [X,Fval,node_list,U,V]=meshAdapt2D(fcn,low_bou,up_bou,torl,min_level,max_level,mode,matrix)
 % Quad-tree (or Omni-Tree)
 % adapt capture 2 dimemsion function value
 % ensure error of linear interplation will less than torl
 %
-if nargin < 7
-    mode=[];
-    if nargin < 6
-        fval_num=[];
-    end
-end
-
-if isempty(fval_num),fval_num=1;end
+if nargin < 8, matrix=false;if nargin < 7, mode='';end;end
 
 % node_list which is a matrix store all node
 % a node is a array, contain:
@@ -23,10 +16,11 @@ if isempty(fval_num),fval_num=1;end
 % 1-2 or 3 or 3-4
 %        1    1-2
 % if children node is empty, left_index or right_index will be zero
-list_add_num=50; % list will be extend only when list is not enough
+list_add_num=32; % list will be extend only when list is not enough
 node_list=zeros(list_add_num,14,'int64');
 % data_list use to sort all float data include coodinate, function value
-data_list=zeros(list_add_num,fval_num+2);
+fval_num=numel(fcn((low_bou+up_bou)/2));
+data_list=zeros(list_add_num+1,fval_num+2);
 
 % add vertex of cell into data_list first
 bou_1=[low_bou(1),low_bou(2)];
@@ -42,7 +36,7 @@ data_list(4,:)=[bou_4,fcn(bou_4)];
 node_list(1,:)=[0,1,2,3,4,0,0,0,0,0,0,0,0,0];
 
 % create node tree from root
-if isempty(mode) mode='omni';end
+if isempty(mode), mode='omni';end
 switch mode
     case 'quad'
         [node_num,data_num]=createNodeTreeQuad(1,4); % Quad tree
@@ -52,8 +46,37 @@ end
 node_list=node_list(1:node_num,:);
 data_list=data_list(1:data_num,:);
 
-X=data_list(:,1:2);
-Fval=data_list(:,3:end);
+if matrix
+    % convert list to matrix
+
+    % generate U and V
+    [u_list,~,u_idx]=unique(data_list(:,1));
+    [v_list,~,v_idx]=unique(data_list(:,2));
+
+    [U,V]=meshgrid(u_list,v_list);
+
+    % local data to Fval
+    Fval=nan(length(v_list),length(u_list),fval_num);
+
+    idx=sub2ind([length(v_list),length(u_list)],v_idx,u_idx);
+    for fval_idx=1:fval_num
+        Fval(idx+(fval_idx-1)*(length(v_list)*length(u_list)))=data_list(:,fval_idx+2);
+    end
+
+    % fit nan data
+    idx=find(isnan(Fval(:,:,1)));
+    Fval_sub=fcn([U(idx),V(idx)]);
+    for fval_idx=1:fval_num
+        Fval(idx+(fval_idx-1)*(length(v_list)*length(u_list)))=Fval_sub(:,fval_idx);
+    end
+
+    X=[];
+else
+    X=data_list(:,1:2);
+    Fval=data_list(:,3:end);
+    U=[];
+    V=[];
+end
 
     function [node_num,data_num]=createNodeTreeQuad(root_idx,data_num)
         % create quad tree
@@ -105,8 +128,8 @@ Fval=data_list(:,3:end);
 
                 if any(abs(fval_c-fval_pred_c) > torl) ||...
                         any(abs(fval_5-fval_pred_5) > torl) || any(abs(fval_8-fval_pred_8) > torl) ||...
-                        any(abs(fval_6-fval_pred_6) > torl) || any(abs(fval_7-fval_pred_7) > torl)
-                    % add to stack
+                        any(abs(fval_6-fval_pred_6) > torl) || any(abs(fval_7-fval_pred_7) > torl) || node(1) < min_level-1
+                    % add to stack to refine grid
                     stack=[stack,node_new_idx];
                     node_list(node_idx,:)=node;
                 end
@@ -137,16 +160,21 @@ Fval=data_list(:,3:end);
 
                 % check u direction
                 if any(abs(fval_5-fval_pred_5) > torl) || any(abs(fval_8-fval_pred_8) > torl)
-                    add_u_flag=true(1);
+                    add_u_flag=true;
                 else
-                    add_u_flag=false(1);
+                    add_u_flag=false;
                 end
 
                 % check v direction
                 if any(abs(fval_6-fval_pred_6) > torl) || any(abs(fval_7-fval_pred_7) > torl)
-                    add_v_flag=true(1);
+                    add_v_flag=true;
                 else
-                    add_v_flag=false(1);
+                    add_v_flag=false;
+                end
+
+                if node(1) < min_level-1
+                    add_u_flag=true;
+                    add_v_flag=true;
                 end
 
                 if add_u_flag && ~add_v_flag

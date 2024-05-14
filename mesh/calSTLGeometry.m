@@ -25,7 +25,6 @@ end
 
 area=0;
 volume=0;
-base_z=0;
 
 % write each marker to file
 for marker_index=1:length(marker_name_list)
@@ -33,38 +32,12 @@ for marker_index=1:length(marker_name_list)
     marker=mesh_data.(marker_name);
 
     element_list=marker.element_list;
-    element_number=size(element_list,1)/3;
+    TPL=reshape(element_list',9,[])';
 
-    for element_index=1:element_number
-        % volume is up volume subtract down volume
-        pnt_1=element_list(3*element_index-2,1:3);
-        pnt_2=element_list(3*element_index-1,1:3);
-        pnt_3=element_list(3*element_index,1:3);
+    area=area+sum(vecnorm(cross(TPL(:,4:6)-TPL(:,1:3),TPL(:,7:9)-TPL(:,4:6),2),2,2)/2);
+    volume=volume+sum((-TPL(:,7).*TPL(:,5).*TPL(:,3)+TPL(:,4).*TPL(:,8).*TPL(:,3)+TPL(:,7).*TPL(:,2).*TPL(:,6)+...
+    -TPL(:,1).*TPL(:,8).*TPL(:,6)-TPL(:,4).*TPL(:,2).*TPL(:,9)+TPL(:,1).*TPL(:,5).*TPL(:,9)))/6;
 
-        % area is sum of all element area
-        area=area+norm(cross(pnt_2-pnt_1,pnt_3-pnt_2))/2;
-
-        % element volume to base plate
-        VF=det(...
-            [1 pnt_1(1) pnt_1(2) pnt_1(3);
-            1 pnt_2(1) pnt_2(2) pnt_2(3);
-            1 pnt_3(1) pnt_3(2) pnt_3(3);
-            1 pnt_1(1) pnt_1(2) base_z;]);
-        VS=det(...
-            [1 pnt_2(1) pnt_2(2) pnt_2(3);
-            1 pnt_2(1) pnt_2(2) base_z;
-            1 pnt_3(1) pnt_3(2) pnt_3(3);
-            1 pnt_1(1) pnt_1(2) base_z;]);
-        VT=det(...
-            [1 pnt_1(1) pnt_1(2) base_z;
-            1 pnt_3(1) pnt_3(2) base_z;
-            1 pnt_2(1) pnt_2(2) base_z;
-            1 pnt_3(1) pnt_3(2) pnt_3(3);]);
-
-        VL=(VF+VS+VT)/6;
-
-        volume=volume-VL;
-    end
 end
 
 end

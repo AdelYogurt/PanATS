@@ -85,7 +85,7 @@ if strcmp(file_type,'binary')
         end
     end
 
-    element_list([3*overlap_list-2;3*overlap_list-1;3*overlap_list],:)=[];
+    element_list([3*overlap_list-2;3*overlap_list-1;overlap_list],:)=[];
     element_number=element_number-length(overlap_list);
 else
     % read head

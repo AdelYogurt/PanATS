@@ -5,8 +5,8 @@ function [cross_flag,stagnation_flag]=judgeAttachment(normal_vector,node_list,no
 % separation and attachment lines; proceedings of the Proceedings
 % Visualization '98 (Cat No98CB36276), F 18-23 Oct. 1998, 1998 [C].
 %
-precision_torlance=eps;
-topology_torlance=1e-2;
+prec_torl=eps; % precision torlance
+topo_torl=1e-2;
 
 cross_flag=false(1);
 stagnation_flag=false(1);
@@ -50,14 +50,14 @@ bias=coefficient(:,3); % [a1;a2]
 
 % jacobian matrix is negative, phase is spiral
 det_jacobian=(jacobian(1,1)*jacobian(2,2)-jacobian(1,2)*jacobian(2,1));
-if (((jacobian(1,1)+jacobian(2,2))^2-4*det_jacobian) < -precision_torlance)
+if (((jacobian(1,1)+jacobian(2,2))^2-4*det_jacobian) < -prec_torl)
     % check if spiral is out flow
     eig_value=eig(jacobian);
     if real(eig_value(1)) > 0
         % out flow
         stagnation_point=-jacobian\bias;
         node_proj_list=(node_list(:,1:2)-stagnation_point');
-        offset = norm(max(node_proj_list)-min(node_proj_list))*topology_torlance;
+        offset = norm(max(node_proj_list)-min(node_proj_list))*topo_torl;
         node_proj_list=geoCurveOffset(node_proj_list,offset);
 
         % if (0,0) inside element
@@ -82,30 +82,30 @@ end
 
 % evaluate eigenvalues of jacobian matrix
 % if one of eigenvalues is zero, process stop
-if all(abs(eig_value) < topology_torlance)
+if all(abs(eig_value) < topo_torl)
     stagnation_point=[0;0];
     return;
-elseif abs(eig_value(2)) < precision_torlance
+elseif abs(eig_value(2)) < prec_torl
     % check if cross separation line
-    if abs(jacobian(1)) < precision_torlance
+    if abs(jacobian(1)) < prec_torl
         x_c=-bias(1);
     else
         x_c=-bias(1)/jacobian(1);
     end
-    if abs(jacobian(4)) < precision_torlance
+    if abs(jacobian(4)) < prec_torl
         y_c=-bias(2);
     else
         y_c=-bias(2)/jacobian(4);
     end
     stagnation_point=[x_c;y_c];
-elseif abs(eig_value(1)) < precision_torlance
+elseif abs(eig_value(1)) < prec_torl
     % converge line
-    if abs(jacobian(1)) < precision_torlance
+    if abs(jacobian(1)) < prec_torl
         x_c=-bias(1);
     else
         x_c=-bias(1)/jacobian(1);
     end
-    if abs(jacobian(4)) < precision_torlance
+    if abs(jacobian(4)) < prec_torl
         y_c=-bias(2);
     else
         y_c=-bias(2)/jacobian(4);
@@ -145,15 +145,19 @@ bou_node=node_proj_list(1:end-1,:);
 if det(eig_vector) < 0 % if det(eig_vector) less than 0, rotation
     bou_node=flipud(bou_node);
 end
-offset=norm(max(bou_node)-min(bou_node))*topology_torlance;
-bou_node=geoCurveOffset(bou_node,offset);
+offset=norm(max(bou_node)-min(bou_node))*topo_torl;
+[bou_node,line_flag]=geoCurveOffset(bou_node,offset);
+if line_flag
+    % project boundary is not a normal poly
+    return;
+end
 
 % judge phase portrait
 % eigenvalue less than zero is concentrate
 % X corresponds to the eigenvectors 1
 % Y corresponds to the eigenvectors 2
 if ((eig_value(1) > 0) && (eig_value(2) >= 0))
-    if abs(eig_value(1)-eig_value(2)) < topology_torlance
+    if abs(eig_value(1)-eig_value(2)) < topo_torl
         % proper node
         % if (0,0) inside element
         if judgeOriginSurround(bou_node)
@@ -178,51 +182,6 @@ elseif ((eig_value(1) > 0) && (eig_value(2) < -0))
     if judgeCrossY(bou_node(1:end,[1,2]))
         cross_flag=true(1);
     end
-end
-
-end
-
-function curve=geoCurveOffset(curve,offset)
-% shifting line with offset
-% direction is outside
-%
-edge_number=size(curve,1);
-
-% calculate line data and move line
-edge_data_list=zeros(edge_number,3); % A, B, C
-for edge_index=1:edge_number
-    point_1=curve(edge_index,:);
-    if edge_index == size(curve,1)
-        point_2=curve(1,:);
-    else
-        point_2=curve(edge_index+1,:);
-    end
-
-    dr=point_2-point_1;
-    
-    edge_data_list(edge_index,1)=-dr(2); % A (dr_y=-A)
-    edge_data_list(edge_index,2)=dr(1); % B (dr_x=B)
-
-    if norm(dr) == 0
-        return;
-    end
-
-    % move line
-    edge_data_list(edge_index,3)=point_1(1)*point_2(2)-point_1(2)*point_2(1)+...
-        offset/norm(dr)*sum(dr.^2); % C
-end
-
-% solve new cross point
-for edge_index=1:edge_number
-    if edge_index == 1
-        edge_prev_index=edge_number;
-    else
-        edge_prev_index=edge_index-1;
-    end
-
-    matrix=[edge_data_list(edge_index,1),edge_data_list(edge_index,2);
-        edge_data_list(edge_prev_index,1),edge_data_list(edge_prev_index,2)];
-    curve(edge_index,:)=matrix\[-edge_data_list(edge_index,3);-edge_data_list(edge_prev_index,3)];
 end
 
 end
@@ -314,60 +273,4 @@ for node_index=1:node_number
         cross_flag=false(1);
     end
 end
-end
-
-function drawFlowField...
-    (bias,jacobian)
-
-a1=bias(1);
-b1=jacobian(1);
-c1=jacobian(3);
-a2=bias(2);
-b2=jacobian(2);
-c2=jacobian(4);
-
-x_list=(-1:0.1:1);
-y_list=(-1:0.1:1);
-hold on;
-for x_index=1:length(x_list)
-    x=x_list(x_index);
-    for y_index=1:length(y_list)
-        y=y_list(y_index);
-        position=[x,y];
-        vector=[a1+b1*x+c1*y,a2+b2*x+c2*y];
-        quiver(position(1),position(2),vector(1),vector(2),'AutoScaleFactor',0.1);
-    end
-end
-hold off
-
-axis equal;
-end
-
-function drawFlowFieldProj...
-    (bias,jacobian,stagnation_point,eig_vector)
-
-a1=bias(1);
-b1=jacobian(1);
-c1=jacobian(3);
-a2=bias(2);
-b2=jacobian(2);
-c2=jacobian(4);
-
-x_list=(-1:0.1:1);
-y_list=(-1:0.1:1);
-hold on;
-for x_index=1:length(x_list)
-    x=x_list(x_index);
-    for y_index=1:length(y_list)
-        y=y_list(y_index);
-        position=[x,y];
-        vector=[a1+b1*x+c1*y,a2+b2*x+c2*y];
-        position=(position-stagnation_point')/eig_vector';
-        vector=vector/eig_vector';
-        quiver(position(1),position(2),vector(1),vector(2),'AutoScaleFactor',0.1);
-    end
-end
-hold off
-
-axis equal;
 end

@@ -4,12 +4,12 @@ close all hidden;
 
 %% PATH
 
-addpath([pwd,'\cfg']);
-addpath([pwd,'\input']);
-addpath([pwd,'\mesh']);
-addpath([pwd,'\src_base']);
-addpath([pwd,'\src_geo']);
-addpath([pwd,'\src_solver']);
+addpath cfg
+addpath input
+addpath mesh
+addpath src_base
+addpath src_geo
+addpath src_solver
 
 %% pre-model
 
@@ -19,24 +19,24 @@ global user_model
 % config=PanATSConfig('blunt_cone.cfg');
 % config=PanATSConfig('INP_plate.cfg');
 % config=PanATSConfig('WWD.cfg');
-config=PanATSConfig('hermes.cfg'); 
+% config=PanATSConfig('hermes.cfg'); 
 % config=PanATSConfig('waverider.cfg'); 
 % config=PanATSConfig('sanger.cfg');
-% config=PanATSConfig('HL20.cfg');
+% config=PanATSConfig('HL20_Ma10.cfg');
 % config=PanATSConfig('sym.cfg');
 preModelPanel(config);
 
 %% calculate
 
-% [area,area_x,area_y,area_z,volume]=solveGeometry();
+[area,area_x,area_y,area_z,volume]=solveGeometry();
 
 % inviscid
-[CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicInviscid();
+[CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicInviscid();
 
 % viscid
 [max_streamline_len]=solveModelStreamline();
 solveModelBoundaryLayer();
-[CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid();
+[CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid();
 [max_heat_flux]=solveModelHypersonicHeat();
 
 % displayModel('Cp')

@@ -2,6 +2,8 @@ function [streamline,line_len,cross_idx]=calStreamline(elem_idx,...
     point_list,element_list,boolean_attach_list,elem_flow_list,normal_vector_list)
 % calculate streamline from point_start and element
 %
+DRAW_FIGURE_FLAG=0; % debug mode, whether draw data
+
 geom_torl=1e-9;
 
 elem_num=length(element_list);
@@ -15,6 +17,8 @@ point_start=sum(point_list(element_list(elem_idx).Node_idx,:),1)/element_list(el
 % line(point_start(:,1),point_start(:,2),point_start(:,3),'Marker','o','Color','b')
 streamline(data_idx,:)=point_start;
 cross_idx(data_idx,:)=elem_idx;
+
+if DRAW_FIGURE_FLAG,displayModel();end
 
 %% upwind search begin
 
@@ -78,6 +82,8 @@ while elem_idx ~= 0 && data_idx <= max_size/2
         if elem_idx_new ~= 0,elem_idx=elem_idx_new;end
     end
     point_start=point_end;
+
+    if DRAW_FIGURE_FLAG,line(point_start(:,1),point_start(:,2),point_start(:,3),'Marker','o');end
 end
 
 
@@ -122,14 +128,14 @@ while elem_idx ~= 0 && data_idx <= max_size
         % check whether point_start local near node point cause
         Bool_overlap=vecnorm(point_start-node_list,2,2) < geom_torl;
         if any(Bool_overlap)
-            % if yes, search element that can continue search
+            % if yes, search element arounded that can continue flow
             elem_idx_origin=elem_idx;
             node_idx=find(Bool_overlap);
             vertex_idx=Node_idx(node_idx);vertex_idx=vertex_idx(1); % overlap point
 
             % base on half edge to search all around element
             elem_idx=elem.Vertex_next(node_idx);
-            while elem_idx_origin ~= elem_idx
+            while elem_idx_origin ~= elem_idx && elem_idx ~= 0
                 elem=element_list(elem_idx);
                 Node_idx=elem.Node_idx;
                 node_num=elem.node_num;
@@ -178,6 +184,8 @@ while elem_idx ~= 0 && data_idx <= max_size
     % search next element
     elem_idx=elem.Vertex_next(node_idx);
     point_start=point_end;
+
+    if DRAW_FIGURE_FLAG,line(point_start(:,1),point_start(:,2),point_start(:,3),'Marker','o');end
 end
 
 streamline=streamline(1:data_idx,:);
@@ -190,7 +198,7 @@ function [point_end,node_idx,d_len]=calElementCross...
 % calculate next cross point
 %
 
-% elem_flow as x, normal_vector as z, project point
+% elem_flow as x, normal_vector as z, point_start is origin, project point
 y_flow=cross(normal_vector,elem_flow);
 rotation=[elem_flow;y_flow;normal_vector]';
 proj_node_list=(node_list-point_start)*rotation;
@@ -205,6 +213,7 @@ for node_base_idx=1:node_num
         node_ref_idx=node_base_idx+1;
     end
 
+    % calculate each line intersection of x axis
     vertex_base_x=proj_node_list(node_base_idx,1);
     vertex_ref_x=proj_node_list(node_ref_idx,1);
     vertex_base_y=proj_node_list(node_base_idx,2);
@@ -212,7 +221,7 @@ for node_base_idx=1:node_num
 
     if (vertex_base_y <= geom_torl && vertex_ref_y >= -geom_torl) ||...
             (vertex_base_y >= -geom_torl && vertex_ref_y <= geom_torl)
-        if vertex_base_y == vertex_ref_y
+        if abs(vertex_base_y-vertex_ref_y) <= geom_torl
             if vertex_ref_x > point_end(1)
                 point_end=[vertex_ref_x,0,0];
                 node_idx=node_base_idx;

@@ -129,7 +129,7 @@ switch (node_num)
             element_dimension=2;
         end
     case 4
-        if ~isempty(typestr) && upper(typestr(1)) == 'HF'
+        if ~isempty(typestr) && upper(typestr(1)) == 'H'
             element_dimension=2;
         else
             element_dimension=3;
@@ -143,7 +143,7 @@ switch (node_num)
             element_dimension=2;
         end
     case 8
-        if ~isempty(typestr) && upper(typestr(1)) == 'HF'
+        if ~isempty(typestr) && upper(typestr(1)) == 'H'
             element_dimension=2;
         else
             element_dimension=3;

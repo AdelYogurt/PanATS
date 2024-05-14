@@ -24,7 +24,10 @@ end
 if exist(mesh_filestr,'file') ~= 2
     error('readMeshCGNS: mesh file do not exist')
 end
-mesh_filestr=which(mesh_filestr);
+
+if ~isempty(which(mesh_filestr))
+    mesh_filestr=which(mesh_filestr);
+end
 
 % only support one base one zone now
 base_index=1;

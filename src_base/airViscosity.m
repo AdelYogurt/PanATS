@@ -1,6 +1,15 @@
 function mu=airViscosity(H,P)
 % base enthalpy calculate viscosity
 %
+% input:
+% H (J/kg), P (Pa)
+%
+% output:
+% mu (Pa*s)
+%
+% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+%
+
 mu_1=1.697e-5;
 H_0=262.25e3; % J/kg
 A_0=114.55e3; % J/kg
@@ -8,6 +17,7 @@ A_0=114.55e3; % J/kg
 % Sutherland equation
 mu=mu_1*(H/H_0).^1.5.*(H_0+A_0)./(H+A_0);
 
+% [1] Page: 91
 % if H < 711.7e3
 %     mu=0.296109e-6*H^0.7259;
 % elseif H < 1881.1e3

@@ -1,4 +1,4 @@
-function [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid()
+function [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid()
 % plate reference enthalpy method to calculate viscid
 %
 % copyright Adel 2023.03
@@ -151,8 +151,8 @@ user_model.output_viscid=output_viscid;
 if config.INFORMATION
     fprintf('solveModelHypersonicViscid: hypersonic viscid solve done!\n');
     fprintf('solveModelHypersonicViscid: result\n');
-    fprintf('CL:  %14f, CD:  %14f, CSF: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\nCEff: %14f\n',...
-        [CL,CD,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
+    fprintf('CD:  %14f, CL:  %14f, CSF: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\nCEff: %14f\n',...
+        [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
 end
 
 end

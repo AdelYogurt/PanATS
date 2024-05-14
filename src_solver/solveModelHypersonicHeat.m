@@ -4,7 +4,9 @@ function [max_heat_flux]=solveModelHypersonicHeat()
 % notice:
 % P_e == P_w because of pressure of outer boundary of boundary layer is equal to pressure of surface
 %
-% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003. [2] Fay J A,
+% Riddell F R. Theory of Stagnation Point Heat Transfer in Dissociated
+% Air[J]. Journal of the Aerospace Sciences, 1958, 25(2): 73-85.
 %
 % copyright Adel 2023.03
 %
@@ -62,6 +64,21 @@ Re_x_ref_list=output_boulay.Re_x_ref_list;
 
 Cf_list=output_viscid.Cf_list;
 
+if ~isempty(SYMMETRY)
+    switch SYMMETRY
+        case 'XOY'
+            identify_dimension=3;
+        case 'YOZ'
+            identify_dimension=1;
+        case 'ZOX'
+            identify_dimension=2;
+        otherwise
+            identify_dimension=0;
+    end
+else
+    identify_dimension=0;
+end
+
 % air parameter
 rho_sl=1.225;
 R=287.0955;
@@ -97,9 +114,9 @@ HF_list=zeros(elem_num,1);
 elem_num=length(element_list);
 for elem_idx=1:elem_num
     % if element is cross by attachment line, do not need to calculate
-    if boolean_attach_list(elem_idx)
-        continue;
-    end
+%     if boolean_attach_list(elem_idx)
+%         continue;
+%     end
 
     % load data
     Cf=Cf_list(elem_idx);
@@ -157,25 +174,46 @@ for attach_idx=1:length(element_attach_list)
     %     HF_s=HF_s*sqrt((1-sin_sweep_sq)^1.5/2);
     % end
 
-    % load around element
+    % load around element properties
     Elem_arou_idx=elem.Vertex_next;
     Elem_arou_idx(Elem_arou_idx == 0)=[];
 
-    % calculate du_e__ds by arhond V_e
-    dist_list=sqrt(sum((center_point_list(Elem_arou_idx,:)-center_point_list(elem_idx,:)).^2,2));
+    % point coordinate and velocity vector
+    arou_pnt=center_point_list(Elem_arou_idx,:);
     V_e_arou=surface_flow_list(Elem_arou_idx,:)./vecnorm(surface_flow_list(Elem_arou_idx,:),2,2);
     V_e_arou=V_e_arou.*V_e_list(Elem_arou_idx,:);
+
+    % point coordinate and velocity vector
+    base_pnt=center_point_list(elem_idx,:);
     V_e=surface_flow_list(elem_idx,:)./vecnorm(surface_flow_list(elem_idx,:),2,2);
     V_e=V_e*V_e_list(elem_idx,:);
-    du_e__ds=mean(vecnorm(V_e_arou-V_e,2,2)./dist_list);
+    
+    % judge if element lay in symmetry plane
+    % if yes, symmetric velocity consider
+    if identify_dimension ~= 0
+        arou_pnt_sym=base_pnt;
+        arou_pnt_sym(:,identify_dimension)=-arou_pnt_sym(:,identify_dimension);
+        arou_pnt=[arou_pnt;arou_pnt_sym];
+
+        V_e_arou_sym=V_e;
+        V_e_arou_sym(:,identify_dimension)=-V_e_arou_sym(:,identify_dimension);
+        V_e_arou=[V_e_arou;V_e_arou_sym];
+    end
+
+    % calculate du_e__ds by arhond V_e
+    dist_list=sqrt(sum((arou_pnt-base_pnt).^2,2));
+    % du_e__ds=mean(vecnorm(V_e_arou-V_e,2,2)./dist_list);
+    du_e__ds=mean(abs(vecnorm(V_e_arou,2,2)-norm(V_e))./dist_list);
+
+    % [2] Page: 85, for modified Newtonian flow
+    % du_e__ds=sqrt(2*(P_e-P_inf)/rho_e)/radius_s;
 
     % Fay-Riddell method
-    % reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+    % [1] Pages: 66-67
     g=H_w/H_e;
-    l=0.216./sqrt(g)-0.01657./g; % Pages: 66-67
+    l=0.216./sqrt(g)-0.01657./g;
     rho_e_mu_e=l*(rho_w*mu_w);
 
-    % du_e__ds=sqrt(2*(P_e-P_1)/rho_e)/radius_s;
     % HF=0.763*Pr^-0.6*((rho_w*mu_w)/(rho_e*mu_e))^0.1*sqrt(rho_e*mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
     HF=0.763*Pr^-0.6*((rho_w*mu_w)/rho_e_mu_e)^0.1*sqrt(rho_e_mu_e*du_e__ds)*(1+(Le^a-1)*H_D/H_e)*(H_e-H_w);
 
