@@ -61,8 +61,8 @@ close all hidden;
 % lgd_hdl.set('Parent',fig_hdl_aero,'Orientation','horizontal','Position',[0.10,0.92,0.80,0.06],'FontSize',10.5,'box','off');
 % fig_hdl_aero.set('Position',[500,350,340,380]);
 % 
-% % print(fig_hdl,'slender.emf','-dmeta','-r600');
-% % print(fig_hdl,'slender.png','-dpng','-r1200');
+% % print(fig_hdl_aero,'slender_verify.emf','-dmeta','-r600');
+% % print(fig_hdl_aero,'slender_verify.png','-dpng','-r1200');
 
 %% blunt cone
 
@@ -140,8 +140,8 @@ close all hidden;
 % lgd_hdl.set('Parent',fig_hdl_aero,'Orientation','horizontal','Position',[0.10,0.92,0.80,0.06],'FontSize',10.5,'box','off');
 % fig_hdl_aero.set('Position',[500,350,340,380]);
 % 
-% % print(fig_hdl,'hermes.emf','-dmeta','-r600');
-% % print(fig_hdl,'hermes.png','-dpng','-r1200');
+% % print(fig_hdl_aero,'hermes_verify.emf','-dmeta','-r600');
+% % print(fig_hdl_aero,'hermes_verify.png','-dpng','-r1200');
 
 %% HL20
 

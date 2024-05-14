@@ -21,9 +21,9 @@ point_list=geometry.point_list;
 output_inviscid=user_model.output_inviscid;
 output_streamline=user_model.output_streamline;
 
-T_1=config.FREESTREAM_TEMPERATURE;
-P_1=config.FREESTREAM_PRESSURE;
-Ma_1=config.MACH_NUMBER;
+T_inf=config.FREESTREAM_TEMPERATURE;
+P_inf=config.FREESTREAM_PRESSURE;
+Ma_inf=config.MACH_NUMBER;
 gamma=config.GAMMA_VALUE;
 % Re=config.REYNOLDS_NUMBER;
 T_w=config.MARKER_ISOTHERMAL;
@@ -36,26 +36,32 @@ streamline_len_list=output_streamline.streamline_len_list;
 
 R=287.0955;
 Pr=0.71;
-r_l=Pr^(1/3); % temperature recovery coefficient
 gamma_plus=gamma+1;
 gamma_sub=gamma-1;
 
 % free flow parameter
-rho_1=P_1/R/T_1;
-a_1=sqrt(gamma*R*T_1);
-V_1=a_1*Ma_1;
-V_1_sq=V_1*V_1;
-q_1=rho_1*V_1_sq/2;
+rho_inf=P_inf/R/T_inf;
+a_inf=sqrt(gamma*R*T_inf);
+V_inf=a_inf*Ma_inf;
+V_inf_sq=V_inf*V_inf;
+q_inf=rho_inf*V_inf_sq/2;
 
 % solve prepare
-H_0=(airEnthalpy(T_1)+V_1_sq/2); % Free-stream enthalpy J/kg equal to H_s
+Re_x_tri=10^(5.37+0.2326*Ma_inf-0.004015*Ma_inf*Ma_inf); % transition Reynolds number
+
+% temperature recovery coefficient
+r_l_lam=Pr^(1/2); % laminar flow
+r_l_turb=Pr^(1/3); % turbulence flow
+
+% solve prepare
+H_0=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
 H_w=airEnthalpy(T_w); % wall air enthalpy J/kg
 
 elem_num=length(element_list);
 % initialize result sort array
-T_2_list=zeros(elem_num,1);
-P_2_list=zeros(elem_num,1);
-rho_2_list=zeros(elem_num,1);
+T_p_list=zeros(elem_num,1);
+P_p_list=zeros(elem_num,1);
+rho_p_list=zeros(elem_num,1);
 
 rho_e_list=zeros(elem_num,1);
 V_e_list=zeros(elem_num,1);
@@ -92,17 +98,23 @@ for elem_idx=1:elem_num
     P_e=P_list(elem_idx); % surface pressure equal to boundary layer pressure
     theta=theta_list(elem_idx); % actually is attack angle
 
-    [T_2,P_2,rho_2,H_2,rho_e,V_e,mu_e,H_e]=aerodynamicBoundaryLayer...
-        (Ma_1,T_1,P_1,rho_1,V_1,gamma,P_e,H_0,theta,...
+    [T_p,P_p,rho_p,H_p,rho_e,V_e,mu_e,H_e]=aerodynamicBoundaryLayer...
+        (Ma_inf,T_inf,P_inf,rho_inf,V_inf,gamma,P_e,H_0,theta,...
         gamma_sub,gamma_plus);
 
-    if V_e == 0, V_e=V_1;end
+    if V_e == 0, V_e=V_inf;end
 
     % local Reynolds number
     Re_x=rho_e*V_e*streamline_len/mu_e;
 
     % reference air paremeter
-    H_r=H_e+r_l*V_e*V_e/2;
+    if Re_x < Re_x_tri
+        % laminar flow
+        H_r=H_e+r_l_lam*V_e*V_e/2;
+    else
+        % turbulent flow
+        H_r=H_e+r_l_turb*V_e*V_e/2;
+    end
     H_ref=0.19*H_r+0.23*H_e+0.58*H_w;
     mu_ref=airViscosity(H_ref);
     rho_ref=airDensity(H_ref,P_e);
@@ -110,9 +122,9 @@ for elem_idx=1:elem_num
     % local reference Reynolds number
     Re_x_ref=Re_x*(rho_ref*mu_e)/(rho_e*mu_ref);
 
-    T_2_list(elem_idx)=T_2;
-    P_2_list(elem_idx)=P_2;
-    rho_2_list(elem_idx)=rho_2;
+    T_p_list(elem_idx)=T_p;
+    P_p_list(elem_idx)=P_p;
+    rho_p_list(elem_idx)=rho_p;
 
     rho_e_list(elem_idx)=rho_e;
     V_e_list(elem_idx)=V_e;
@@ -129,9 +141,9 @@ for elem_idx=1:elem_num
     Re_x_ref_list(elem_idx)=Re_x_ref;
 end
 
-output_boulay.T_2_list=T_2_list;
-output_boulay.P_2_list=P_2_list;
-output_boulay.rho_2_list=rho_2_list;
+output_boulay.T_p_list=T_p_list;
+output_boulay.P_p_list=P_p_list;
+output_boulay.rho_p_list=rho_p_list;
 
 output_boulay.rho_e_list=rho_e_list;
 output_boulay.V_e_list=V_e_list;
@@ -176,19 +188,12 @@ H_2=gamma/gamma_sub*P_2/rho_2;
 rho_e=(P_e/P_2)^(1/gamma)*rho_2; % notic from after shock to boundary out is isentropic
 
 % % base on ideal gas equation obtain enthalpy, gamma/gamma_sub*R=cp
-H_e=gamma/gamma_sub*P_e/rho_e;
-% H_e=(0.213833*P_e/101325/rho_e)^(1/0.972)*1755.52e3;
-% if H_e > 1755.52e3
-%     a=0.718+1.38974e-2*log(P_e/101325);
-%     H_e=(0.213833*P_e/101325/rho_e)^(1/a)*1755.52e3;
-% end
+H_e=gamma/gamma_sub*P_e^(1-1/gamma)*P_2^(1/gamma)/rho_2; % H_e=gamma/gamma_sub*P_e/rho_e;
 
 % base on energy equation obtain velocity
 V_e=sqrt(2*(H_0-H_e));
 
-if H_0 < H_e
-    V_e=0;
-end
+if H_0 < H_e, V_e=0;end
 
 % base on sutherland to calculate viscosity coefficient
 mu_e=airViscosity(H_e);

@@ -18,8 +18,8 @@ addpath src_solver
 % config=PanATSConfig('hermes.cfg'); 
 % AOA_PanATS=[-5,0,5,10,15,20,25,30];
 
-config=PanATSConfig('slender.cfg'); 
-AOA_PanATS=[0,3,5,7,10];
+% config=PanATSConfig('slender.cfg'); 
+% AOA_PanATS=[0,3,5,7,10];
 
 %% calculate
 

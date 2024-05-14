@@ -44,7 +44,7 @@ q_inf=rho_inf*V_inf_sq/2;
 H_inf=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
 
 % solve prepare
-Ma_1_sq=Ma_inf*Ma_inf;
+Ma_inf_sq=Ma_inf*Ma_inf;
 gamma_plus=gamma+1;
 gamma_sub=gamma-1;
 
@@ -59,37 +59,32 @@ D=1.0081057-0.0132323*Ma_inf+0.00164956*Ma_inf*Ma_inf-0.00006797*Ma_inf*Ma_inf*M
 
 % Prandtl Mayer parameter
 theta_max=(sqrt(gamma_plus/gamma_sub)-1)*pi/2-...
-    sqrt(gamma_plus/gamma_sub)*atan(sqrt(gamma_sub/gamma_plus*(Ma_1_sq-1)))+...
-    atan(sqrt(Ma_1_sq-1));
+    sqrt(gamma_plus/gamma_sub)*atan(sqrt(gamma_sub/gamma_plus*(Ma_inf_sq-1)))+...
+    atan(sqrt(Ma_inf_sq-1));
 
-% modified Newton Cp_max
-Cp_stag=2/gamma/Ma_1_sq*(...
-    (gamma_plus^2*Ma_1_sq/(4*gamma*Ma_1_sq-2*gamma_sub))^(gamma/gamma_sub)*((1-gamma+2*gamma*Ma_1_sq)/gamma_plus)...
+% modified Newton CP_max
+CP_stag=2/gamma/Ma_inf_sq*(...
+    (gamma_plus^2*Ma_inf_sq/(4*gamma*Ma_inf_sq-2*gamma_sub))^(gamma/gamma_sub)*((1-gamma+2*gamma*Ma_inf_sq)/gamma_plus)...
     -1);
 
-% if Ma_inf < 5
-%     warning('solveModelHypersonicAerodynamic: Mach number less than 5');
-%     HYPERSONIC_FLAG=0;
-% elseif Ma_inf < 6.5
-%     HYPERSONIC_FLAG=1;
-% elseif Ma_inf < 8.5
-%     HYPERSONIC_FLAG=2;
-% else
-%     HYPERSONIC_FLAG=3;
-% end
+Ma_low_max=8.5;
+Ma_high_min=6.5;
+Ma_t=(Ma_inf-Ma_high_min)/(Ma_low_max-Ma_high_min);
 
 if Ma_inf < 5
     warning('solveModelHypersonicAerodynamic: Mach number less than 5');
     HYPERSONIC_FLAG=0;
-elseif Ma_inf < 10
+elseif Ma_inf < Ma_high_min
     HYPERSONIC_FLAG=1;
-else
+elseif Ma_inf < Ma_low_max
     HYPERSONIC_FLAG=2;
+else
+    HYPERSONIC_FLAG=3;
 end
 
 % normal shock parameter
-P_2__P_1=2*gamma/gamma_plus*Ma_1_sq-gamma_sub/gamma_plus;
-rho_2__rho_1=gamma_plus*Ma_1_sq/(gamma_sub*Ma_1_sq+2);
+P_2__P_1=2*gamma/gamma_plus*Ma_inf_sq-gamma_sub/gamma_plus;
+rho_2__rho_1=gamma_plus*Ma_inf_sq/(gamma_sub*Ma_inf_sq+2);
 P_2=P_2__P_1*P_inf;
 rho_2=rho_2__rho_1*rho_inf;
 
@@ -99,11 +94,11 @@ P_max__rho_max_p_gamma=P_2/rho_2^gamma;
 P_max=(P_max__rho_max^gamma/P_max__rho_max_p_gamma)^(1/gamma_sub);
 
 % calculate enthalpy correct factor
-if HYPERSONIC_FLAG== 0
+if HYPERSONIC_FLAG <= 1
     CP_normal=calDahlemDuck(pi/2,1);
-elseif HYPERSONIC_FLAG== 1
-    CP_normal=transition(calDahlemDuck(pi/2,1),calModifyNewton(1),(Ma_inf-5)/5);
-elseif HYPERSONIC_FLAG== 2
+elseif HYPERSONIC_FLAG == 2
+    CP_normal=transition(calDahlemDuck(pi/2,1),calModifyNewton(1),Ma_t);
+elseif HYPERSONIC_FLAG == 3
     CP_normal=calModifyNewton(1);
 end
 P_normal=CP_normal*q_inf+P_inf;
@@ -122,12 +117,15 @@ theta_list=fail_list-pi/2;
 % notice cos(theta)^2== 1-cos_fail.^2
 sin_theta_sq_list=cos_fail_list.*cos_fail_list;
 
-% calculate surface Cp
+% calculate surface CP
 CP_list=zeros(size(theta_list));
-if HYPERSONIC_FLAG== 0
-    Bool=theta_list < 0;
-    CP_list(Bool)=calPrandtlMeyer(theta_list(Bool));
 
+if HYPERSONIC_FLAG <= 1
+    % leeward
+    Bool=theta_list < 0;
+    CP_list(Bool)=calACMEmpirical(theta_list(Bool));
+
+    % windward
     Bool=theta_list >= 0 & theta_list < pi/6;
     CP_list(Bool)=calTangentWedge(theta_list(Bool),sin_theta_sq_list(Bool));
 
@@ -136,15 +134,15 @@ if HYPERSONIC_FLAG== 0
     
     Bool=theta_list >= pi/3;
     CP_list(Bool)=calDahlemDuck(theta_list(Bool),sin_theta_sq_list(Bool));
-elseif HYPERSONIC_FLAG== 1
-    Ma_t=(Ma_inf-5)/5;
-
+elseif HYPERSONIC_FLAG == 2
+    % leeward
     Bool=theta_list < 0;
     CP_list(Bool)=transition(...
-        calPrandtlMeyer(theta_list(Bool)),...
         calACMEmpirical(theta_list(Bool)),...
+        calPrandtlMeyer(theta_list(Bool)),...
         Ma_t);
 
+    % windward
     Bool=theta_list >= 0 & theta_list < pi/6;
     CP_list(Bool)=transition(...
         calTangentWedge(theta_list(Bool),sin_theta_sq_list(Bool)),...
@@ -162,10 +160,14 @@ elseif HYPERSONIC_FLAG== 1
         calDahlemDuck(theta_list(Bool),sin_theta_sq_list(Bool)),...
         calModifyNewton(sin_theta_sq_list(Bool)),...
         Ma_t);
-elseif HYPERSONIC_FLAG== 2
+elseif HYPERSONIC_FLAG == 3
+    % leeward
     Bool=theta_list < 0;
-    CP_list(Bool)=calACMEmpirical(theta_list(Bool));
-    CP_list(~Bool)=calModifyNewton(sin_theta_sq_list(~Bool));
+    CP_list(Bool)=calPrandtlMeyer(theta_list(Bool));
+
+    % windward
+    Bool=theta_list >= 0;
+    CP_list(Bool)=calModifyNewton(sin_theta_sq_list(Bool));
 end
 
 % Pressure
@@ -175,6 +177,7 @@ P_list=q_inf*CP_list+P_inf;
 Bool_enthalpy_correct=theta_list > 0;
 P_list(Bool_enthalpy_correct)=P_list(Bool_enthalpy_correct).*...
     (1-(1-P_correct)*sin(theta_list(Bool_enthalpy_correct)));
+
 CP_list=(P_list-P_inf)/q_inf;
 
 dFn_list=-normal_vector_list.*area_list.*P_list;
@@ -228,7 +231,7 @@ if ~isempty(SYMMETRY)
 end
 
 output_inviscid.theta_list=theta_list;
-output_inviscid.Cp_list=CP_list;
+output_inviscid.CP_list=CP_list;
 output_inviscid.P_list=P_list;
 output_inviscid.dFn_list=dFn_list;
 output_inviscid.dMn_list=dMn_list;
@@ -254,25 +257,20 @@ end
         % res=A*(1-t)+B*t;
     end
 
-    function Cp=calDejarnetle(theta)
-        % Dejarnetle modify Newton method
-        %
-        Cp=Cp_stag*(1-D*(cos(theta)).^G);
-    end
-
-    function Cp=calModifyNewton(sin_theta_sq)
+    function CP=calModifyNewton(sin_theta_sq)
         % modified Newton
         %
-        Cp=Cp_stag*sin_theta_sq;
+        CP=CP_stag*sin_theta_sq;
     end
 
-    function Cp=calACMEmpirical(theta)
+    function CP=calACMEmpirical(theta)
         % ACM empirical data
         %
-        Cp=max((theta*3.8197)*(1/Ma_1_sq),-(1/Ma_1_sq)); % delta(deg)/15/Ma_1_sq
+        % modify
+        CP=max((theta*3.8197)*(1/Ma_inf_sq),-1/Ma_inf_sq+0.57/Ma_inf_sq^2); % delta(deg)/15/Ma_inf_sq
     end
 
-    function Cp=calTangentCone(theta)
+    function CP=calTangentCone(theta)
         % Each face element is regarded as a part of a cone whose half-top
         % Angle is equal to the Angle of the object surface of the face
         % element.
@@ -284,31 +282,31 @@ end
         sin_theta=sin(theta);
         Ma_n=(0.87.*Ma_inf-0.544).*sin_theta + 0.53;
         Ma_n_sq=Ma_n.^2;
-        Cp=48.*Ma_n_sq.*sin_theta.^2./(23.*Ma_n_sq-5);
+        CP=48.*Ma_n_sq.*sin_theta.^2./(23.*Ma_n_sq-5);
     end
 
-    function Cp=calTangentWedgeEmpirical(theta)
+    function CP=calTangentWedgeEmpirical(theta)
         % empirical tangent wedge method
         xx=Ma_inf.*sin(theta);
-        Cp=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_inf.^2);
+        CP=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_inf.^2);
     end
 
-    function Cp=calTangentWedge(theta,sin_theta_sq)
+    function CP=calTangentWedge(theta,sin_theta_sq)
         % If theta is greater than 45.585 deg, then the shock is detached,
         % regardless of the value of mach. Use TangentWedgeEmpirical
         %
-        Cp=theta;
-        Ma_1_4=Ma_1_sq.^2;
+        CP=theta;
+        Ma_1_4=Ma_inf_sq.^2;
 
-        b=-(Ma_1_sq+2)./Ma_1_sq-gamma.*sin_theta_sq;
-        c=(2.*Ma_1_sq+1)./Ma_1_4+sin_theta_sq.*((gamma_plus/2).^2+gamma_sub./Ma_1_sq);
+        b=-(Ma_inf_sq+2)./Ma_inf_sq-gamma.*sin_theta_sq;
+        c=(2.*Ma_inf_sq+1)./Ma_1_4+sin_theta_sq.*((gamma_plus/2).^2+gamma_sub./Ma_inf_sq);
         d=(sin_theta_sq-1)./Ma_1_4;
         q=(b.*b-3.*c)./9;
         r=(b.*(2.*b.^2-9.*c)+27.*d)./54;
         disc=q.*q.*q - r.*r;
 
         Bool_disc=disc > 0;
-        Cp(~Bool_disc)=calTangentWedgeEmpirical(theta(~Bool_disc));
+        CP(~Bool_disc)=calTangentWedgeEmpirical(theta(~Bool_disc));
 
         if any(Bool_disc)
             costh=r(Bool_disc)./sqrt(q(Bool_disc).^3);
@@ -318,75 +316,66 @@ end
             root3=c.*cos((acos_theta+4.*pi)./3)-d;
             % root3 is supposed to be the middle root, but check it anyway
             % wave angle
-            Cp(Bool_disc)=4.0.*(Ma_1_sq.*root3-1.0)./(Ma_1_sq.*(gamma+1.0));
+            CP(Bool_disc)=4.0.*(Ma_inf_sq.*root3-1.0)./(Ma_inf_sq.*(gamma+1.0));
         end
 
         Bool_theta=theta > 0.7956; % 45.585 deg
-        Cp(Bool_theta)=calTangentWedgeEmpirical(theta(Bool_theta));
+        CP(Bool_theta)=calTangentWedgeEmpirical(theta(Bool_theta));
 
         % There can be numerical problems with very small wedge angles. Use the
         % equation on p. 92 of Liepmann and Roshko, Gasdynamics.
-%         Bool_theta=theta < 0.035; % 45.585 deg
-%         Cp(Bool_theta)=gamma.*Ma_1_sq.*theta(Bool_theta)./sqrt(Ma_1_sq.^2-1.0);
+
+        % modify
+        % Bool_theta=theta < 0.035; % 45.585 deg
+        % CP(Bool_theta)=gamma.*Ma_inf_sq.*theta(Bool_theta)./sqrt(Ma_inf_sq.^2-1.0);
         
     end
 
-    function Cp=calTangentWedgeInfiniteMach(theta)
-        % PURPOSE - Calculate pressure using tangent wedge
-        % infinite Mach method add theory
-        %
-        emns=0.5.*gamma_plus.*Ma_inf.*sin(theta)+exp(-0.25.*gamma_plus.*Ma_inf.*sin(theta));
-        Cp=(4./gamma_plus).*(emns.^2-1)./Ma_inf.^2;
-    end
-
-    function Cp=calDahlemDuck(theta,sin_theta_sq)
+    function CP=calDahlemDuck(theta,sin_theta_sq)
         % modified Dahlem-Buck method
         %
-        Cp=theta;
+        CP=theta;
         Bool_neg=theta <= 0;
-        Cp(Bool_neg)=0;
+        CP(Bool_neg)=0;
 
         if any(~Bool_neg)
             % first compute the original
-            Cp_max=(1./sin(4*theta(~Bool_neg)).^0.75+1);
-            Cp_max(theta(~Bool_neg) > 0.3927)=Cp_stag; % 22.5 deg
-            Cp_max(Cp_max > 5.0)=5.0;
-            Cp_max(Cp_max < Cp_stag)=Cp_stag;
+            CP_max=(1./sin(4*theta(~Bool_neg)).^0.75+1);
+            CP_max(theta(~Bool_neg) > 0.3927)=2; % 22.5 deg
+            CP_max(CP_max > 5.0)=5.0;
+            CP_max(CP_max < 2)=2;
 
             % modify for low mach number
             eta=a*(theta(~Bool_neg)/pi*180).^n+1.0;
-            Cp(~Bool_neg)=eta.*Cp_max.*sin_theta_sq(~Bool_neg);
+            CP(~Bool_neg)=eta.*CP_max.*sin_theta_sq(~Bool_neg);
         end
     end
 
-    function Cp=calPrandtlMayerFit(theta)
-        theta(theta < theta_max)=calACMEmpirical(theta(theta < theta_max));
-        Cp=-gamma_plus*theta.^2/2.*(sqrt(1+(4/gamma_plus/Ma_inf./theta).^2)-1);
-        Cp(theta== 0)=0;
-    end
-
-    function Cp=calPrandtlMeyer(theta)
-        % PURPOSE - Compute the pressure coefficient associated with an change of
-        % freestream direction of deltar. Since deltar is negative in the calling
-        % program, note that you subtract deltar from nuZero to get the nu on the
-        % expansion surface.
-        % radians  ( will be negative)
+    function CP=calPrandtlMeyer(theta)
+        % PURPOSE - Compute the pressure coefficient associated with an
+        % change of freestream direction of deltar. Since deltar is
+        % negative in the calling program, note that you subtract deltar
+        % from theta_inf to get the dtheta on the expansion surface radians
+        % ( will be negative)
         %
-        beta=sqrt(abs(Ma_1_sq-1.0));
+        beta=sqrt(abs(Ma_inf_sq-1.0));
 
-        % free-stream nu
-        nuzero=sqrt(6).*atan(beta./sqrt(6))-atan(beta);
+        % free-stream theta
+        theta_inf=sqrt(6).*atan(beta./sqrt(6))-atan(beta);
 
-        % nu on the expansion surface
-        nu=nuzero-theta;
+        % dtheta on the expansion surface
+        dtheta=theta_inf-theta;
 
-        Ma_local_sq=calInversePrandtlMeyer(nu).^2;
-        bracket=(1.0+(gamma_sub/2).*Ma_local_sq)./(1.0+(gamma_sub/2).*Ma_1_sq);
-        Cp=((2/gamma)./Ma_1_sq).*(bracket.^(-(gamma/gamma_sub))-1.0);
+        Ma_local_sq=calInversePrandtlMeyer(dtheta).^2;
+        bracket=(1.0+(gamma_sub/2).*Ma_inf_sq)./(1.0+(gamma_sub/2).*Ma_local_sq);
+        CP=((2/gamma)./Ma_inf_sq).*(bracket.^((gamma/gamma_sub))-1.0);
 
-        % nu inf is 0.5*PI*(Sqrt(6)-1)
+        % dtheta inf is pi/2*(sqrt(6)-1)
         % can't go any lower than this
-        Cp(nu > 2.27685316)=-2.0./(gamma.*Ma_1_sq);
+        CP(dtheta > 2.27685)=-2.0./(gamma.*Ma_inf_sq);
+
+        % modify
+        CP=max(CP,(2.0./(gamma.*Ma_inf_sq)).*( (2/gamma_plus)^gamma.* (1./Ma_inf_sq).^(gamma).* ((2*gamma*Ma_inf_sq-gamma_sub)/gamma_plus) -1 ));
     end
 
     function Ma=calInversePrandtlMeyer(nu)
@@ -394,60 +383,25 @@ end
         % curve fit, good to 5 or 6 significant figures. Refer to the function
         % InversePrandtlMeyerPrecise if you need full doubleprecision accuracy.
         % 
-        % reference: [1] Hall I M. Inversion of the Prandtl-Meyer
+        % reference: [1] Hall I Ma_inf. Inversion of the Prandtl-Meyer
         % relation[J]. The Aeronautical Journal (1968), 1975, 79: 417 - 8.
         %
         y=(nu./2.27685316).^0.6666667;
         Ma=(1.0+y.*(1.3604+y.*(0.0962+y.*-0.5127)))./(1.0+y.*(-0.6722+y.*-0.3278));
     end
 
-%     function Ma_1=calInversePrandtlMeyerprecise(nu)
-%         % PURPOSE - Inverse Prandtl-Meyer function with high precision. Use Hall's
-%         % approximation for a good first guess, then apply Newton's method to get
-%         % greater accuracy. Instead of putting a test for convergence in the
-%         % algorithm, I studied the function for various values of nu and found that
-%         % four steps will give full convergence to doubleprecision (64 bits). One
-%         % step would give adequate precision for single precision.
-%         % Note the use of beta instead of Mach as the dependant variable until the
-%         % very last step.
-%         %
-%         % first guess
-%         beta=sqrt(abs((calInversePrandtlMeyer(nu)).^2 - one));
-%         % use Newton MAX times
-%         for i=1:max_ml
-%             % error in nu
-%             err=sqrt6.*atan(beta./sqrt6)-atan(beta)-nu;
-%             betasq=beta.*beta;
-%             % d(nu)/d(beta)
-%             beta=beta-err.*(six+betasq).*(one+betasq)./(six.*term2.*betasq);
-%         end
-%         i=fix(max_ml+1);
-%         Ma_1=sqrt(beta.*beta+one);
-%     end
+    function CP=calDejarnetle(theta)
+        % Dejarnetle modify Newton method
+        %
+        CP=CP_stag*(1-D*(cos(theta)).^G);
+    end
 
-%     function Cp=calPrandtlMeyerxxx()
-%         beta=sqrt(abs(Ma_1_sq-1.0));
-%         %   free-stream nu }
-%         nuzero=sqrt6.*atan(beta./sqrt6)-atan(beta);
-%         %  should be > 0 }
-%         del=-theta;
-%         %      nu on the expansion surface }
-%         nu=nuzero+del;
-%         %   make a guess for beta - infinite Mach approx. }
-%         beta=5.0./(numax-nu);
-%         beta=sqrt(sqrt(nu./numax)).*5.0./(numax-nu);
-%         %   error in nu at this beta}
-%         err=sqrt6.*atan(beta./sqrt6)-atan(beta)-nu;
-%         % use Newton-Raphson MAX times
-%         for i=1:max_ml
-%             betasq=beta.^2;
-%             %  estimate
-%             beta=beta-err.*(1+betasq./6.0).*(1+betasq)./(term2.*betasq);
-%             %   new error in nu }
-%             err=sqrt6.*atan(beta./sqrt6)-atan(beta)-nu;
-%         end
-%         i=fix(max_ml+1);
-%         bracket=(1.0+term3.*(1+beta.*beta))./(1.0+term3.*Ma_1_sq);
-%         Cp=(con7./Ma_1_sq).*(bracket.^(-expt) -1.0);
-%     end
+    function CP=calTangentWedgeInfiniteMach(theta)
+        % PURPOSE - Calculate pressure using tangent wedge
+        % infinite Mach method add theory
+        %
+        emns=0.5.*gamma_plus.*Ma_inf.*sin(theta)+exp(-0.25.*gamma_plus.*Ma_inf.*sin(theta));
+        CP=(4./gamma_plus).*(emns.^2-1)./Ma_inf.^2;
+    end
+
 end

@@ -44,9 +44,9 @@ surface_flow_list=output_streamline.surface_flow_list;
 boolean_attach_list=output_streamline.boolean_attach_list;
 element_attach_list=output_streamline.element_attach_list;
 
-T_2_list=output_boulay.T_2_list;
-P_2_list=output_boulay.P_2_list;
-rho_2_list=output_boulay.rho_2_list;
+T_p_list=output_boulay.T_p_list;
+P_p_list=output_boulay.P_p_list;
+rho_p_list=output_boulay.rho_p_list;
 
 rho_e_list=output_boulay.rho_e_list;
 V_e_list=output_boulay.V_e_list;
@@ -137,9 +137,9 @@ for attach_idx=1:length(element_attach_list)
     % stagnation point air parameter parpare
     P_e=P_list(elem_idx); % stagnation point pressure
 
-    T_2=T_2_list(elem_idx);
-    P_2=P_2_list(elem_idx);
-    rho_2=rho_2_list(elem_idx);
+    T_2=T_p_list(elem_idx);
+    P_2=P_p_list(elem_idx);
+    rho_2=rho_p_list(elem_idx);
 
     rho_e=rho_e_list(elem_idx);
     V_e=V_e_list(elem_idx);
