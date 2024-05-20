@@ -24,7 +24,6 @@ user_model.output_streamline=[];
 user_model.output_boulay=[];
 user_model.output_viscid=[];
 user_model.output_heat=[];
-user_model.output_FEM=[];
 user_model.output_post=[];
 
 % load mesh data

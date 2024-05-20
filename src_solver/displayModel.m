@@ -29,8 +29,6 @@ output_streamline=user_model.output_streamline;
 output_boulay=user_model.output_boulay;
 output_viscid=user_model.output_viscid;
 output_heat=user_model.output_heat;
-output_FEM=user_model.output_FEM;
-output_post=user_model.output_post;
 
 fig_res=figure();
 

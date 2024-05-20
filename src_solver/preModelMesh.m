@@ -17,9 +17,13 @@ if ischar(mkr_name_list)
     mkr_name_list={mkr_name_list};
 end
 mkr_idx=1;
+
+% remove useless marker
 while mkr_idx <= length(mkr_name_list)
     mkr_name=mkr_name_list{mkr_idx};
-    if strcmp(mkr_name,'geometry')
+
+    % remove geometry and 2D marker
+    if strcmp(mkr_name,'geometry') || mesh_data.(mkr_name).ID == 3
         mkr_name_list(mkr_idx)=[];
     else
         mkr_idx=mkr_idx+1;
