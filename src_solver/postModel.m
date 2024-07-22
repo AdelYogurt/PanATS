@@ -84,21 +84,30 @@ end
 
 area_sum_list(area_sum_list == 0)=1;
 
-% average velocity to each point
-Cp_list=Cp_list./area_sum_list;
-P_list=P_list./area_sum_list;
-streamline_len_list=streamline_len_list./area_sum_list;
-surface_flow_list=surface_flow_list./area_sum_list;
-Cf_list=Cf_list./area_sum_list;
-HF_list=HF_list./area_sum_list;
+% average velocity to each point and updata data into output
+if ~isempty(output_inviscid)
+    Cp_list=Cp_list./area_sum_list;
+    P_list=P_list./area_sum_list;
+    output_post.Cp_list=Cp_list;
+    output_post.P_list=P_list;
+end
 
-% updata data into output
-output_post.Cp_list=Cp_list;
-output_post.P_list=P_list;
-output_post.streamline_len_list=streamline_len_list;
-output_post.surface_flow_list=surface_flow_list;
-output_post.Cf_list=Cf_list;
-output_post.HF_list=HF_list;
+if ~isempty(output_streamline)
+    streamline_len_list=streamline_len_list./area_sum_list;
+    surface_flow_list=surface_flow_list./area_sum_list;
+    output_post.streamline_len_list=streamline_len_list;
+    output_post.surface_flow_list=surface_flow_list;
+end
+
+if ~isempty(output_viscid)
+    Cf_list=Cf_list./area_sum_list;
+    output_post.Cf_list=Cf_list;
+end
+
+if ~isempty(output_heat)
+    HF_list=HF_list./area_sum_list;
+    output_post.HF_list=HF_list;
+end
 
 user_model.output_post=output_post;
 
@@ -189,10 +198,10 @@ if isfield(config,'OUTPUT_FILES') && ~isempty(config.OUTPUT_FILES)
             fclose(out_file);
 
             % write point data
-            writematrix(data(:,2:end),out_filename,'WriteMode','append','FileType','text');
+            writematrix(data(:,2:end),out_filename,'WriteMode','append','FileType','text','Delimiter',' ');
 
             % write element idx
-            writematrix(elem_idx_mat,out_filename,'WriteMode','append','FileType','text');
+            writematrix(elem_idx_mat,out_filename,'WriteMode','append','FileType','text','Delimiter',' ');
         end
     end
 end

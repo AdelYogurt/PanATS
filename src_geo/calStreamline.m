@@ -130,7 +130,7 @@ while elem_idx ~= 0 && data_idx <= max_size
         if any(Bool_overlap)
             % if yes, search element arounded that can continue flow
             elem_idx_origin=elem_idx;
-            node_idx=find(Bool_overlap);
+            node_idx=find(Bool_overlap,1);
             vertex_idx=Node_idx(node_idx);vertex_idx=vertex_idx(1); % overlap point
 
             % base on half edge to search all around element

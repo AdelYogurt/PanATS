@@ -1,20 +1,21 @@
-function mesh_data=readMeshSTL(mesh_filestr,scale,file_type,geometry_torlance)
+function mesh_data=readMeshSTL(mesh_filestr,scale,file_type,geom_torl)
 % read mesh data from stl file
 %
 % input:
-% mesh_filestr(support .stl file), scale(geometry zoom scale), ...
-% file_type(stl code format, binary/ASCII), ...
-% geometry_torlance(default is 1e-12)
+% mesh_filestr(char): stl file to read
+% scale(double): geometry zoom scale
+% file_type(char): stl code format, binary/ASCII
+% geom_torl(double): ignore size of edge len, default is eps
 %
 % output:
 % mesh_data
 %
-% notice:
+% mesh_data format:
 % mesh_data(single zone): mesh_data.(marker)
 % marker: marker.type, marker.element_list
 %
-if nargin < 4
-    geometry_torlance=1e-12;
+if nargin < 4 || isempty(geom_torl)
+    geom_torl=eps;
     if nargin < 3
         file_type=[];
         if nargin < 2
@@ -78,14 +79,14 @@ if strcmp(file_type,'binary')
 
         attribute=fread(mesh_file,1,'int16');
 
-        if norm(point_1-point_2) < geometry_torlance ||...
-                norm(point_2-point_3) < geometry_torlance ||...
-                norm(point_3-point_1) < geometry_torlance
+        if norm(point_1-point_2) < geom_torl ||...
+                norm(point_2-point_3) < geom_torl ||...
+                norm(point_3-point_1) < geom_torl
             overlap_list=[overlap_list;element_index];
         end
     end
 
-    element_list([3*overlap_list-2;3*overlap_list-1;overlap_list],:)=[];
+    element_list([3*overlap_list-2;3*overlap_list-1;3*overlap_list],:)=[];
     element_number=element_number-length(overlap_list);
 else
     % read head
@@ -110,9 +111,9 @@ else
         % read normal vector
         vector_normal_string=strsplit(fgetl(mesh_file));
 
-        if norm(point_1-point_2) < geometry_torlance ||...
-                norm(point_2-point_3) < geometry_torlance ||...
-                norm(point_3-point_1) < geometry_torlance
+        if norm(point_1-point_2) < geom_torl ||...
+                norm(point_2-point_3) < geom_torl ||...
+                norm(point_3-point_1) < geom_torl
         else
             element_number=element_number+1;
             element_list(3*element_number-2:3*element_number,:)=...

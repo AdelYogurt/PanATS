@@ -8,7 +8,7 @@ if nargin < 3
     end
 end
 
-if isempty(axe_hdl), axe_hdl=axes(gcf());end
+if isempty(axe_hdl), axe_hdl=gca();end
 
 if isempty(marker_name_list)
     marker_name_list=fieldnames(mesh_data);
@@ -108,7 +108,6 @@ x_range=xlim();
 y_range=ylim();
 if dimension ~= 2
     zlabel('z');
-    view(3);
     z_range=zlim();
     center=[mean(x_range),mean(y_range),mean(z_range)];
     range=max([x_range(2)-x_range(1),y_range(2)-y_range(1),z_range(2)-z_range(1)])/2;

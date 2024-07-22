@@ -42,7 +42,7 @@ if ~isfield(config,'mesh_data') || isempty(config.mesh_data)
 
             for file_index=1:length(mesh_filestr_list)
                 mesh_filestr=mesh_filestr_list{file_index};
-                mesh_data_new=readMeshSTL(mesh_filestr,config.MESH_SCALE,config.MESH_ENCODE);
+                mesh_data_new=readMeshSTL(mesh_filestr,config.MESH_SCALE);
                 mkr_name=fieldnames(mesh_data_new);mkr_name=mkr_name{1};
                 marker_moniter{file_index}=mkr_name;
                 mesh_data.(mkr_name)=mesh_data_new.(mkr_name);
@@ -82,14 +82,10 @@ end
 if ~isfield(config,'MARKER_MONITORING')
     config.MARKER_MONITORING=[];
 else
-    if isnumeric(config.MARKER_MONITORING)
-        if config.MARKER_MONITORING == 0
-            config.MARKER_MONITORING=[];
-%         else
-%             error('preModelPanel: marker moniter can not be number other than 0');
-        end
+    if strcmp(config.MARKER_MONITORING,'NONE')
+        config.MARKER_MONITORING=[];
     end
-    
+
     if ischar(config.MARKER_MONITORING)
         config.MARKER_MONITORING={config.MARKER_MONITORING};
     end

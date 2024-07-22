@@ -162,7 +162,7 @@ axis equal;
 xlabel('x');
 ylabel('y');
 zlabel('z');
-view(3);
+
 
 % x_range=xlim();
 % y_range=ylim();

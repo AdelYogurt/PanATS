@@ -42,9 +42,6 @@ classdef PanATSConfig < handle
             if ~isfield(self.data_dict,'MESH_SCALE')
                 self.data_dict.MESH_SCALE=1;
             end
-            if ~isfield(self.data_dict,'MESH_ENCODE')
-                self.data_dict.MESH_ENCODE=[];
-            end
             if ~isfield(self.data_dict,'AOA')
                 self.data_dict.AOA=0;
             end
