@@ -1,44 +1,62 @@
-function CFD=PanATS(fig_filestr)
+function [model,CATS]=PanATS(config)
 % driver of PanATS
 %
-global user_model
+
+%% input model
+if isa(config,'char')
+    config_filestr=config;
+    config=PanATSConfig(config_filestr);
+    config=config.data_dict;
+elseif isa(config,'struct')
+elseif isa(config,'PanATSConfig')
+    config=config.data_dict;
+else
+    error('PanATS: error input format');
+end
+
+model.config=config;
+model.geometry=struct();
+model.numerics=struct();
+model.output=struct();
+
+CATS=struct();
 
 %% pre model
-config=PanATSConfig(fig_filestr);
-preModelPanel(config);
+
+[model,geom_out]=preModelPanel(model);
+CATS=mergeStruct(CATS,geom_out);
 
 %% solve model
 
-config=user_model.config;
-
-[area,area_x,area_y,area_z,volume]=solveGeometry();
-if config.REF_AREA == 0, config.REF_AREA=area_z;end
-
-if strcmp(config.SOLVER,'PANEL_INVISCID') || strcmp(config.SOLVER,'PANEL_VISCID')
+if strcmp(model.config.SOLVER,'PANEL_INVISCID') || strcmp(model.config.SOLVER,'PANEL_VISCID')
     % inviscid
-    [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicInviscid();
+    [model,CA_out]=solveModelHypersonicInviscid(model);
+    CATS=mergeStruct(CATS,CA_out);
 
-    if strcmp(config.SOLVER,'PANEL_VISCID')
+    if strcmp(model.config.SOLVER,'PANEL_VISCID')
         % viscid
-        CFD.max_streamline_len=solveModelStreamline();
-        solveModelBoundaryLayer();
-        [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid();
-        CFD.max_heat_flux=solveModelHypersonicHeat();
+        [model,SLE_out]=solveModelStreamlineGeom(model);
+        [model,BL_out]=solveModelBoundaryLayer(model);
+        [model,CA_out]=solveModelHypersonicViscid(model);
+        [model,CT_out]=solveModelHypersonicHeat(model);
+
+        CATS=mergeStruct(CATS,SLE_out);
+        CATS=mergeStruct(CATS,BL_out);
+        CATS=mergeStruct(CATS,CA_out);
+        CATS=mergeStruct(CATS,CT_out);
     end
 end
 
-CFD.CD=CD;
-CFD.CL=CL;
-CFD.CSF=CSF;
-CFD.CFx=CFx;
-CFD.CFy=CFy;
-CFD.CFz=CFz;
-CFD.CMx=CMx;
-CFD.CMy=CMy;
-CFD.CMz=CMz;
-CFD.CEff=CEff;
-
 %% post model
 
-postModel();
+model=postModel(model);
+end
+
+function T=mergeStruct(T,S)
+if isempty(S),return;end
+field_list=fieldnames(S);
+for k=1:numel(field_list)
+    field    =field_list{k};
+    T.(field)=S.(field);
+end
 end

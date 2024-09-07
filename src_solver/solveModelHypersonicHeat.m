@@ -1,83 +1,77 @@
-function [max_heat_flux]=solveModelHypersonicHeat()
+function [model,CT_out]=solveModelHypersonicHeat(model)
 % plate reference enthalpy method to calculate heat density of surface element
 %
 % notice:
 % P_e == P_w because of pressure of outer boundary of boundary layer is equal to pressure of surface
 %
-% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003. [2] Fay J A,
-% Riddell F R. Theory of Stagnation Point Heat Transfer in Dissociated
-% Air[J]. Journal of the Aerospace Sciences, 1958, 25(2): 73-85.
+% reference:
+% [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+% [2] Fay J A, Riddell F R. Theory of Stagnation Point Heat Transfer in
+% Dissociated Air[J]. Journal of the Aerospace Sciences, 1958, 25(2):
+% 73-85.
 %
 % copyright Adel 2023.03
 %
-global config user_model
+config=model.config; % load config
+geometry=model.geometry; % load geometry
+numerics=model.numerics; % load numerics
+INFORMATION=config.INFORMATION; % whether print information
 
-config=user_model.config;
-geometry=user_model.geometry;
-element_list=user_model.element_list;
-SYMMETRY=config.SYMMETRY;
-
-% load geometry
-dimension=geometry.dimension;
-point_list=geometry.point_list;
-center_point_list=geometry.center_point_list;
-
-% heat calculate need inviscid and streamline result
-output_inviscid=user_model.output_inviscid;
-output_streamline=user_model.output_streamline;
-output_boulay=user_model.output_boulay;
-output_viscid=user_model.output_viscid;
-
-% inflow condition
+% load config
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;
 Ma_inf=config.MACH_NUMBER;
 gamma=config.GAMMA_VALUE;
-% Re_inf=config.REYNOLDS_NUMBER;
+SYMMETRY=config.SYMMETRY;
 T_w=config.MARKER_ISOTHERMAL;
 
-% load data from inviscid, streamline, boundary layer and viscid result
-theta_list=output_inviscid.theta_list;
-P_list=output_inviscid.P_list;
+% load geometry
+dim=geometry.dimension;
+pnt_list=geometry.point_list;
+elem_list=geometry.element_list;
+conn_mat=geometry.connectivity_matrix;
+cntr_pnt_list=geometry.center_point_list;
 
-surface_flow_list=output_streamline.surface_flow_list;
-boolean_attach_list=output_streamline.boolean_attach_list;
-element_attach_list=output_streamline.element_attach_list;
+% load numerics
+theta_list=numerics.theta_list;
+P_list=numerics.P_list;
+elem_flow_list=numerics.element_flow_list;
+bool_att_list=numerics.boolean_attachment_list;
+elem_att_list=numerics.element_attachment_list;
+T_p_list=numerics.T_p_list;
+P_p_list=numerics.P_p_list;
+rho_p_list=numerics.rho_p_list;
+rho_e_list=numerics.rho_e_list;
+V_e_list=numerics.V_e_list;
+mu_e_list=numerics.mu_e_list;
+H_e_list=numerics.H_e_list;
+rho_ref_list=numerics.rho_ref_list;
+mu_ref_list=numerics.mu_ref_list;
+H_ref_list=numerics.H_ref_list;
+H_r_list=numerics.H_r_list;
+Re_x_list=numerics.Re_x_list;
+Re_x_ref_list=numerics.Re_x_ref_list;
+Cf_list=numerics.Cf_list;
 
-T_p_list=output_boulay.T_p_list;
-P_p_list=output_boulay.P_p_list;
-rho_p_list=output_boulay.rho_p_list;
+% initialize numerics
+numerics.HF_list=[];
 
-rho_e_list=output_boulay.rho_e_list;
-V_e_list=output_boulay.V_e_list;
-mu_e_list=output_boulay.mu_e_list;
-H_e_list=output_boulay.H_e_list;
+% initialize output
+CT_out.HFmax=[];
 
-rho_ref_list=output_boulay.rho_ref_list;
-mu_ref_list=output_boulay.mu_ref_list;
-H_ref_list=output_boulay.H_ref_list;
-
-H_r_list=output_boulay.H_r_list;
-
-Re_x_list=output_boulay.Re_x_list;
-Re_x_ref_list=output_boulay.Re_x_ref_list;
-
-Cf_list=output_viscid.Cf_list;
-
-if ~isempty(SYMMETRY)
-    switch SYMMETRY
-        case 'XOY'
-            identify_dimension=3;
-        case 'YOZ'
-            identify_dimension=1;
-        case 'ZOX'
-            identify_dimension=2;
-        otherwise
-            identify_dimension=0;
-    end
-else
-    identify_dimension=0;
+switch SYMMETRY
+    case 'XOY'
+        identify_dim=3;
+    case 'YOZ'
+        identify_dim=1;
+    case 'ZOX'
+        identify_dim=2;
+    otherwise
+        identify_dim=0;
 end
+
+
+%% pre process
 
 % air parameter
 rho_sl=1.225;
@@ -106,12 +100,11 @@ H_w=airEnthalpy(T_w); % wall air enthalpy J/kg
 % H_D=(33867*0.78+15320*0.22)*1e3; % Mean dissociation enthalpy of air J/kg
 H_D=airEnthalpy(T_inf); % base on calculate result, H_D should be enthalpy of air
 
-elem_num=length(element_list);
+elem_num=length(elem_list);
 % initialize result sort array
 HF_list=zeros(elem_num,1);
 
 % calculate heat flow by plate reference enthalpy method
-elem_num=length(element_list);
 for elem_idx=1:elem_num
     % if element is cross by attachment line, do not need to calculate
 %     if boolean_attach_list(elem_idx)
@@ -130,9 +123,26 @@ for elem_idx=1:elem_num
 end
 
 % calculate attachment element by Detra-Kemp-Riddell method
-for attach_idx=1:length(element_attach_list)
-    elem_idx=element_attach_list(attach_idx);
-    elem=element_list(elem_idx);
+for attach_idx=1:length(elem_att_list)
+    elem_idx=elem_att_list(attach_idx);
+
+    if isnan(elem_list(elem_idx,4)),node_idx_list=elem_list(elem_idx,1:3);node_num=3;
+    else,node_idx_list=elem_list(elem_idx,1:4);node_num=4;end
+
+    % load around element properties
+    elem_arou_idx_idx=zeros(1,node_num);
+    for node_idx=1:node_num
+        pnt_idx=node_idx_list(node_idx);
+
+        if node_idx == node_num
+            pnt_jdx=node_idx_list(1);
+        else
+            pnt_jdx=node_idx_list(node_idx+1);
+        end
+
+        elem_arou_idx_idx(node_idx)=full(conn_mat(pnt_jdx,pnt_idx));
+    end
+    elem_arou_idx_idx(elem_arou_idx_idx==0)=[];
 
     % stagnation point air parameter parpare
     P_e=P_list(elem_idx); % stagnation point pressure
@@ -174,29 +184,25 @@ for attach_idx=1:length(element_attach_list)
     %     HF_s=HF_s*sqrt((1-sin_sweep_sq)^1.5/2);
     % end
 
-    % load around element properties
-    Elem_arou_idx=elem.Vertex_next;
-    Elem_arou_idx(Elem_arou_idx == 0)=[];
+    % point coordinate and velocity vector
+    arou_pnt=cntr_pnt_list(elem_arou_idx_idx,:);
+    V_e_arou=elem_flow_list(elem_arou_idx_idx,:)./vecnorm(elem_flow_list(elem_arou_idx_idx,:),2,2);
+    V_e_arou=V_e_arou.*V_e_list(elem_arou_idx_idx,:);
 
     % point coordinate and velocity vector
-    arou_pnt=center_point_list(Elem_arou_idx,:);
-    V_e_arou=surface_flow_list(Elem_arou_idx,:)./vecnorm(surface_flow_list(Elem_arou_idx,:),2,2);
-    V_e_arou=V_e_arou.*V_e_list(Elem_arou_idx,:);
-
-    % point coordinate and velocity vector
-    base_pnt=center_point_list(elem_idx,:);
-    V_e=surface_flow_list(elem_idx,:)./vecnorm(surface_flow_list(elem_idx,:),2,2);
+    base_pnt=cntr_pnt_list(elem_idx,:);
+    V_e=elem_flow_list(elem_idx,:)./vecnorm(elem_flow_list(elem_idx,:),2,2);
     V_e=V_e*V_e_list(elem_idx,:);
     
     % judge if element lay in symmetry plane
     % if yes, symmetric velocity consider
-    if identify_dimension ~= 0
+    if identify_dim ~= 0
         arou_pnt_sym=base_pnt;
-        arou_pnt_sym(:,identify_dimension)=-arou_pnt_sym(:,identify_dimension);
+        arou_pnt_sym(:,identify_dim)=-arou_pnt_sym(:,identify_dim);
         arou_pnt=[arou_pnt;arou_pnt_sym];
 
         V_e_arou_sym=V_e;
-        V_e_arou_sym(:,identify_dimension)=-V_e_arou_sym(:,identify_dimension);
+        V_e_arou_sym(:,identify_dim)=-V_e_arou_sym(:,identify_dim);
         V_e_arou=[V_e_arou;V_e_arou_sym];
     end
 
@@ -220,16 +226,23 @@ for attach_idx=1:length(element_attach_list)
     HF_list(elem_idx)=max(HF_list(elem_idx),HF);
 end
 
-max_heat_flux=max(HF_list);
-output_heat.HF_list=HF_list;
+HFmax=max(HF_list);
 
-user_model.output_heat=output_heat;
+%% sort data
 
 if config.INFORMATION
     fprintf('solveModelHypersonicHeat: hypersonic heat solve done!\n');
     fprintf('solveModelHypersonicHeat: result\n');
-    fprintf('max heat flux: %14f\n',max_heat_flux)
+    fprintf('max heat flux: %14f\n',HFmax)
 end
+
+numerics.HF_list=HF_list;
+
+CT_out.HFmax=HFmax;
+
+model.numerics=numerics;
+
+%% aerothermal engineering estimation function
 
     function HF_s=calTauber(radius_s)
         % Tauber method

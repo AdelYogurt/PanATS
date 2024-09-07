@@ -7,7 +7,8 @@ function rho=airDensity(H,P)
 % output:
 % rho (kg/m3)
 %
-% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+% reference:
+% [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
 %
 
 % [1] Page: 90

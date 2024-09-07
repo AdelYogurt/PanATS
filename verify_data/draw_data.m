@@ -66,20 +66,22 @@ close all hidden;
 
 %% blunt cone
 
-% load('blunt_cone_exp.mat');
-% load('blunt_cone_SU2.mat')
-% load('blunt_cone_PanATS.mat')
-% 
-% fig_hdl=figure();
-% line(X_blunt_cone_exp,HF_blunt_cone_exp,'Marker','s','Color','r','LineStyle','none','MarkerFaceColor','r');
-% line(X_blunt_cone_SU2/568.7e-3,HF_blunt_cone_SU2/HF_0,'Color','b','LineWidth',1);
-% line(X_blunt_cone_HATS/568.7e-3,HF_blunt_cone_HATS/HF_0,'Color',[0.9290 0.6940 0.1250],'LineWidth',1);
-% set(gca,'Xlim',[-0.1,1]);
-% set(gca,'Ylim',[-0.3,2.3]);
-% xlabel('x/L_b');
-% ylabel('HF/HF_0');
-% legend('Exp','HF','LF','Location','northeast')
-% fig_hdl.set('Position',[488,342,420,315])
+load('blunt_cone_exp.mat');
+% load('blunt_cone_SU2.mat');
+load('blunt_cone_PanATS.mat');
+
+fig_hdl=figure();axe_hdl=axes(fig_hdl);
+line(axe_hdl,X_exp,HF_exp,'Marker','s','Color','r','LineStyle','none','MarkerFaceColor','r');
+% line(axe_hdl,X_SU2/568.7e-3,HF_SU2/HF_0,'Color','b','LineWidth',1);
+line(axe_hdl,X_PanATS/568.7e-3,HF_PanATS/HF_0,'Color',[0.9290 0.6940 0.1250],'LineWidth',1);
+axe_hdl.set('FontSize',12,'FontName','times new roman');
+xlim([-0.1,1]);
+ylim([-0.1,0.4]);
+xlabel('\itX/L_b','FontSize',12,'FontName','times new roman');
+ylabel('\itQ/Q_0','FontSize',12,'FontName','times new roman');
+legend('Exp','PanATS','Location','northeast','FontSize',12,'FontName','times new roman')
+fig_hdl.set('Position',[488,342,420,315])
+box on;grid on;
 
 %% hermes
 

@@ -7,7 +7,8 @@ function mu=airViscosity(H,P)
 % output:
 % mu (Pa*s)
 %
-% reference: [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
+% reference:
+% [1] 张志成. 高超声速气动热和热防护[M]. 北京：国防工业出版社, 2003.
 %
 
 mu_1=1.697e-5;

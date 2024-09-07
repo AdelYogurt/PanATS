@@ -1,50 +1,75 @@
-function [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicViscid()
+function [model,CA_out]=solveModelHypersonicViscid(model)
 % plate reference enthalpy method to calculate viscid
 %
 % copyright Adel 2023.03
 %
-global user_model
+config=model.config; % load config
+geometry=model.geometry; % load geometry
+numerics=model.numerics; % load numerics
+INFORMATION=config.INFORMATION; % whether print information
 
-config=user_model.config;
-geometry=user_model.geometry;
-element_list=user_model.element_list;
-SYMMETRY=config.SYMMETRY;
-
-% load geometry
-dimension=geometry.dimension;
-point_list=geometry.point_list;
-center_point_list=geometry.center_point_list;
-area_list=geometry.area_list;
-normal_vector_list=geometry.normal_vector_list;
-
-% heat calculate need inviscid and streamline result
-output_inviscid=user_model.output_inviscid;
-output_streamline=user_model.output_streamline;
-output_boulay=user_model.output_boulay;
-
-% reference value
-ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
-ref_area=config.REF_AREA;
-ref_length=config.REF_LENGTH;
-coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-
+% load config
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;
 Ma_inf=config.MACH_NUMBER;
 gamma=config.GAMMA_VALUE;
-% Re_inf=config.REYNOLDS_NUMBER;
+SYMMETRY=config.SYMMETRY;
+ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
+ref_area=config.REF_AREA;
+ref_length=config.REF_LENGTH;
 
-% load data from inviscid and boundary layer result
-force_inviscid=output_inviscid.force_inviscid;
-moment_inviscid=output_inviscid.moment_inviscid;
+% load geometry
+dim=geometry.dimension;
+pnt_list=geometry.point_list;
+elem_list=geometry.element_list;
+cntr_pnt_list=geometry.center_point_list;
+E_nmvctr_list=geometry.EN_vector_list;
+P_nmvctr_list=geometry.PN_vector_list;
+area_list=geometry.area_list;
 
-surface_flow_list=output_streamline.surface_flow_list;
+% load numerics
+force_inviscid=numerics.force_inviscid;
+moment_inviscid=numerics.moment_inviscid;
+elem_flow_list=numerics.element_flow_list;
+rho_e_list=numerics.rho_e_list;
+rho_ref_list=numerics.rho_ref_list;
+Re_x_list=numerics.Re_x_list;
+Re_x_ref_list=numerics.Re_x_ref_list;
 
-rho_e_list=output_boulay.rho_e_list;
-rho_ref_list=output_boulay.rho_ref_list;
+% initialize numerics
+numerics.Cf_list=[];
+numerics.dFs_list=[];
+numerics.dMs_list=[];
+numerics.force_viscid=[];
+numerics.moment_viscid=[];
 
-Re_x_list=output_boulay.Re_x_list;
-Re_x_ref_list=output_boulay.Re_x_ref_list;
+% initialize output
+CA_out.CD=[];
+CA_out.CL=[];
+CA_out.CSF=[];
+CA_out.CFx=[];
+CA_out.CFy=[];
+CA_out.CFz=[];
+CA_out.CMx=[];
+CA_out.CMy=[];
+CA_out.CMz=[];
+CA_out.CEff=[];
+
+switch SYMMETRY
+    case 'XOY'
+        identify_dim=3;
+    case 'YOZ'
+        identify_dim=1;
+    case 'ZOX'
+        identify_dim=2;
+    otherwise
+        identify_dim=0;
+end
+
+%% pre process
+
+% calculate element free flow vector
+coord_vec=coordVecToOri(config.AOA,config.SIDESLIP_ANGLE,dim);
 
 % air parameter
 rho_sl=1.225;
@@ -60,6 +85,8 @@ q_inf=rho_inf*V_inf_sq/2;
 
 % solve prepare
 Re_x_tri=10^(5.37+0.2326*Ma_inf-0.004015*Ma_inf*Ma_inf); % transition Reynolds number
+
+%% calculate surface frictional coefficient base on engineering estimation function 
 
 % calculate frictional drag coefficient
 Cf_ref_list=zeros(size(Re_x_ref_list));
@@ -82,13 +109,15 @@ Cf_list=Cf_ref_list.*rho_ref_list./rho_e_list;
 S_list=q_inf*Cf_list;
 
 % flow vector
-srf_flow_norm=vecnorm(surface_flow_list,2,2);
+srf_flow_norm=vecnorm(elem_flow_list,2,2);
 srf_flow_norm(srf_flow_norm == 0)=1;
-tangent_vector_list=surface_flow_list./srf_flow_norm;
+tang_vctr_list=elem_flow_list./srf_flow_norm;
 
 % shear stress vector (N)
-dFs_list=tangent_vector_list.*area_list.*S_list;
-dMs_list=cross(center_point_list-ref_point,dFs_list);
+dFs_list=tang_vctr_list.*area_list.*S_list;
+dMs_list=cross(cntr_pnt_list-ref_point,dFs_list);
+
+%% post prcocess
 
 % total force
 force_viscid=sum(dFs_list,1);
@@ -121,32 +150,24 @@ CMz=moment(3)/ref_area/ref_length/q_inf;
 CEff=CL/(CD+eps);
 
 % process SYMMETRY
-if ~isempty(SYMMETRY)
-    switch config.SYMMETRY
-        case 'XOY'
+if identify_dim
+    switch identify_dim
+        case 3
             CFz=0;
             CMx=0;
             CMy=0;
-        case 'YOZ'
+        case 1
             CFx=0;
             CMy=0;
             CMz=0;
-        case 'ZOX'
+        case 2
             CFy=0;
             CMz=0;
             CMx=0;
-        otherwise
-            error('solveModelHypersonicInviscid: nuknown SYMMETRY type');
     end
 end
 
-output_viscid.Cf_list=Cf_list;
-output_viscid.dFs_list=dFs_list;
-output_viscid.dMs_list=dMs_list;
-output_viscid.force_viscid=force_viscid;
-output_viscid.moment_viscid=moment_viscid;
-
-user_model.output_viscid=output_viscid;
+%% sort data
 
 if config.INFORMATION
     fprintf('solveModelHypersonicViscid: hypersonic viscid solve done!\n');
@@ -155,4 +176,22 @@ if config.INFORMATION
         [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
 end
 
+numerics.Cf_list=Cf_list;
+numerics.dFs_list=dFs_list;
+numerics.dMs_list=dMs_list;
+numerics.force_viscid=force_viscid;
+numerics.moment_viscid=moment_viscid;
+
+CA_out.CD=CD;
+CA_out.CL=CL;
+CA_out.CSF=CSF;
+CA_out.CFx=CFx;
+CA_out.CFy=CFy;
+CA_out.CFz=CFz;
+CA_out.CMx=CMx;
+CA_out.CMy=CMy;
+CA_out.CMz=CMz;
+CA_out.CEff=CEff;
+
+model.numerics=numerics;
 end

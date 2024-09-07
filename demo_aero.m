@@ -23,7 +23,7 @@ addpath src_solver
 
 %% calculate
 
-preModelPanel(config);
+preModel(config);
 user_model.config.INFORMATION=0;
 
 CD_PanATS=zeros(size(AOA_PanATS));

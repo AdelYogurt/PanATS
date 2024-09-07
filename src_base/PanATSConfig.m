@@ -33,34 +33,8 @@ classdef PanATSConfig < handle
             [self.config_filedir,temp_filename,~]=fileparts(config_filestr);
             self.config_filename=[temp_filename,'.cfg'];
 
+            self.setDefault();
             self.configRead();
-
-            % default value
-            if ~isfield(self.data_dict,'SYMMETRY')
-                self.data_dict.SYMMETRY=[];
-            end
-            if ~isfield(self.data_dict,'MESH_SCALE')
-                self.data_dict.MESH_SCALE=1;
-            end
-            if ~isfield(self.data_dict,'AOA')
-                self.data_dict.AOA=0;
-            end
-            if ~isfield(self.data_dict,'SIDESLIP_ANGLE')
-                self.data_dict.SIDESLIP_ANGLE=0;
-            end
-            if ~isfield(self.data_dict,'INFORMATION')
-                self.data_dict.INFORMATION=1;
-            end
-
-            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_X')
-                self.data_dict.ANGULAR_VELOCITY_X=0.0;
-            end
-            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_Y')
-                self.data_dict.ANGULAR_VELOCITY_Y=0.0;
-            end
-            if ~isfield(self.data_dict,'ANGULAR_VELOCITY_Z')
-                self.data_dict.ANGULAR_VELOCITY_Z=0.0;
-            end
         end
 
         function dump(self,cfg_filestr)
@@ -119,9 +93,7 @@ classdef PanATSConfig < handle
                         value=value(1:end-1);
                     end
 
-                    if isempty(value)
-                        error('readModelCFG: definition lack value');
-                    end
+                    if isempty(value),value=[];end
 
                     % add parameter, if is number, convert char to number
                     for value_idx=1:length(value)
@@ -186,6 +158,41 @@ classdef PanATSConfig < handle
                     fprintf(cfg_file,'%s',value);
                 end
             end
+        end
+
+        function setDefault(self)
+            % set default value to config
+            %
+            self.data_dict.SOLVER='PANEL_VISCID';
+            self.data_dict.AOA=1.25;
+            self.data_dict.SIDESLIP_ANGLE=0;
+
+            self.data_dict.MACH_NUMBER=0.8;
+            self.data_dict.FREESTREAM_TEMPERATURE=288.15;
+            self.data_dict.FREESTREAM_PRESSURE=101325.0;
+
+            self.data_dict.REF_ORIGIN_MOMENT_X=0.25;
+            self.data_dict.REF_ORIGIN_MOMENT_Y=0.00;
+            self.data_dict.REF_ORIGIN_MOMENT_Z=0.00;
+
+            self.data_dict.ANGULAR_VELOCITY_X=0.00;
+            self.data_dict.ANGULAR_VELOCITY_Y=0.00;
+            self.data_dict.ANGULAR_VELOCITY_Z=0.00;
+
+            self.data_dict.REF_LENGTH=1.00;
+            self.data_dict.REF_AREA=1.00;
+
+            self.data_dict.MARKER_ISOTHERMAL=300;
+            self.data_dict.SYMMETRY='';
+            self.data_dict.MARKER_MONITORING='';
+
+            self.data_dict.MESH_FILENAME='';
+            self.data_dict.MESH_FORMAT='';
+            self.data_dict.MESH_SCALE=1;
+
+            self.data_dict.OUTPUT_FILES=[];
+
+            self.data_dict.INFORMATION=1;
         end
     end
 

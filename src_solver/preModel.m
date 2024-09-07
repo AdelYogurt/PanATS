@@ -1,4 +1,4 @@
-function [model,geom_out]=preModelPanel(model)
+function [model,geom_out]=preModel(model)
 % prepare model for panel method
 % load mesh data from file
 % create connectivity of element
@@ -112,7 +112,7 @@ for mkr_morit_idx=1:length(config.MARKER_MONITORING)
     end
 
     if ~exist_flag
-        error('preModelPanel: marker monitered do not exist in mesh');
+        error('preModel: marker monitered do not exist in mesh');
     end
 end
 
@@ -203,7 +203,7 @@ elem_num=size(elem_list,1);
 if dim == 2
     % create all vertex
     vtx_i=reshape(elem_list,[],1);
-    vtx_j=[ones(elem_num,1);2*ones(elem_num,1)];
+    vtx_j=[2*ones(elem_num,1);ones(elem_num,1)];
     vtx_v=repmat(1:elem_num,2,1)';
 
     % create connectivity matrix
@@ -423,8 +423,8 @@ geometry.marker_list=mkr_list;
 geometry.element_list=elem_list;
 geometry.connectivity_matrix=conn_mat;
 geometry.center_point_list=cntr_pnt_list;
-geometry.EN_vector_list=E_nmvctr_list;
-geometry.PN_vector_list=P_nmvctr_list;
+geometry.E_Nvector_list=E_nmvctr_list;
+geometry.P_Nvector_list=P_nmvctr_list;
 geometry.area_list=area_list;
 
 model.geometry=geometry;

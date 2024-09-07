@@ -1,117 +1,55 @@
-function postModel()
-% reconstruct cell data into vertex data, then write into file
+function model=postModel(model)
+% reconstruct element data into point data, then write into file
 %
 % copyright Adel 2023.03
 %
-global user_model
-
-config=user_model.config;
-geometry=user_model.geometry;
-element_list=user_model.element_list;
-SYMMETRY=config.SYMMETRY;
+config=model.config; % load config
+geometry=model.geometry; % load geometry
+numerics=model.numerics; % load numerics
+output=model.output; % load output
+INFORMATION=config.INFORMATION; % whether print information
 
 % load geometry
-dimension=geometry.dimension;
-point_list=geometry.point_list;
+pnt_list=geometry.point_list;
+elem_list=geometry.element_list;
 area_list=geometry.area_list;
 
-% load data form user_model
-output_inviscid=user_model.output_inviscid;
-output_streamline=user_model.output_streamline;
-output_boulay=user_model.output_boulay;
-output_viscid=user_model.output_viscid;
-output_heat=user_model.output_heat;
+%% average element data to point data
 
-output_post=user_model.output_post;
+pnt_num=size(pnt_list,1);
+elem_num=size(elem_list,1);
+type_list=fieldnames(numerics);
 
-pnt_num=size(point_list,1);
-% inviscid
-if ~isempty(output_inviscid)
-    elem_Cp_list=output_inviscid.Cp_list;
-    elem_P_list=output_inviscid.P_list;
-    Cp_list=zeros(pnt_num,1);
-    P_list=zeros(pnt_num,1);
-end
-
-% streamline
-if ~isempty(output_streamline)
-    elem_streamline_len_list=output_streamline.streamline_len_list;
-    elem_surface_flow_list=output_streamline.surface_flow_list;
-    streamline_len_list=zeros(pnt_num,1);
-    surface_flow_list=zeros(pnt_num,3);
-end
-
-% viscid
-if ~isempty(output_viscid)
-    elem_Cf_list=output_viscid.Cf_list;
-    Cf_list=zeros(pnt_num,1);
-end
-
-% heat
-if ~isempty(output_heat)
-    elem_HF_list=output_heat.HF_list;
-    HF_list=zeros(pnt_num,1);
-end
-
-area_sum_list=zeros(pnt_num,1); % repeat times of area sum
-elem_num=length(element_list);
+% sum of weight
+sum_weight_list=zeros(pnt_num,1);
 for elem_idx=1:elem_num
-    elem=element_list(elem_idx);
-    Node_idx=elem.Node_idx;
-    area=area_list(elem_idx);
+    if isnan(elem_list(elem_idx,4)),node_idx_list=elem_list(elem_idx,1:3);
+    else,node_idx_list=elem_list(elem_idx,1:4);end
+    sum_weight_list(node_idx_list,:)=sum_weight_list(node_idx_list,:)+area_list(elem_idx);
+end
+sum_weight_list(sum_weight_list==0)=1;
 
-    % add data to each point
-    if ~isempty(output_inviscid)
-        Cp_list(Node_idx,:)=Cp_list(Node_idx,:)+elem_Cp_list(elem_idx,:)*area;
-        P_list(Node_idx,:)=P_list(Node_idx,:)+elem_P_list(elem_idx,:)*area;
+for type_idx=1:length(type_list)
+    % load element data
+    type=type_list{type_idx};
+    elem_data=numerics.(type);
+    if size(elem_data,1) ~= elem_num,continue;end % this is not element data
+
+    % convert element data to point data
+    pnt_data=zeros(pnt_num,size(elem_data,2));
+    for elem_idx=1:elem_num
+        if isnan(elem_list(elem_idx,4)),node_idx_list=elem_list(elem_idx,1:3);
+        else,node_idx_list=elem_list(elem_idx,1:4);end
+        pnt_data(node_idx_list,:)=pnt_data(node_idx_list,:)+elem_data(elem_idx,:)*area_list(elem_idx);
     end
+    pnt_data=pnt_data./sum_weight_list;
 
-    if ~isempty(output_streamline)
-        streamline_len_list(Node_idx,:)=streamline_len_list(Node_idx,:)+elem_streamline_len_list(elem_idx,:)*area;
-        surface_flow_list(Node_idx,:)=surface_flow_list(Node_idx,:)+elem_surface_flow_list(elem_idx,:)*area;
-    end
-
-    if ~isempty(output_viscid)
-        Cf_list(Node_idx,:)=Cf_list(Node_idx,:)+elem_Cf_list(elem_idx,:)*area;
-    end
-
-    if ~isempty(output_heat)
-        HF_list(Node_idx,:)=HF_list(Node_idx,:)+elem_HF_list(elem_idx,:)*area;
-    end
-
-    area_sum_list(Node_idx)=area_sum_list(Node_idx)+area;
+    output.(type)=pnt_data;
 end
 
-area_sum_list(area_sum_list == 0)=1;
+%% generate file output
 
-% average velocity to each point and updata data into output
-if ~isempty(output_inviscid)
-    Cp_list=Cp_list./area_sum_list;
-    P_list=P_list./area_sum_list;
-    output_post.Cp_list=Cp_list;
-    output_post.P_list=P_list;
-end
-
-if ~isempty(output_streamline)
-    streamline_len_list=streamline_len_list./area_sum_list;
-    surface_flow_list=surface_flow_list./area_sum_list;
-    output_post.streamline_len_list=streamline_len_list;
-    output_post.surface_flow_list=surface_flow_list;
-end
-
-if ~isempty(output_viscid)
-    Cf_list=Cf_list./area_sum_list;
-    output_post.Cf_list=Cf_list;
-end
-
-if ~isempty(output_heat)
-    HF_list=HF_list./area_sum_list;
-    output_post.HF_list=HF_list;
-end
-
-user_model.output_post=output_post;
-
-% write model into file
+%  write model into file
 if isfield(config,'OUTPUT_FILES') && ~isempty(config.OUTPUT_FILES)
     out_filetype_list=config.OUTPUT_FILES;
     if ischar(out_filetype_list)
@@ -121,30 +59,29 @@ if isfield(config,'OUTPUT_FILES') && ~isempty(config.OUTPUT_FILES)
     pnt_idx_list=(1:pnt_num)';
     % construct output data and head
     type=["""PointID""","""x""","""y""","""z"""];
-    data=[pnt_idx_list,point_list(:,1),point_list(:,2),point_list(:,3)];
+    data=[pnt_idx_list,pnt_list(:,1),pnt_list(:,2),pnt_list(:,3)];
 
-    % inviscid
-    if ~isempty(output_inviscid)
+    if strcmp(model.config.SOLVER,'PANEL_INVISCID') || strcmp(model.config.SOLVER,'PANEL_VISCID')
+        P_list=output.P_list;
+        Cp_list=output.Cp_list;
+
         type=[type,"""Pressure""","""Pressure_Coefficient"""];
         data=[data,P_list,Cp_list];
-    end
 
-    % streamline
-    if ~isempty(output_streamline)
-        type=[type,"""Velocity_x""","""Velocity_y""","""Velocity_z""","""Streamline_Length"""];
-        data=[data,surface_flow_list(:,1),surface_flow_list(:,2),surface_flow_list(:,3),streamline_len_list];
-    end
+        % VISCID result
+        if strcmp(model.config.SOLVER,'PANEL_VISCID')
+            pnt_flow_list=output.element_flow_list;
+            sle_len_list=output.streamline_len_list;
+            Cf_list=output.Cf_list;
+            HF_list=output.HF_list;
 
-    % viscid
-    if ~isempty(output_viscid)
-        type=[type,"""Skin_Friction_Coefficient"""];
-        data=[data,Cf_list];
-    end
-
-    % heat
-    if ~isempty(output_heat)
-        type=[type,"""Heat_Flux"""];
-        data=[data,HF_list];
+            type=[type,"""Velocity_x""","""Velocity_y""","""Velocity_z""","""Streamline_Length"""];
+            data=[data,pnt_flow_list(:,1),pnt_flow_list(:,2),pnt_flow_list(:,3),sle_len_list];
+            type=[type,"""Skin_Friction_Coefficient"""];
+            data=[data,Cf_list];
+            type=[type,"""Heat_Flux"""];
+            data=[data,HF_list];
+        end
     end
 
     for file_idx=1:length(out_filetype_list)
@@ -155,27 +92,10 @@ if isfield(config,'OUTPUT_FILES') && ~isempty(config.OUTPUT_FILES)
             tbl=array2table(data,'VariableNames',type);
             writetable(tbl,out_filename)
         elseif strcmp(out_filetype,'SURFACE_TECPLOT')
-            % process element index into FETRIANGLE or FEQUADRILATERAL mat
-            elem_num=length(element_list);
-            each_node_num=3;
-            elem_idx_mat=zeros(elem_num,each_node_num);
-            allTri=true;
-            for elem_idx=1:elem_num
-                elem=element_list(elem_idx);
-                Node_idx=elem.Node_idx;
-
-                if allTri && each_node_num < elem.node_num
-                    % change tri mat into qual mat
-                    elem_idx_mat=[elem_idx_mat,zeros(elem_num,1)];
-                    elem_idx_mat(1:elem_idx,end)=elem_idx_mat(1:elem_idx,end-1);
-                    each_node_num=4;
-                    allTri=false;
-                end
-
-                if elem.node_num < each_node_num, Node_idx=[Node_idx,Node_idx(end)];end
-
-                elem_idx_mat(elem_idx,:)=Node_idx(1:each_node_num);
-            end
+            % process element list into FETRIANGLE or FEQUADRILATERAL mat
+            bool=isnan(elem_list(:,4));
+            if all(bool),elem_list=elem_list(:,1:3);allTri=true;
+            else,elem_list(bool,4)=elem_list(bool,3);allTri=false;end
 
             % write tecplot data
             out_filename='surface_flow.plt';
@@ -190,25 +110,34 @@ if isfield(config,'OUTPUT_FILES') && ~isempty(config.OUTPUT_FILES)
 
             % data information
             if allTri
-                fprintf(out_file,'ZONE NODES= %d, ELEMENTS= %d, DATAPACKING=POINT, ZONETYPE=FETRIANGLE',pnt_num,elem_num);
+                fprintf(out_file,'ZONE NODES= %d, ELEMENTS= %d, DATAPACKING=POINT, ZONETYPE=FETRIANGLE\n',pnt_num,elem_num);
             else
-                fprintf(out_file,'ZONE NODES= %d, ELEMENTS= %d, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL',pnt_num,elem_num);
+                fprintf(out_file,'ZONE NODES= %d, ELEMENTS= %d, DATAPACKING=POINT, ZONETYPE=FEQUADRILATERAL\n',pnt_num,elem_num);
             end
 
-            fclose(out_file);
-
             % write point data
-            writematrix(data(:,2:end),out_filename,'WriteMode','append','FileType','text','Delimiter',' ');
+            writeMatrix(data(:,2:end),out_file);
 
             % write element idx
-            writematrix(elem_idx_mat,out_filename,'WriteMode','append','FileType','text','Delimiter',' ');
+            writeMatrix(elem_list,out_file);
+
+            fclose(out_file);
         end
     end
 end
+
+%% sort data
 
 if config.INFORMATION
     fprintf('postModel: post model done!\n');
 end
 
+model.output=output;
 end
 
+function writeMatrix(mat,out_file)
+% write matrix into file handle
+%
+out_format=[repmat('%.15e ',1,size(mat,2)-1),'%.15e\n'];
+fprintf(out_file,out_format,mat');
+end

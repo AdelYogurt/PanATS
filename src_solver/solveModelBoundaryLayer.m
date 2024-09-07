@@ -1,4 +1,4 @@
-function solveModelBoundaryLayer()
+function [model,BL_out]=solveModelBoundaryLayer(model)
 % solve boundary layer parameter
 %
 % note P_e == P_w because of
@@ -6,33 +6,46 @@ function solveModelBoundaryLayer()
 %
 % copyright Adel 2023.03
 %
-global user_model
+config=model.config; % load config
+geometry=model.geometry; % load geometry
+numerics=model.numerics; % load numerics
+INFORMATION=config.INFORMATION; % whether print information
 
-config=user_model.config;
-geometry=user_model.geometry;
-element_list=user_model.element_list;
-SYMMETRY=config.SYMMETRY;
-
-% load geometry
-dimension=geometry.dimension;
-point_list=geometry.point_list;
-
-% heat calculate need inviscid and streamline result
-output_inviscid=user_model.output_inviscid;
-output_streamline=user_model.output_streamline;
-
+% load config
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;
 Ma_inf=config.MACH_NUMBER;
 gamma=config.GAMMA_VALUE;
-% Re=config.REYNOLDS_NUMBER;
 T_w=config.MARKER_ISOTHERMAL;
 
-% load data from inviscid and streamline result
-theta_list=output_inviscid.theta_list;
-P_list=output_inviscid.P_list;
+% load geometry
+pnt_list=geometry.point_list;
+elem_list=geometry.element_list;
 
-streamline_len_list=output_streamline.streamline_len_list;
+% load numerics
+theta_list=numerics.theta_list;
+P_list=numerics.P_list;
+sle_len_list=numerics.streamline_len_list;
+
+% initialize numerics
+numerics.T_p_list=[];
+numerics.P_p_list=[];
+numerics.rho_p_list=[];
+numerics.rho_e_list=[];
+numerics.V_e_list=[];
+numerics.mu_e_list=[];
+numerics.H_e_list=[];
+numerics.rho_ref_list=[];
+numerics.mu_ref_list=[];
+numerics.H_ref_list=[];
+numerics.H_r_list=[];
+numerics.Re_x_list=[];
+numerics.Re_x_ref_list=[];
+
+% initialize output
+BL_out=[];
+
+%% pre process
 
 R=287.0955;
 Pr=0.71;
@@ -49,15 +62,16 @@ q_inf=rho_inf*V_inf_sq/2;
 % solve prepare
 Re_x_tri=10^(5.37+0.2326*Ma_inf-0.004015*Ma_inf*Ma_inf); % transition Reynolds number
 
+H_0=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
+H_w=airEnthalpy(T_w); % wall air enthalpy J/kg
+
 % temperature recovery coefficient
 r_l_lam=Pr^(1/2); % laminar flow
 r_l_turb=Pr^(1/3); % turbulence flow
 
-% solve prepare
-H_0=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
-H_w=airEnthalpy(T_w); % wall air enthalpy J/kg
+%% calculate boundary layer gas parameter
 
-elem_num=length(element_list);
+elem_num=length(elem_list);
 % initialize result sort array
 T_p_list=zeros(elem_num,1);
 P_p_list=zeros(elem_num,1);
@@ -77,21 +91,19 @@ H_r_list=zeros(elem_num,1);
 Re_x_list=zeros(elem_num,1);
 Re_x_ref_list=zeros(elem_num,1);
 
-elem_num=length(element_list);
 % calculate boundary layer air paremeter and
 % local Reynolds number, local reference Reynolds number
 for elem_idx=1:elem_num
-    elem=element_list(elem_idx);
-    streamline_len=streamline_len_list(elem_idx);
+    sle_len=sle_len_list(elem_idx);
 
-    if streamline_len == 0
+    if sle_len == 0
         % for stagnation element or attachmenet line element
         % use average streamline_len in element
-        Node_idx=elem.Node_idx;
-        node_num=elem.node_num;
-        center_point=sum(point_list(Node_idx,1:3),1)/node_num;
-        point_len=sqrt(sum((point_list(Node_idx,1:3)-center_point).^2,2));
-        streamline_len=sum(point_len)/node_num;
+        if isnan(elem_list(elem_idx,4)),node_idx_list=elem_list(elem_idx,1:3);node_num=3;
+        else,node_idx_list=elem_list(elem_idx,1:4);node_num=4;end
+        cntr_pnt=sum(pnt_list(node_idx_list,1:3),1)/node_num;
+        pnt_len=sqrt(sum((pnt_list(node_idx_list,1:3)-cntr_pnt).^2,2));
+        sle_len=sum(pnt_len)/node_num;
     end
 
     % boundary layer air paremeter
@@ -105,7 +117,7 @@ for elem_idx=1:elem_num
     if V_e == 0, V_e=V_inf;end
 
     % local Reynolds number
-    Re_x=rho_e*V_e*streamline_len/mu_e;
+    Re_x=rho_e*V_e*sle_len/mu_e;
 
     % reference air paremeter
     if Re_x < Re_x_tri
@@ -141,29 +153,27 @@ for elem_idx=1:elem_num
     Re_x_ref_list(elem_idx)=Re_x_ref;
 end
 
-output_boulay.T_p_list=T_p_list;
-output_boulay.P_p_list=P_p_list;
-output_boulay.rho_p_list=rho_p_list;
-
-output_boulay.rho_e_list=rho_e_list;
-output_boulay.V_e_list=V_e_list;
-output_boulay.mu_e_list=mu_e_list;
-output_boulay.H_e_list=H_e_list;
-
-output_boulay.rho_ref_list=rho_ref_list;
-output_boulay.mu_ref_list=mu_ref_list;
-output_boulay.H_ref_list=H_ref_list;
-
-output_boulay.H_r_list=H_r_list;
-
-output_boulay.Re_x_list=Re_x_list;
-output_boulay.Re_x_ref_list=Re_x_ref_list;
-
-user_model.output_boulay=output_boulay;
+%% sort data
 
 if config.INFORMATION
     fprintf('solveModelBoundaryLayer: boundary layer parameter solve done!\n');
 end
+
+numerics.T_p_list=T_p_list;
+numerics.P_p_list=P_p_list;
+numerics.rho_p_list=rho_p_list;
+numerics.rho_e_list=rho_e_list;
+numerics.V_e_list=V_e_list;
+numerics.mu_e_list=mu_e_list;
+numerics.H_e_list=H_e_list;
+numerics.rho_ref_list=rho_ref_list;
+numerics.mu_ref_list=mu_ref_list;
+numerics.H_ref_list=H_ref_list;
+numerics.H_r_list=H_r_list;
+numerics.Re_x_list=Re_x_list;
+numerics.Re_x_ref_list=Re_x_ref_list;
+
+model.numerics=numerics;
 
 end
 
@@ -260,8 +270,6 @@ mu_e=airViscosity(H_e);
             tan_theta=(Ma_1_sq__*sin_beta_sq__-1)/...
                 (Ma_1_sq__*((gamma+1)/2-sin_beta_sq__)+1)/tan_beta__;
         end
-
     end
-
 end
 

@@ -1,46 +1,80 @@
-function [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff]=solveModelHypersonicInviscid()
-% base on Newton method and etc to calculate pressure of surface element
+function [model,CA_out]=solveModelHypersonicInviscid(model)
+% base on local incline method to calculate hypersonic invisid flow
 %
 % copyright Adel 2023.03
 %
-global user_model
+config=model.config; % load config
+geometry=model.geometry; % load geometry
+numerics=model.numerics; % load numerics
+INFORMATION=config.INFORMATION; % whether print information
 
-config=user_model.config;
-geometry=user_model.geometry;
-element_list=user_model.element_list;
-SYMMETRY=config.SYMMETRY;
-
-% load geometry
-dimension=geometry.dimension;
-point_list=geometry.point_list;
-center_point_list=geometry.center_point_list;
-area_list=geometry.area_list;
-normal_vector_list=geometry.normal_vector_list;
-
-% reference value
-ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
-ref_area=config.REF_AREA;
-ref_length=config.REF_LENGTH;
-coord_vec=coordVecToOriSU2(config.AOA,config.SIDESLIP_ANGLE,dimension);
-
-% calculate inflow vector
-omega=[config.ANGULAR_VELOCITY_X,config.ANGULAR_VELOCITY_Y,config.ANGULAR_VELOCITY_Z]/180*pi;
-free_flow_vector_list=coord_vec(:,1)'-cross(repmat(omega,length(element_list),1),center_point_list-ref_point,2);
-
-% inflow condition
+% load config
+AOA=config.AOA;
+AOS=config.SIDESLIP_ANGLE;
 T_inf=config.FREESTREAM_TEMPERATURE;
 P_inf=config.FREESTREAM_PRESSURE;
 Ma_inf=config.MACH_NUMBER;
 gamma=config.GAMMA_VALUE;
-% Re_inf=config.REYNOLDS_NUMBER;
+SYMMETRY=config.SYMMETRY;
+ref_point=[config.REF_ORIGIN_MOMENT_X,config.REF_ORIGIN_MOMENT_Y,config.REF_ORIGIN_MOMENT_Z];
+ref_area=config.REF_AREA;
+ref_length=config.REF_LENGTH;
+omega=[config.ANGULAR_VELOCITY_X,config.ANGULAR_VELOCITY_Y,config.ANGULAR_VELOCITY_Z]/180*pi;
 
+% load geometry
+dim=geometry.dimension;
+pnt_list=geometry.point_list;
+elem_list=geometry.element_list;
+cntr_pnt_list=geometry.center_point_list;
+E_nmvctr_list=geometry.EN_vector_list;
+P_nmvctr_list=geometry.PN_vector_list;
+area_list=geometry.area_list;
+
+% initialize numerics
+numerics.theta_list=[];
+numerics.Cp_list=[];
+numerics.P_list=[];
+numerics.dFn_list=[];
+numerics.dMn_list=[];
+numerics.force_inviscid=[];
+numerics.moment_inviscid=[];
+
+% initialize output
+CA_out.CD=[];
+CA_out.CL=[];
+CA_out.CSF=[];
+CA_out.CFx=[];
+CA_out.CFy=[];
+CA_out.CFz=[];
+CA_out.CMx=[];
+CA_out.CMy=[];
+CA_out.CMz=[];
+CA_out.CEff=[];
+
+switch SYMMETRY
+    case 'XOY'
+        identify_dim=3;
+    case 'YOZ'
+        identify_dim=1;
+    case 'ZOX'
+        identify_dim=2;
+    otherwise
+        identify_dim=0;
+end
+
+%% pre process
+
+% calculate element free flow vector
+coord_vec=coordVecToOri(AOA,AOS,dim);
+E_FFvctr_list=coord_vec(:,1)'-cross(repmat(omega,length(elem_list),1),cntr_pnt_list-ref_point,2);
+
+% free flow condition
 R=287.0955;
 rho_inf=P_inf/R/T_inf;
 a_inf=sqrt(gamma*R*T_inf);
 V_inf=a_inf*Ma_inf;
 V_inf_sq=V_inf*V_inf;
 q_inf=rho_inf*V_inf_sq/2;
-
 H_inf=(airEnthalpy(T_inf)+V_inf_sq/2); % Free-stream enthalpy J/kg equal to H_s
 
 % solve prepare
@@ -107,7 +141,7 @@ if P_normal > P_max, P_correct=P_max/P_normal;
 else, P_correct=1;end
 
 % fail is angle of normal vector and free flow vector
-cos_fail_list=sum(normal_vector_list.*free_flow_vector_list,2);
+cos_fail_list=sum(E_nmvctr_list.*E_FFvctr_list,2);
 fail_list=acos(cos_fail_list);
 fail_list(cos_fail_list < -1)=pi;
 fail_list(cos_fail_list > 1)=0;
@@ -117,9 +151,9 @@ theta_list=fail_list-pi/2;
 % notice cos(theta)^2== 1-cos_fail.^2
 sin_theta_sq_list=cos_fail_list.*cos_fail_list;
 
-% calculate surface Cp
-Cp_list=zeros(size(theta_list));
+%% calculate surface pressure coefficient base on engineering estimation function 
 
+Cp_list=zeros(size(theta_list));
 if HYPERSONIC_FLAG <= 1
     % leeward
     Bool=theta_list < 0;
@@ -170,7 +204,7 @@ elseif HYPERSONIC_FLAG == 3
     Cp_list(Bool)=calModifyNewton(sin_theta_sq_list(Bool));
 end
 
-% Pressure
+% calculate pressure
 P_list=q_inf*Cp_list+P_inf;
 
 % enthalpy correct
@@ -180,8 +214,10 @@ P_list(Bool_enthalpy_correct)=P_list(Bool_enthalpy_correct).*...
 
 Cp_list=(P_list-P_inf)/q_inf;
 
-dFn_list=-normal_vector_list.*area_list.*P_list;
-dMn_list=cross(center_point_list-ref_point,dFn_list);
+dFn_list=-E_nmvctr_list.*area_list.*P_list;
+dMn_list=cross(cntr_pnt_list-ref_point,dFn_list);
+
+%% post prcocess
 
 % total force
 force_inviscid=sum(dFn_list,1);
@@ -211,34 +247,24 @@ CMz=moment_inviscid(3)/ref_area/ref_length/q_inf;
 CEff=CL/(CD+eps);
 
 % process SYMMETRY
-if ~isempty(SYMMETRY)
-    switch config.SYMMETRY
-        case 'XOY'
+if identify_dim
+    switch identify_dim
+        case 3
             CFz=0;
             CMx=0;
             CMy=0;
-        case 'YOZ'
+        case 1
             CFx=0;
             CMy=0;
             CMz=0;
-        case 'ZOX'
+        case 2
             CFy=0;
             CMz=0;
             CMx=0;
-        otherwise
-            error('solveModelHypersonicInviscid: nuknown SYMMETRY type');
     end
 end
 
-output_inviscid.theta_list=theta_list;
-output_inviscid.Cp_list=Cp_list;
-output_inviscid.P_list=P_list;
-output_inviscid.dFn_list=dFn_list;
-output_inviscid.dMn_list=dMn_list;
-output_inviscid.force_inviscid=force_inviscid;
-output_inviscid.moment_inviscid=moment_inviscid;
-
-user_model.output_inviscid=output_inviscid;
+%% sort data
 
 if config.INFORMATION
     fprintf('solveModelHypersonicInviscid: hypersonic inviscid solve done!\n');
@@ -246,6 +272,29 @@ if config.INFORMATION
     fprintf('CD:  %14f, CL:  %14f, CSF: %14f\nCFx:  %14f, CFy:  %14f, CFz:  %14f\nCMx: %14f, CMy: %14f, CMz: %14f\nCEff: %14f\n',...
         [CD,CL,CSF,CFx,CFy,CFz,CMx,CMy,CMz,CEff])
 end
+
+numerics.theta_list=theta_list;
+numerics.Cp_list=Cp_list;
+numerics.P_list=P_list;
+numerics.dFn_list=dFn_list;
+numerics.dMn_list=dMn_list;
+numerics.force_inviscid=force_inviscid;
+numerics.moment_inviscid=moment_inviscid;
+
+CA_out.CD=CD;
+CA_out.CL=CL;
+CA_out.CSF=CSF;
+CA_out.CFx=CFx;
+CA_out.CFy=CFy;
+CA_out.CFz=CFz;
+CA_out.CMx=CMx;
+CA_out.CMy=CMy;
+CA_out.CMz=CMz;
+CA_out.CEff=CEff;
+
+model.numerics=numerics;
+
+%% auxiliary function
 
     function res=transition(A,B,t)
         % transition function between two condition
@@ -257,17 +306,18 @@ end
         % res=A*(1-t)+B*t;
     end
 
+%% aerodynamic engineering estimation function
+
+    function Cp=calDejarnetle(theta)
+        % Dejarnetle modify Newton method
+        %
+        Cp=Cp_stag*(1-D*(cos(theta)).^G);
+    end
+
     function Cp=calModifyNewton(sin_theta_sq)
         % modified Newton
         %
         Cp=Cp_stag*sin_theta_sq;
-    end
-
-    function Cp=calACMEmpirical(theta)
-        % ACM empirical data
-        %
-        % modify
-        Cp=max((theta*3.8197)*(1/Ma_inf_sq),-1/Ma_inf_sq+0.57/Ma_inf_sq^2); % delta(deg)/15/Ma_inf_sq
     end
 
     function Cp=calTangentCone(theta)
@@ -280,15 +330,9 @@ end
         % reference: NASA TP 1539 (Appendix)
         %
         sin_theta=sin(theta);
-        Ma_n=(0.87.*Ma_inf-0.544).*sin_theta + 0.53;
+        Ma_n=(0.87.*Ma_inf-0.544).*sin_theta+0.53;
         Ma_n_sq=Ma_n.^2;
         Cp=48.*Ma_n_sq.*sin_theta.^2./(23.*Ma_n_sq-5);
-    end
-
-    function Cp=calTangentWedgeEmpirical(theta)
-        % empirical tangent wedge method
-        xx=Ma_inf.*sin(theta);
-        Cp=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_inf.^2);
     end
 
     function Cp=calTangentWedge(theta,sin_theta_sq)
@@ -296,11 +340,11 @@ end
         % regardless of the value of mach. Use TangentWedgeEmpirical
         %
         Cp=theta;
-        Ma_1_4=Ma_inf_sq.^2;
+        Ma_inf_qd=Ma_inf_sq.^2;
 
         b=-(Ma_inf_sq+2)./Ma_inf_sq-gamma.*sin_theta_sq;
-        c=(2.*Ma_inf_sq+1)./Ma_1_4+sin_theta_sq.*((gamma_plus/2).^2+gamma_sub./Ma_inf_sq);
-        d=(sin_theta_sq-1)./Ma_1_4;
+        c=(2.*Ma_inf_sq+1)./Ma_inf_qd+sin_theta_sq.*((gamma_plus/2).^2+gamma_sub./Ma_inf_sq);
+        d=(sin_theta_sq-1)./Ma_inf_qd;
         q=(b.*b-3.*c)./9;
         r=(b.*(2.*b.^2-9.*c)+27.*d)./54;
         disc=q.*q.*q - r.*r;
@@ -328,7 +372,12 @@ end
         % modify
         % Bool_theta=theta < 0.035; % 45.585 deg
         % Cp(Bool_theta)=gamma.*Ma_inf_sq.*theta(Bool_theta)./sqrt(Ma_inf_sq.^2-1.0);
-        
+    end
+
+    function Cp=calTangentWedgeEmpirical(theta)
+        % empirical tangent wedge method
+        xx=Ma_inf.*sin(theta);
+        Cp=((1.2.*xx+exp(-0.6.*xx)).^2-1.0)./(0.6.*Ma_inf.^2);
     end
 
     function Cp=calDahlemDuck(theta,sin_theta_sq)
@@ -341,9 +390,9 @@ end
         if any(~Bool_neg)
             % first compute the original
             Cp_max=(1./sin(4*theta(~Bool_neg)).^0.75+1);
-            Cp_max(theta(~Bool_neg) > 0.3927)=2; % 22.5 deg
+            Cp_max(theta(~Bool_neg) > 0.3927)=Cp_stag; % 22.5 deg
             Cp_max(Cp_max > 5.0)=5.0;
-            Cp_max(Cp_max < 2)=2;
+            Cp_max(Cp_max < Cp_stag)=Cp_stag;
 
             % modify for low mach number
             eta=a*(theta(~Bool_neg)/pi*180).^n+1.0;
@@ -379,21 +428,22 @@ end
     end
 
     function Ma=calInversePrandtlMeyer(nu)
-        % PURPOSE - Inverse Prandtl-Meyer Function. A simple rational polynomial
-        % curve fit, good to 5 or 6 significant figures. Refer to the function
-        % InversePrandtlMeyerPrecise if you need full doubleprecision accuracy.
-        % 
-        % reference: [1] Hall I Ma_inf. Inversion of the Prandtl-Meyer
-        % relation[J]. The Aeronautical Journal (1968), 1975, 79: 417 - 8.
+        % Inverse Prandtl-Meyer Function
+        % a simple rational polynomial curve fit
+        %
+        % reference:
+        % [1] Hall I Ma_inf. Inversion of the Prandtl-Meyer relation[J].
+        % The Aeronautical Journal (1968), 1975, 79: 417 - 8.
         %
         y=(nu./2.27685316).^0.6666667;
         Ma=(1.0+y.*(1.3604+y.*(0.0962+y.*-0.5127)))./(1.0+y.*(-0.6722+y.*-0.3278));
     end
 
-    function Cp=calDejarnetle(theta)
-        % Dejarnetle modify Newton method
+    function Cp=calACMEmpirical(theta)
+        % ACM empirical data
         %
-        Cp=Cp_stag*(1-D*(cos(theta)).^G);
+        % modify
+        Cp=max((theta*3.8197)*(1/Ma_inf_sq),-1/Ma_inf_sq+0.57/Ma_inf_sq^2); % delta(deg)/15/Ma_inf_sq
     end
 
     function Cp=calTangentWedgeInfiniteMach(theta)
@@ -403,5 +453,4 @@ end
         emns=0.5.*gamma_plus.*Ma_inf.*sin(theta)+exp(-0.25.*gamma_plus.*Ma_inf.*sin(theta));
         Cp=(4./gamma_plus).*(emns.^2-1)./Ma_inf.^2;
     end
-
 end

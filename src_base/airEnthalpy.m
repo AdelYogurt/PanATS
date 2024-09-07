@@ -7,10 +7,10 @@ function H=airEnthalpy(T)
 % output:
 % H (J/kg)
 %
-% reference: [1] Miller C G, Iii. Comparison of thin-film resistance
-% heat-transfer gages with thin-skin transient calorimeter gages in
-% conventional hypersonic wind tunnels[R]. NASA-TM-83197, 1981.
-%
+% reference:
+% [1] Miller C G, Iii. Comparison of thin-film resistance heat-transfer
+% gages with thin-skin transient calorimeter gages in conventional
+% hypersonic wind tunnels[R]. NASA-TM-83197, 1981.
 %
 
 % [1] Page: 17
